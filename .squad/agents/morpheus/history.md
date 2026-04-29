@@ -28,3 +28,26 @@
 📌 Sprint planning complete on 2026-04-29T07:21:03.149-04:00. Execution roadmap now live in GitHub.
 
 📌 Scribe consolidated Morpheus sprint decision into `.squad/decisions.md` on 2026-04-29T11:27:53Z. Decision merging and orchestration logging complete. Decision inbox cleared.
+
+## Sprint 1 Kick-Off
+
+📌 **Completed:** 2026-04-29T07:32:23.826-04:00
+
+**Branch Created:** `sprint/1-metrics-core-collection` — Pushed to origin. All team members tracking this branch.
+
+**Wave Structure & Assignment:**
+- **Wave 1 (Ready Now):** Trinity → #1 (SimplicitySnapshot record). No blockers.
+- **Wave 2 (After #1 compiles):** Switch → #2 (Sample.OverEngineered), Tank → #3 (Sample.Simplified). Parallel.
+- **Wave 3 (After #1/#2/#3):** Link → #4 (Structural pass: MSBuild walk).
+- **Wave 4 (After #4):** Trinity → #5 (Semantic pass: Roslyn compilation).
+- **Wave 5 (After #5):** Switch → #6 (PrimaryPathAttribute + heuristic pass).
+- **Wave 6 (After #4/#5/#6):** Tank → #7 (CLI `analyze` command).
+- **Wave 7 (After #7):** Link → #8 (CLI `report` command: HTML).
+
+**Critical Path:** #1 → #4 → #5 → #6 → #7 → #8 (8 hard dependencies). Parallelization only at #2/#3.
+
+**Key Decision:** Sequential waves enforce the implementation order from spec. Each wave unblocks the next via GitHub issue comments (no new squad labels introduced yet). Coordinator tracks unblocking and promotes issues to "in progress" as dependencies clear.
+
+**Unblocking Mechanism:** Issue comments document ownership and blocking criteria. After #1 compiles, Wave 2 can start. No speculative work. Each task has a concrete measured prerequisite.
+
+**DoD per Milestone:** Validated against both sample solutions (Sample.OverEngineered and Sample.Simplified). Zero-config promise enforced by CLI validation.
