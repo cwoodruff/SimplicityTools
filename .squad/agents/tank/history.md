@@ -15,9 +15,12 @@
 
 📌 Team hired on 2026-04-29T06:47:51.656-04:00
 📌 **Sprint 1 issue #1 completed (2026-04-29T11:44:51.000Z):** SimplicitySnapshot contract tests finalized. Validated 10 positional properties, 2 derived ratios, `ToSummary()` formatting, and culture-invariant output. Trinity's implementation aligns contract to spec; legacy instance members excluded. Notes: contract drift detection working as intended; Sprint 1 waves 2–7 now unblocked.
+📌 **Sprint 1 issue #3 completed (2026-04-29T11:57:01.000Z):** Sample.Simplified scaffold delivered as 2-project modular monolith with single IFulfillmentPolicy interface seam (StandardFulfillmentPolicy and ExpressFulfillmentPolicy implementations). Six tests passing. Decision logged.
 
 ## Learnings
 
+- 2026-04-29T07:32:23.826-04:00: For Sample.Simplified, keeping one real interface seam (`IFulfillmentPolicy`) and leaving catalog, ordering, and payment flows concrete gives the metrics work a cleaner low-abstraction baseline without losing a legitimate polymorphic example.
 - My initial focus is package tests, regression safety, and sample-project validation.
 - 2026-04-29T07:32:23.826-04:00: When a book-facing summary string is part of the spec, test it under a non-default culture so formatting drift gets caught before it leaks into chapter output or CLI text.
 - 2026-04-29T11:44:51.000Z: Exact contract tests succeed when implementation aligns specs first and rejects compatibility debt. Regression signal is strong when public surface is predictable.
+- 2026-04-29T11:57:01.000Z: Real interface seams with multiple active implementations make future analyzer work trustworthy without noise.

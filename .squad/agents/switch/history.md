@@ -14,7 +14,11 @@
 ## Recent Updates
 
 📌 Team hired on 2026-04-29T06:47:51.656-04:00
+📌 **Sprint 1 issue #2 completed (2026-04-29T11:57:01.000Z):** Sample.OverEngineered scaffold delivered with 12-project topology (composition root + 11 layers). Real Roslyn/MSBuild facts ready for metrics. Decision logged.
 
 ## Learnings
 
 - My initial focus is Roslyn analysis, diagnostics, and compiler-backed heuristics.
+
+- 2026-04-29T07:32:23.826-04:00: I used the existing sample executable as a composition root and pushed the overengineering into 11 supporting libraries so future metrics work can count project fan-out, single-implementation interfaces, and mediator-style hops without inventing fake files later.
+- 2026-04-29T11:57:01.000Z: Structural overengineering with real projects makes sample differences measurable and avoids placeholder theater.
