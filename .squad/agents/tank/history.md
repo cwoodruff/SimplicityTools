@@ -27,3 +27,4 @@
 - 2026-04-29T11:57:01.000Z: Real interface seams with multiple active implementations make future analyzer work trustworthy without noise.
 
 - 2026-04-29T07:32:23.826-04:00: CLI regression tests are steadier when the tool is executed as a built process against both sample solutions and the sample baselines stay numeric-only, so `CollectedAt` does not create fake churn.
+- 2026-04-29T10:58:25.595-04:00: `ReportGenerator.cs` footer contained an external `https://github.com/cwoodruff/SimplicityTools` hyperlink, violating the self-contained HTML contract. Fixed by replacing the anchor tag with plain text. Test: `ReportCommand_GeneratesSelfContainedHtmlForBothSamples` in `SimplicityTools.Cli.Tests`. All 4 CLI tests now pass.
