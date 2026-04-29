@@ -1,0 +1,5 @@
+namespace StructuralFixture.App.Generated;
+
+public static class Generated
+{
+}

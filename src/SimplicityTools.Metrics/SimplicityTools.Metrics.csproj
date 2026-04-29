@@ -7,4 +7,10 @@
     <PackageId>SimplicityTools.Metrics</PackageId>
     <Description>Core data model and snapshot collection primitives for the Simplicity-First .NET Toolkit.</Description>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Build" Version="18.4.0" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.Build.Locator" Version="1.9.1" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="4.14.0" />
+  </ItemGroup>
 </Project>

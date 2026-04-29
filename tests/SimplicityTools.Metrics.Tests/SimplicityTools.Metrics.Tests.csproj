@@ -23,4 +23,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SimplicityTools.Metrics\SimplicityTools.Metrics.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="TestData\**\*.cs" />
+    <None Include="TestData\**\*" />
+  </ItemGroup>
 </Project>

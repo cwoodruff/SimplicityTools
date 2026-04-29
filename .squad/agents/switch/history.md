@@ -22,3 +22,4 @@
 
 - 2026-04-29T07:32:23.826-04:00: I used the existing sample executable as a composition root and pushed the overengineering into 11 supporting libraries so future metrics work can count project fan-out, single-implementation interfaces, and mediator-style hops without inventing fake files later.
 - 2026-04-29T11:57:01.000Z: Structural overengineering with real projects makes sample differences measurable and avoids placeholder theater.
+- 2026-04-29T07:32:23.826-04:00: For the primary-path heuristic pass, I treated inbound references as a file-level score across the named types declared in a file and refused to promote the percentile signal when every candidate had zero inbound references; otherwise the heuristic would mark noise as intent.

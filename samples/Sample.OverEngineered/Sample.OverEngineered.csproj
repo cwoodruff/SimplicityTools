@@ -1,9 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="OverEngineeredCompositionRoot.cs" />
+    <Compile Include="Presentation\**\*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="Sample.OverEngineered.Application/Sample.OverEngineered.Application.csproj" />
+    <ProjectReference Include="Sample.OverEngineered.Authorization/Sample.OverEngineered.Authorization.csproj" />
+    <ProjectReference Include="Sample.OverEngineered.Cache/Sample.OverEngineered.Cache.csproj" />
+    <ProjectReference Include="Sample.OverEngineered.Domain/Sample.OverEngineered.Domain.csproj" />
+    <ProjectReference Include="Sample.OverEngineered.Infrastructure/Sample.OverEngineered.Infrastructure.csproj" />
+    <ProjectReference Include="Sample.OverEngineered.Messaging/Sample.OverEngineered.Messaging.csproj" />
+    <ProjectReference Include="Sample.OverEngineered.Persistence/Sample.OverEngineered.Persistence.csproj" />
+    <ProjectReference Include="Sample.OverEngineered.ReadModel/Sample.OverEngineered.ReadModel.csproj" />
+    <ProjectReference Include="Sample.OverEngineered.Telemetry/Sample.OverEngineered.Telemetry.csproj" />
+    <ProjectReference Include="Sample.OverEngineered.Validation/Sample.OverEngineered.Validation.csproj" />
+    <ProjectReference Include="Sample.OverEngineered.WriteModel/Sample.OverEngineered.WriteModel.csproj" />
+  </ItemGroup>
 </Project>
