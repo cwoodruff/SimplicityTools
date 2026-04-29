@@ -27,6 +27,16 @@
 **What:** Mapped the 13-step implementation order into three milestones: Metrics & Core Collection (M1, steps 1–8), Filters + TCA + CLI Extensions (M2, steps 9–11), and Roslyn Analyzers + Code Fixes (M3, steps 12–13). Each milestone represents a meaningful delivery gate aligned with the book's chapter structure and the three-tier package architecture (Metrics → Filters/Tca → Cli).
 **Why:** Grouping steps into three sprints provides narrative clarity (measurement → decision support → IDE feedback), aligns with package dependency boundaries, and syncs with the book chapters. All 26 resulting issues have been created in GitHub with milestone assignments and prerequisite tracking. DoD criteria defined per milestone.
 
+### 2026-04-29T07:32:23.826-04:00: Sprint 1 kick-off
+**By:** Morpheus
+**What:** Sprint 1 covers the foundation of the Simplicity-First .NET Toolkit: building the core data model (SimplicitySnapshot), implementing the three collection passes (structural, semantic, heuristic), scaffolding sample solutions, and delivering the CLI `analyze` and `report` commands. The sprint follows a hard dependency chain: Issue #1 (SimplicitySnapshot) unblocks Wave 2 (#2, #3 samples in parallel), which unblock Wave 3+ through #7 (CLI analyze). Full implementation sequence, work wave assignments, and critical decisions documented in inbox/morpheus-sprint1-kickoff.md.
+**Why:** Provides clarity on Sprint 1 scope, dependency enforcement, and team wave assignments to ensure systematic execution without blocked parallelism or speculative work.
+
+### 2026-04-29T07:32:23.826-04:00: SimplicitySnapshot contract finalized
+**By:** Trinity and Tank (consensus)
+**What:** `SimplicitySnapshot` public contract is fixed to the 10 positional constructor properties, 2 derived ratio properties, and `ToSummary()` method only. Legacy compatibility properties (old `SolutionName`, `Metrics`) are not preserved. Static `Empty(string)` helper retained as migration aid.
+**Why:** Downstream packages (Filters, TCA, CLI) and book chapters reference a single stable shape. Tank's contract tests enforce this as regression signal. Trinity preserved the spec-aligned contract in implementation, rejecting stale instance members despite compilation compatibility, to avoid downstream ambiguity.
+
 ## Governance
 
 - All meaningful changes require team consensus
