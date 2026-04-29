@@ -67,3 +67,8 @@
 - All meaningful changes require team consensus
 - Document architectural decisions here
 - Keep history focused on work, decisions focused on direction
+
+### 2026-04-29T07:32:23.826-04:00: CLI sample baselines stay date-agnostic
+**By:** Tank
+**What:** Keep `tests/SimplicitySampleBaselines.json` limited to numeric snapshot metrics plus solution-relative paths. CLI analyze tests should derive the expected summary date from actual output instead of storing `CollectedAt` in the baseline file.
+**Why:** `CollectedAt` is runtime state, not a product baseline. Keeping the baselines date-agnostic lets the suite catch real metric drift in the samples without false failures every day the CLI runs.
