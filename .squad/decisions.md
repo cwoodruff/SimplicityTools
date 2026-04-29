@@ -72,3 +72,8 @@
 **By:** Tank
 **What:** Keep `tests/SimplicitySampleBaselines.json` limited to numeric snapshot metrics plus solution-relative paths. CLI analyze tests should derive the expected summary date from actual output instead of storing `CollectedAt` in the baseline file.
 **Why:** `CollectedAt` is runtime state, not a product baseline. Keeping the baselines date-agnostic lets the suite catch real metric drift in the samples without false failures every day the CLI runs.
+
+### 2026-04-29T07:32:23.826-04:00: HTML Report Design & Execution
+**By:** Link
+**What:** Implemented `dotnet simplicity report` to generate a self-contained, styled HTML report capturing all required sections with no external dependencies. All CSS embedded inline; dark theme (`#0D0D0D`) with brand red (`#E31B23`) accents. Report structure: Executive Summary (metric cards), Filter Verdicts (domain health badges), Metric Detail (full table), Complexity Budget (simplified scorecard), Trend Analysis, Appendix. Simplicity Score algorithm uses composite 0–100 penalty system (premature abstraction up to 30 pts, unused dependencies up to 20 pts, high method complexity up to 20 pts, low primary path coverage up to 30 pts). Output to `./simplicity-report/index.html` (~11–12 KB, <1 sec generation).
+**Why:** Self-contained HTML works offline and in CI/CD with zero configuration. Embedded CSS and brand colors reflect professionalism; responsive grid and status badges provide visual health signals. Composite Simplicity Score guides teams toward highest-impact improvements. Three test methods validate HTML structure, self-contained output, and metric inclusion across Sample.Simplified and Sample.OverEngineered.

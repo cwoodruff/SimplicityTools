@@ -19,11 +19,15 @@
 
 - My initial focus is CLI experience, docs, and sample-driven guidance.
 
-### 2026-04-29T07:32:23.826-04:00: HTML Report Design
+### 2026-04-29T07:32:23.826-04:00: HTML Report Design & Implementation ✓
 
-**UX Decision:** The HTML report uses dark theme (#0D0D0D background) with brand red accent (#E31B23) to create professional visual hierarchy while remaining self-contained. All CSS is embedded; no external assets or CDN dependencies. This ensures CI/CD-safe generation and works offline.
+**Issue #8 Completed.** UX Decision: Dark theme (#0D0D0D) with brand red accents (#E31B23); all CSS embedded inline for self-contained, offline-safe generation.
 
-**Metric Presentation:** Report includes six main sections (Executive Summary, Filter Verdicts, Metric Detail, Complexity Budget, Trend Analysis, Appendix). Verdicts present health status as badges with contextual colors (green/good, orange/warn, red/critical) so developers quickly understand where to focus.
+**Implementation:** Shipped `dotnet simplicity report <solution.sln>` command generating `./simplicity-report/index.html` (~11–12 KB, <1 sec). Six-section report structure: Executive Summary (metric cards), Filter Verdicts (health badges), Metric Detail (full table), Complexity Budget (scorecard), Trend Analysis (guidance), Appendix (definitions + metadata).
 
-**Simplicity Score:** Calculated from four penalty factors: premature abstraction ratio, unused dependencies, method complexity, and low primary path coverage. Score guides teams toward actionable improvement areas.
+**Simplicity Score Algorithm:** Composite 0–100 scale penalizing premature abstraction (up to 30 pts), unused dependencies (up to 20 pts), method complexity (up to 20 pts), low primary path coverage (up to 30 pts). Guides teams toward highest-impact improvements.
+
+**Testing:** Added three test methods validating HTML structure, self-contained output (no external assets), and metric inclusion across both samples (Sample.Simplified, Sample.OverEngineered).
+
+**Outcome:** Milestone 1 issue chain #1–#8 now complete on `sprint/1-metrics-core-collection`. Core collection passes, samples, analyze command, and report command all shipping together.
 
