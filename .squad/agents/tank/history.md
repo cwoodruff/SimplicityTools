@@ -28,3 +28,6 @@
 
 - 2026-04-29T07:32:23.826-04:00: CLI regression tests are steadier when the tool is executed as a built process against both sample solutions and the sample baselines stay numeric-only, so `CollectedAt` does not create fake churn.
 - 2026-04-29T10:58:25.595-04:00: `ReportGenerator.cs` footer contained an external `https://github.com/cwoodruff/SimplicityTools` hyperlink, violating the self-contained HTML contract. Fixed by replacing the anchor tag with plain text. Test: `ReportCommand_GeneratesSelfContainedHtmlForBothSamples` in `SimplicityTools.Cli.Tests`. All 4 CLI tests now pass.
+- 2026-04-29T10:58:25.595-04:00: When re-verifying a previously identified fix, always reproduce with `--no-build` to separate build-cache noise from real test failures. MSBuild `error MSB3492` on `.msCoverageSourceRootsMapping_*` cache files (caused by macOS `com.apple.provenance` extended attributes) can block incremental builds but is resolved by cleaning `obj/` and `bin/` artifacts before re-running. The underlying test logic was sound; only the build cache was corrupted.
+
+📌 **Session update (2026-04-29T14:58:25Z):** Regression investigation session completed. Confirmed fix already in commit b8d1d17 for HTML report self-contained contract. Test suite passing; no source edits required.
