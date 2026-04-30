@@ -225,3 +225,57 @@ Add a regression that covers the dependent-interface scenario so this bug does n
 - `dotnet build src/SimplicityTools.Analyzers/SimplicityTools.Analyzers.csproj --nologo`
 - Focused reruns for `SingleImplementationInterfaceCodeFixProvider_PreservesDependentInterfaceChains`, `UnusedDependencyCodeFixProvider_RemovesPackageReferenceWithPreviewSafeRewrite`, and `UnusedDependencyCodeFixProvider_RemovesMultilinePackageReferenceWithoutBreakingXml`
 - `dotnet test tests/SimplicityTools.Analyzers.Tests/SimplicityTools.Analyzers.Tests.csproj --nologo --no-build` → 20 tests passed
+# README Positioning Decision
+
+**By:** Link (DevRel)  
+**Date:** 2026-04-30T08:24:49.761-04:00  
+**Status:** Ready for merge to decisions.md
+
+## What
+
+Rewrote `README.md` as a GitHub repository landing page that speaks to both engineering teams and stakeholders.
+
+## Structure
+
+1. **Opening hook** — Value statement + problem framing (2 paragraphs)
+2. **The Problem** — Why complexity matters to teams (3 short questions)
+3. **What You Get** — Five tools table with use-case context
+4. **Zero-Config First Run** — Prove the zero-config promise with three inline commands
+5. **Build Into Your Workflow** — CI baseline/diff, live watch mode
+6. **What Gets Measured** — Four categories: structural, code, verdicts, cost
+7. **Analyzer Code Fixes** — Surface SF0001 and SF0002 as immediate value
+8. **For Developers** — Install path, build path, library usage, link to full guide
+9. **For Stakeholders** — Cost framing, use cases, ROI story
+10. **Project Structure** — Directory tree + tests location
+11. **Key Design Decisions** — Five bullet points on zero deps, zero config, self-contained reports, teaching approach, validation
+12. **Next Steps** — Four clear calls-to-action
+
+## Key Claims (All grounded in shipped behavior)
+
+- Six CLI commands: `analyze`, `report`, `baseline`, `diff`, `budget`, `watch` ✓
+- Zero config + sensible defaults ✓
+- Self-contained HTML reports ✓
+- Seven analyzers (SF0001–SF0007) ✓
+- Two code fixes (SF0001, SF0002) ✓
+- Three filter verdicts (TwoAmTest, HalfRule, PrimaryPathFirst) ✓
+- TCA cost model (team size, salary, incidents, on-call rate, attrition) ✓
+- Two sample solutions (Simplified: 2 projects; OverEngineered: 12 projects) ✓
+
+## Why
+
+The current README was a three-line stub pointing at docs. This failed the landing-page test:
+- Didn't surface the value proposition
+- Didn't explain *what* SimplicityTools does or *why*
+- Didn't distinguish between developer use cases and stakeholder communication
+- Assumed visitors already knew what "Simplicity-First" meant
+
+The new README:
+- Opens with a problem statement that resonates across roles
+- Foregrounds the zero-config promise and five-tool ecosystem
+- Separates developer onboarding from stakeholder cost/benefit messaging
+- Keeps the full guide link but makes the README itself scannable and complete
+- Frames TCA and filter verdicts as the "why" that metrics alone don't provide
+
+## When to Merge
+
+After next review cycle or immediately if no additional context changes README positioning.

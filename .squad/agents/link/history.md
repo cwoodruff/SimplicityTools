@@ -106,3 +106,44 @@
 **Wave 1 Status:** #25 (Trend Analysis) already delivered; Link ready to move to Wave 2 code fixes as soon as Switch completes #16 (SF0001 analyzer) and #17 (SF0002 analyzer) design.
 
 **Scribe Sync:** Sprint 3 launch decision, trend history contract, SF0002 compiler-backed policy, and SF0007 explicit baseline policy all merged into `.squad/decisions.md`. Orchestration log created at 2026-04-30T11:13:32Z documenting this coordination.
+
+### 2026-04-30T06:57:15.306-04:00: Analyzer code-fix wave 2 ✓
+
+**Issues #23–#24 Completed.** Added Roslyn code fix providers for SF0001 and SF0002 so the IDE can turn both diagnostics into a next action instead of a dead-end warning.
+
+**Implementation:** SF0001 now rewrites interface references to the sole concrete implementation across the solution, removes the interface declaration, strips implementation base-list entries, and converts explicit interface members into normal public members when needed. SF0002 now edits the `.csproj` through a preview-friendly `TextDocument` solution change, removing only the targeted `<PackageReference>` line span instead of rewriting the whole XML file.
+
+**Testing:** Expanded analyzer tests with workspace-backed code-fix coverage that asserts preview operations exist, validates SF0001 by recompiling the rewritten project, and validates SF0002 by reparsing the updated project file and rerunning the analyzer against the rewritten `.csproj`. Final verification passed with `dotnet build src/SimplicityTools.Analyzers/SimplicityTools.Analyzers.csproj --nologo --verbosity minimal`, `dotnet test tests/SimplicityTools.Analyzers.Tests/SimplicityTools.Analyzers.Tests.csproj --nologo --verbosity minimal`, and `dotnet test --no-restore --verbosity minimal`.
+
+**Outcome:** Sprint 3 now has the two mandatory fixers for first-run IDE ergonomics, and both prove out through Roslyn round-trip validation instead of text-only assertions.
+
+### 2026-04-30T08:11:34.261-04:00: Full tools guide for first-run usage ✓
+
+Added `docs/using-the-simplicity-tools.md` and refreshed `README.md` so the repo now has a discoverable, commit-ready guide for the current toolset.
+
+Useful learning: the report's trend view is powered by raw `SimplicitySnapshot` JSON files in `.simplicity-history/`, not by a dedicated archive command, so docs need to teach that manual history flow explicitly. Also, the CLI's first-run missing-config warning is intentional product surface and should be documented as expected behavior, not troubleshooting noise.
+
+### 2026-04-30T08:24:49.761-04:00: GitHub landing-page README rewrite ✓
+
+Completely rewrote `README.md` as a GitHub repository landing page with:
+- Opening value statement ("measures solution complexity, surfaces opportunities")
+- Business problem framing ("Why is this expensive?")
+- Five-tool overview table with use-case context for each
+- Separate sections for developers (install, build, integrate) and stakeholders (cost/benefit, use cases)
+- Project structure and design decision rationale
+- Scannable navigation to full docs and schema
+
+**Structure:** Problem → Value → 5 Tools → Dev/Stakeholder Guidance → Project Layout → Next Steps. Grounded every claim in shipped behavior (six CLI commands, two code fixes, seven analyzers, three filters, HTML report, zero-config first run).
+
+**Key framing:** Positioned SimplicityTools as answering "What to fix and why it matters to the business"—not just "here are the metrics." TCA cost model and filter verdicts surface the *why*, not just the *what*.
+
+**Outcome:** GitHub repository landing page that works for both engineering teams evaluating the toolkit and stakeholders considering investment in code quality. Full docs still live in `docs/using-the-simplicity-tools.md`; README serves as scannable entry point.
+
+## 2026-04-30T12:27:33.382322Z - README Update Task Spawned
+- **Requested by:** Chris Woody Woodruff
+- **Scope:** Update repository README with project description, tool outline, problems solved, and developer/stakeholder value
+- **Deliverables:** 
+  - README.md rewritten as GitHub landing page
+  - Link history updated with this session
+  - Decision inbox entry link-readme-positioning.md created
+- **Status:** In Progress
