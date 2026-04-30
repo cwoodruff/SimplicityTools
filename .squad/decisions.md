@@ -279,3 +279,79 @@ The new README:
 ## When to Merge
 
 After next review cycle or immediately if no additional context changes README positioning.
+# 2026-04-30T17:29:31.278-04:00: Sprint 4 package release grouping
+
+**By:** Link
+
+**Decision:** Package releases will be cut as three SemVer tag families: `libraries/vX.Y.Z` for `SimplicityTools.Metrics`, `SimplicityTools.Filters`, and `SimplicityTools.Tca`; `analyzers/vX.Y.Z` for `SimplicityTools.Analyzers`; and `cli/vX.Y.Z` for `SimplicityTools.Cli`.
+
+**Why:** The three reusable libraries form one public API line and need to stay in lockstep, while the analyzer package and global tool need room to ship on their own cadence. Encoding that split in tag names makes the GitHub Actions release workflow readable, keeps dry-run packaging simple on branch pushes, and gives contributors a clear answer for “which version do I cut next?”.
+
+**Packaging note:** All five packages share the repo README, the MIT license expression, the docs URL, and a single NuGet icon so the first NuGet page mirrors the same product story as the repository landing page.
+---
+date: 2026-04-30T17:29:31.278-04:00
+author: Morpheus
+decision: Sprint 4 Launch — Package Foundation (Milestone 4)
+---
+
+# Sprint 4 Launch: Package Foundation
+
+**Decision Date:** 2026-04-30T17:29:31.278-04:00
+
+## Context
+
+Sprint 4 launches Milestone 4: Package Foundation. Three issues total, all assigned to Link (DevRel).
+
+**Branch:** `sprint/4-package-foundation` — created from origin/main, pushed to origin.
+
+**Scope:** Foundation for NuGet and global tool packaging: .nuspec metadata, CI/CD pipeline, versioning strategy.
+
+## Issue Breakdown
+
+| Issue | Title | Assignee | Type | Dependency |
+|-------|-------|----------|------|-----------|
+| #32 | Setup .nuspec metadata for all packages | Link | Infrastructure | None — Wave 1 |
+| #33 | Setup GitHub Actions CI/CD for NuGet publish | Link | Infrastructure | None — Wave 1 (parallel with #32) |
+| #34 | Document versioning strategy and release process | Link | Documentation | #32, #33 — Wave 2 |
+
+## Wave Structure
+
+**Wave 1 (Ready Now):**
+- Link → #32 (Setup .nuspec metadata)
+- Link → #33 (Setup GitHub Actions CI/CD)
+- **Why:** Both are foundational infrastructure tasks with no inter-dependency. Metadata defines what gets packaged; CI/CD pipeline orchestrates the publish. Can proceed in parallel.
+
+**Wave 2 (After #32 + #33 complete):**
+- Link → #34 (Document versioning strategy)
+- **Why:** Documentation requires understanding the concrete metadata structure (from #32) and the CI/CD flow (from #33) to provide accurate instructions.
+
+## Critical Path
+
+#32 → #34 and #33 → #34. All work serializes through documentation, which is the final gate before packaging pipeline moves to Milestone 5.
+
+## Reasoning
+
+**Three issues only.** Milestone 4 is the smallest foundation phase: metadata setup, pipeline infrastructure, and release documentation. It unblocks Milestones 5–7 (library packaging, global tool, and UX).
+
+**Link owns all three.** DevRel (Link's charter) encompasses package metadata, CI/CD usability, and release documentation. Link has context from Milestone 3 completion and understands the zero-config promise that drives packaging strategy.
+
+**No speculative work.** Each issue has a concrete, measurable deliverable. #32 produces .nuspec files; #33 produces a GitHub Actions workflow; #34 produces CONTRIBUTING.md + release documentation.
+
+**Wave 1 parallelization is aggressive but safe.** Metadata and CI/CD are independent concerns; Link can context-switch between them without blocking. Once both are done, documentation becomes trivial (summarizing decisions made in #32/#33).
+
+## DoD
+
+- #32: All five packages (.csproj or .nuspec) have complete metadata; PrivateAssets=all is set on analyzer; `dotnet pack` runs without warnings.
+- #33: GitHub Actions workflow builds on push, runs tests, generates .nupkg, includes dry-run validation; workflow passes locally.
+- #34: CONTRIBUTING.md has release section; versioning strategy documented; local test-publish instructions included.
+
+**Integration Test:** After all three close, verify `dotnet pack` works for all packages and workflow dry-run produces valid .nupkg files (no publish).
+
+## Next Gates
+
+- **M4 → M5 Gate:** M4 must complete before Trinity begins M5 (library packaging). M4 establishes the metadata schema and CI/CD foundation that M5 builds upon.
+- **Coordinator Action:** When M4 closes, promote M5 issues to "ready" and spawn Trinity for Wave 1 (package four libraries).
+
+## Signed Off
+
+Morpheus, 2026-04-30T17:29:31.278-04:00
