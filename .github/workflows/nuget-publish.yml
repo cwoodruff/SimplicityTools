@@ -1,0 +1,319 @@
+name: NuGet packages
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - 'sprint/**'
+    tags:
+      - 'libraries/v*'
+      - 'analyzers/v*'
+      - 'cli/v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  PACKAGE_OUTPUT_DIR: artifacts/packages
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      release_group: ${{ steps.release.outputs.release_group }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Resolve release shape
+        id: release
+        shell: bash
+        run: |
+          ref_type="${GITHUB_REF_TYPE:-branch}"
+          ref_name="${GITHUB_REF_NAME}"
+
+          if [[ "$ref_type" == "tag" ]]; then
+            if [[ "$ref_name" =~ ^libraries/v([0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z]+)*)$ ]]; then
+              echo "release_group=libraries" >> "$GITHUB_OUTPUT"
+              echo "pack_version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+            elif [[ "$ref_name" =~ ^analyzers/v([0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z]+)*)$ ]]; then
+              echo "release_group=analyzers" >> "$GITHUB_OUTPUT"
+              echo "pack_version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+            elif [[ "$ref_name" =~ ^cli/v([0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z]+)*)$ ]]; then
+              echo "release_group=cli" >> "$GITHUB_OUTPUT"
+              echo "pack_version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+            else
+              echo "::error::Unsupported tag '$ref_name'. Use libraries/vX.Y.Z, analyzers/vX.Y.Z, or cli/vX.Y.Z."
+              exit 1
+            fi
+          else
+            echo "release_group=validation" >> "$GITHUB_OUTPUT"
+            echo "pack_version=0.4.0-ci.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore solution
+        run: dotnet restore SimplicityTools.sln --verbosity minimal
+
+      - name: Build solution
+        run: dotnet build SimplicityTools.sln --configuration Release --no-restore --verbosity minimal
+
+      - name: Test solution
+        run: dotnet test SimplicityTools.sln --configuration Release --no-build --verbosity minimal
+
+      - name: Dry-run pack
+        shell: bash
+        run: |
+          mkdir -p "$PACKAGE_OUTPUT_DIR"
+
+          case "${{ steps.release.outputs.release_group }}" in
+            libraries)
+              projects=(
+                src/SimplicityTools.Metrics/SimplicityTools.Metrics.csproj
+                src/SimplicityTools.Filters/SimplicityTools.Filters.csproj
+                src/SimplicityTools.Tca/SimplicityTools.Tca.csproj
+              )
+              ;;
+            analyzers)
+              projects=(
+                src/SimplicityTools.Analyzers/SimplicityTools.Analyzers.csproj
+              )
+              ;;
+            cli)
+              projects=(
+                src/SimplicityTools.Cli/SimplicityTools.Cli.csproj
+              )
+              ;;
+            *)
+              projects=(
+                src/SimplicityTools.Metrics/SimplicityTools.Metrics.csproj
+                src/SimplicityTools.Filters/SimplicityTools.Filters.csproj
+                src/SimplicityTools.Tca/SimplicityTools.Tca.csproj
+                src/SimplicityTools.Analyzers/SimplicityTools.Analyzers.csproj
+                src/SimplicityTools.Cli/SimplicityTools.Cli.csproj
+              )
+              ;;
+          esac
+
+          for project in "${projects[@]}"; do
+            dotnet pack "$project" \
+              --configuration Release \
+              --no-build \
+              --output "$PACKAGE_OUTPUT_DIR" \
+              -p:Version=${{ steps.release.outputs.pack_version }} \
+              --verbosity minimal
+          done
+
+      - name: Validate packed metadata
+        shell: bash
+        run: |
+          python - <<'PY'
+          import glob
+          import pathlib
+          import sys
+          import xml.etree.ElementTree as ET
+          import zipfile
+
+          packages = sorted(glob.glob("artifacts/packages/*.nupkg"))
+          if not packages:
+              print("No packages were produced.", file=sys.stderr)
+              sys.exit(1)
+
+          for package_path in packages:
+              package = pathlib.Path(package_path)
+              with zipfile.ZipFile(package) as archive:
+                  names = set(archive.namelist())
+                  if "README.md" not in names:
+                      print(f"{package.name} is missing README.md", file=sys.stderr)
+                      sys.exit(1)
+                  if "simplicitytools-icon.png" not in names:
+                      print(f"{package.name} is missing simplicitytools-icon.png", file=sys.stderr)
+                      sys.exit(1)
+
+                  nuspec_name = next((name for name in names if name.endswith(".nuspec")), None)
+                  if nuspec_name is None:
+                      print(f"{package.name} is missing a nuspec file", file=sys.stderr)
+                      sys.exit(1)
+
+                  root = ET.fromstring(archive.read(nuspec_name))
+
+                  def local_name(tag):
+                      return tag.split("}", 1)[-1]
+
+                  metadata = next((child for child in root if local_name(child.tag) == "metadata"), None)
+                  if metadata is None:
+                      print(f"{package.name} is missing nuspec metadata", file=sys.stderr)
+                      sys.exit(1)
+
+                  required = {
+                      "authors": "Authors",
+                      "description": "Description",
+                      "license": "License",
+                      "projectUrl": "Package project URL",
+                      "repository": "Repository metadata",
+                      "icon": "Package icon"
+                  }
+
+                  for tag_name, label in required.items():
+                      if not any(local_name(child.tag) == tag_name for child in metadata):
+                          print(f"{package.name} is missing {label}", file=sys.stderr)
+                          sys.exit(1)
+          PY
+
+      - name: Validate analyzer consumer package
+        shell: bash
+        run: |
+          python - <<'PY'
+          import glob
+          import os
+          import pathlib
+          import subprocess
+          import sys
+          import textwrap
+          import zipfile
+
+          packages = sorted(glob.glob("artifacts/packages/SimplicityTools.Analyzers.*.nupkg"))
+          if not packages:
+              print("No analyzer package produced in this run; skipping analyzer consumer validation.")
+              raise SystemExit(0)
+
+          package = pathlib.Path(packages[0])
+          with zipfile.ZipFile(package) as archive:
+              names = set(archive.namelist())
+              required_entries = {
+                  "analyzers/dotnet/cs/SimplicityTools.Analyzers.dll",
+              }
+              missing = sorted(required_entries - names)
+              if missing:
+                  print(f"{package.name} is missing analyzer assets: {', '.join(missing)}", file=sys.stderr)
+                  sys.exit(1)
+              if "lib/net10.0/SimplicityTools.Analyzers.dll" in names:
+                  print(f"{package.name} incorrectly ships under lib/net10.0/", file=sys.stderr)
+                  sys.exit(1)
+
+          validation_root = pathlib.Path("artifacts/analyzer-consumer-validation")
+          package_source = validation_root / "packages"
+          global_packages = validation_root / "global-packages"
+          consumer_root = validation_root / "consumer"
+          package_source.mkdir(parents=True, exist_ok=True)
+          global_packages.mkdir(parents=True, exist_ok=True)
+          consumer_root.mkdir(parents=True, exist_ok=True)
+
+          destination = package_source / package.name
+          destination.write_bytes(package.read_bytes())
+
+          (consumer_root / "Consumer.csproj").write_text(textwrap.dedent(f"""
+              <Project Sdk="Microsoft.NET.Sdk">
+                <PropertyGroup>
+                  <TargetFramework>net10.0</TargetFramework>
+                  <ImplicitUsings>enable</ImplicitUsings>
+                  <Nullable>enable</Nullable>
+                </PropertyGroup>
+                <ItemGroup>
+                  <PackageReference Include="SimplicityTools.Analyzers" Version="{package.stem.removeprefix('SimplicityTools.Analyzers.')}" />
+                </ItemGroup>
+              </Project>
+              """).strip() + "\n", encoding="utf-8")
+
+          (consumer_root / "Feature.cs").write_text(textwrap.dedent("""
+              namespace Consumer;
+
+              public interface IPricer
+              {
+                  decimal Price();
+              }
+
+              public sealed class DefaultPricer : IPricer
+              {
+                  public decimal Price() => 12m;
+              }
+              """).strip() + "\n", encoding="utf-8")
+
+          env = os.environ.copy()
+          env["NUGET_PACKAGES"] = str(global_packages.resolve())
+          build = subprocess.run(
+              [
+                  "dotnet",
+                  "build",
+                  "Consumer.csproj",
+                  "--verbosity",
+                  "minimal",
+                  f"-p:RestoreAdditionalProjectSources={package_source.resolve()}",
+              ],
+              cwd=consumer_root,
+              env=env,
+              text=True,
+              capture_output=True,
+          )
+
+          output = f"{build.stdout}\n{build.stderr}"
+          if build.returncode != 0:
+              print(output, file=sys.stderr)
+              sys.exit(build.returncode)
+          if "warning SF0001" not in output:
+              print(output, file=sys.stderr)
+              print("Analyzer consumer build did not emit SF0001.", file=sys.stderr)
+              sys.exit(1)
+          PY
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: artifacts/packages/*
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: nuget-packages
+          path: artifacts/packages
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish to NuGet.org
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [[ -z "$NUGET_API_KEY" ]]; then
+            echo "::error::NUGET_API_KEY is not configured."
+            exit 1
+          fi
+
+          shopt -s nullglob
+          packages=(artifacts/packages/*.nupkg)
+
+          if [[ ${#packages[@]} -eq 0 ]]; then
+            echo "::error::No NuGet packages found to publish."
+            exit 1
+          fi
+
+          for package in "${packages[@]}"; do
+            if [[ "$package" == *.symbols.nupkg ]]; then
+              continue
+            fi
+
+            dotnet nuget push "$package" \
+              --source https://api.nuget.org/v3/index.json \
+              --api-key "$NUGET_API_KEY" \
+              --skip-duplicate
+          done

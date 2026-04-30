@@ -51,3 +51,49 @@
 - **Revision Scope:** SF0001 must either refuse the fix when dependencies exist or rewrite chain safely with regression coverage.
 - **Next:** Await Trinity revision. Decision recorded in `.squad/decisions.md`.
 - **Status:** Tank available for #26 and other Sprint 3 tasks post-review.
+
+---
+
+## 2026-04-30T21:29:31Z — Sprint 4 Foundation Review Rejection & New Revision
+**From:** Scribe cross-agent sync (Tank Sprint 4 review outcome)
+- **Issue:** Sprint 4 foundation review completed on `sprint/4-package-foundation` (Milestone 4 issues #32, #33, #34).
+- **Verdict:** **REJECTED** — Analyzer package structure defective.
+- **Critical Defect:** `SimplicityTools.Analyzers.0.4.0-local.nupkg` packed as normal library (`lib/net10.0/...`) instead of analyzer layout (`analyzers/dotnet/cs/...`). Verified: scratch consumer build emitted **0 warnings**, so SF0001 never executed.
+- **Evidence:** `dotnet build`, `dotnet test`, `dotnet pack`, and `dotnet tool install` all passed; consumer validation failed.
+- **Trinity Assignment:** Repack analyzer with correct layout; add release-validation coverage to prove consumers load the analyzer and emit expected diagnostics before publish approval.
+- **Reviewer Lockout:** None; normal review cycle on next submission.
+- **Critical Path:** M4 completion blocks M5 (library packaging). This revision is the final gate before packaging pipeline advances.
+- **Decision:** Full record in `.squad/decisions.md` under "Sprint 4 Foundation Review — Tank Verdict".
+- 2026-04-30T17:29:31.278-04:00: Roslyn consumer validation is only trustworthy when the packed analyzer is restored into a real downstream project from a repo-root artifact path; consumer fixtures under `bin/` can mask diagnostics, and `PrivateAssets="all"` on the validation `PackageReference` suppresses the analyzer path we need to prove.
+
+---
+
+## 2026-04-30T21:29:31Z — Decision Archived
+**From:** Scribe session (post-Tank verdict)
+- **Action:** Trinity's analyzer packaging revision decision merged from inbox into shared decision log.
+- **Decision Point:** 2026-04-30T17:29:31.278-04:00 — Analyzer packaging repacked per Tank revision
+  - Scope: `SimplicityTools.Analyzers` must pack under `analyzers/dotnet/cs/` with normal `lib/` output suppressed
+  - Validation: Must inspect `.nupkg` for correct analyzer path; must fail if legacy `lib/net10.0/` path exists
+  - Consumer validation: Must prove packaging restores into downstream project with expected SF0001 diagnostics firing
+- **Status:** Decision now in team memory, ready for implementation and validation tracking.
+
+---
+
+## 2026-04-30T22:15:00Z — Sprint 4 Milestone 4 Analyzer Rereview Approved
+**From:** Scribe session (Tank rereview outcome)
+- **Issue:** Sprint 4 Milestone 4 analyzer-package rereview completed.
+- **Trinity's Revision:** Modified `SimplicityTools.Analyzers.csproj` to:
+  - Set `PackageType` to `Analyzer`
+  - Suppress normal build-output packing
+  - Pack analyzer DLL/PDB under `analyzers/dotnet/cs/`
+- **Validation Evidence:** Tank verified:
+  - Packed nupkg contains `analyzers/dotnet/cs/SimplicityTools.Analyzers.dll`
+  - No `lib/net10.0/SimplicityTools.Analyzers.dll` entry (legacy path suppressed)
+  - Downstream consumer restore and build emitted `warning SF0001` (analyzer loaded by Roslyn)
+- **Test Coverage Added:** `AnalyzerPackageValidationTests.PackedAnalyzerPackage_UsesAnalyzerLayout_AndReportsDiagnosticsInConsumer` ✅
+- **Release Gate Automated:** `.github/workflows/nuget-publish.yml` now enforces both checks:
+  - Fails if analyzer asset missing from `analyzers/dotnet/cs/`
+  - Fails if analyzer still ships under `lib/net10.0/`
+  - Fails if downstream consumer build does not emit `warning SF0001`
+- **Verdict:** ✅ **APPROVED** — Publish blocker closed for Sprint 4 Milestone 4.
+- **Status:** Analyzer package release-ready. No further revisions needed.

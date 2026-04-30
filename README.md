@@ -84,7 +84,10 @@ Two of the seven diagnostics come with IDE code fixes:
    ```
 
 3. **Read the full guide:**  
-   [Using the SimplicityTools Toolset](docs/using-the-simplicity-tools.md) — six commands, configuration reference, filter explanations, and practical workflows.
+    [Using the SimplicityTools Toolset](docs/using-the-simplicity-tools.md) — six commands, configuration reference, filter explanations, and practical workflows.
+
+4. **Need package or release details?**  
+   [Contributing guide](CONTRIBUTING.md) — release tags, package versioning rules, local test-publish flow, and NuGet release steps.
 
 ### Add to Your Project
 
@@ -111,6 +114,13 @@ var verdicts = new[] {
 };
 var estimate = TcaEstimate.Create(snapshot, verdicts);
 ```
+
+### Package versioning at a glance
+
+- `SimplicityTools.Metrics`, `SimplicityTools.Filters`, and `SimplicityTools.Tca` version together.
+- `SimplicityTools.Analyzers` can ship on its own cadence.
+- `SimplicityTools.Cli` can ship on its own cadence.
+- Git tags drive published package versions: `libraries/vX.Y.Z`, `analyzers/vX.Y.Z`, and `cli/vX.Y.Z`.
 
 ## For Stakeholders
 
@@ -168,6 +178,7 @@ SimplicityTools/
 - **New to SimplicityTools?** Start with [Using the SimplicityTools Toolset](docs/using-the-simplicity-tools.md).
 - **Want to run it now?** Try `dotnet simplicity analyze samples/Sample.Simplified/Sample.Simplified.sln`.
 - **Configuring for your team?** See the [`simplicity.json` schema](docs/simplicity-schema.json).
+- **Cutting a package release?** Follow [CONTRIBUTING.md](CONTRIBUTING.md) for the tag and NuGet workflow.
 - **Contributing?** Check out the issues and sprint milestones. The team operates in public.
 
 ---
