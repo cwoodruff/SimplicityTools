@@ -117,3 +117,23 @@
 **By:** Link
 **What:** `dotnet-simplicity watch` should run an initial snapshot immediately, then re-run analysis after a 500ms debounce for source-level changes under the solution root. The watcher should ignore generated and tooling-owned paths (`bin`, `obj`, `.git`, `.vs`, and `simplicity-report`) and only warn once while `simplicity.json` remains missing.
 **Why:** A live CLI that retriggers itself on analyzer/build output or repeats the same missing-config warning on every save turns feedback into noise. This guard keeps watch mode useful in the first five minutes while still reacting to real code and config edits.
+
+### 2026-04-30T06:57:15.306-04:00: Trend history contract
+**By:** Link
+**What:** Treat each `*.json` file under the solution-root `.simplicity-history/` directory as a serialized `SimplicitySnapshot`, order the files by `CollectedAt`, and layer the current report snapshot on top when rendering HTML trends.
+**Why:** This keeps the trend input format aligned with the existing snapshot JSON shape instead of inventing a second history schema. The report can stay zero-config on the first run, teach teams how to unlock trends, and upgrade automatically once at least two historical snapshots exist.
+
+### 2026-04-30T06:57:15.306-04:00: Sprint 3 Launch: Roslyn Analyzers + Code Fixes
+**By:** Morpheus
+**What:** Sprint 3 delivers the complete Roslyn analyzer suite (SF0001–SF0007, 7 diagnostics) and two code fix providers (SF0001, SF0002). This milestone completes the IDE integration layer, enabling real-time architectural feedback. The sprint also adds trend analysis to the HTML report and comprehensive integration testing with performance baselines. 11 open issues in Milestone 3 organized in three waves: Wave 1 (Ready Now) includes Switch → Analyzers #16–#22 (7 independent diagnostics, parallelizable) and Link → Trend Analysis #25 (parallelizable); Wave 2 (After #16/#17 complete) includes Link → Code Fixes #23–#24; Wave 3 (After Waves 1 + 2 complete) includes Tank → Integration Testing + Performance Validation #26. Critical path: #16–#22 (~3–4 days) → #23–#24 (~2–3 days) → #26 (~1–2 days). Total: ~6–9 days.
+**Why:** Wave structure enforces implementation order while maximizing parallelism. Seven analyzers are semantically independent and can parallelize. Code fixes serialize after their corresponding analyzers are design-complete. Integration testing serves as the final quality gate before closing Sprint 3. This structure keeps forward motion while enforcing quality gates and baseline tolerances.
+
+### 2026-04-30T06:57:15.306-04:00: SF0002 package-usage truth stays compiler-backed
+**By:** Switch
+**What:** SF0002 should only diagnose `<PackageReference>` items that map to compile-time metadata references. The analyzer parses the project file, maps package IDs to referenced assemblies by normalized NuGet package path, and marks a package as used only when Roslyn binding resolves symbols or types from those assemblies in C# source.
+**Why:** This keeps the warning tied to what the compiler can actually see instead of namespace-string guesses. It also avoids false positives for build-only or analyzer-only packages that contribute no compile assets.
+
+### 2026-04-30T06:57:15.306-04:00: SF0007 primary-path baseline is explicit, not circular
+**By:** Switch
+**What:** SF0007 treats primary-path files as `[PrimaryPath]`-annotated files when any annotation exists; otherwise it falls back to the existing directory conventions (`Controllers`, `Endpoints`, `Handlers`, `Pages`). It does not use inbound-reference percentile fallback to define the comparison set for this analyzer.
+**Why:** Using inbound references to define the primary-path baseline for an over-reference diagnostic would be circular and noisy. The analyzer needs a stable comparison set that developers can explain and intentionally shape.

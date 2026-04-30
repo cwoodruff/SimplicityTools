@@ -88,3 +88,21 @@
 ### 2026-04-30T02:13:09Z: Watch command decision archived ✓
 
 **Scribe Sync:** Watch command self-loop guard decision merged from inbox into `.squad/decisions.md` active decisions log. Sprint 2 all seven issues (#9–#15) now complete. Ready for Sprint 3 planning (Roslyn Analyzers + Code Fixes).
+
+### 2026-04-30T06:57:15.306-04:00: HTML report trend wave ✓
+
+**Issue #25 Completed.** The HTML report now scans `.simplicity-history/*.json` for serialized `SimplicitySnapshot` files, orders them by `CollectedAt`, and layers the current snapshot on top when enough history exists.
+
+**Implementation:** Replaced the placeholder trend copy with an inline SVG “Trend Wave” that charts primary path coverage, average method complexity, onboarding hours, and simplicity score over time with no JavaScript. Added historical filter score and complexity delta tables so the report explains which signals are improving or regressing.
+
+**Testing:** Expanded CLI coverage to assert the no-history on-ramp copy and the multi-snapshot trend rendering path using repo-local workspaces. Because the shared checkout currently has unrelated analyzer work in progress, I validated the CLI tests with `dotnet build tests/SimplicityTools.Cli.Tests/SimplicityTools.Cli.Tests.csproj --nologo --no-dependencies --verbosity quiet` followed by `dotnet test tests/SimplicityTools.Cli.Tests/SimplicityTools.Cli.Tests.csproj --nologo --no-build`.
+
+**Outcome:** The report now answers “what changed over time?” in a self-contained HTML artifact, while still teaching teams exactly how to unlock trend history on the first run.
+
+### 2026-04-30T11:13:32Z: Sprint 3 Launch Coordination ✓
+
+**Team Coordination:** Morpheus published Sprint 3 execution plan covering 11 open Milestone 3 issues across three waves: Wave 1 (Ready Now) assigns Switch to analyzers #16–#22 (7 independent diagnostics, parallelizable) and Link to Trend Analysis #25 (already complete); Wave 2 (After #16/#17 complete) assigns Link to Code Fixes #23–#24 (depends on SF0001/SF0002 analyzer contracts); Wave 3 (After Waves 1 + 2 complete) assigns Tank to Integration Testing + Performance Validation #26 (final quality gate). Critical path: #16–#22 (~3–4 days) → #23–#24 (~2–3 days) → #26 (~1–2 days). Total: ~6–9 days.
+
+**Wave 1 Status:** #25 (Trend Analysis) already delivered; Link ready to move to Wave 2 code fixes as soon as Switch completes #16 (SF0001 analyzer) and #17 (SF0002 analyzer) design.
+
+**Scribe Sync:** Sprint 3 launch decision, trend history contract, SF0002 compiler-backed policy, and SF0007 explicit baseline policy all merged into `.squad/decisions.md`. Orchestration log created at 2026-04-30T11:13:32Z documenting this coordination.
