@@ -68,6 +68,12 @@
 - **Decision:** Use a process-level xUnit performance gate in `tests/SimplicityTools.Cli.Tests` and a separate BenchmarkDotNet harness in `tests/SimplicityTools.Benchmarks` for issue #26.
 - **Why:** The repo had sample integration coverage and baseline-tolerance checks already, but it lacked a persistent performance harness and no existing workflow enforced the 5-second budget. This is the narrowest addition that both exposes benchmark evidence and makes the existing `dotnet test` build fail when the threshold regresses.
 - **Impact:** No GitHub Actions workflow change was needed. Any CI path that already runs `dotnet test SimplicityTools.sln --nologo` now picks up the p95 gate, and the benchmark project remains available for deeper runtime inspection.
+
+### 2026-04-30T22:15:00Z: Sprint 4 Milestone 4 analyzer package rereview
+**By:** Tank
+**What:** Approved. Trinity's revision closes the prior publish blocker for the analyzer package. The package now ships under `analyzers/dotnet/cs/`, emits `warning SF0001` in downstream consumers, and is validated by `AnalyzerPackageValidationTests.PackedAnalyzerPackage_UsesAnalyzerLayout_AndReportsDiagnosticsInConsumer` and `.github/workflows/nuget-publish.yml` gates.
+**Why:** The first packaging attempt installed cleanly but emitted zero diagnostics in consumers. This revision proves the packaged analyzer actually loads and fires the expected diagnostic before publish is approved.
+
 ## Governance
 
 - All meaningful changes require team consensus

@@ -76,3 +76,24 @@
   - Validation: Must inspect `.nupkg` for correct analyzer path; must fail if legacy `lib/net10.0/` path exists
   - Consumer validation: Must prove packaging restores into downstream project with expected SF0001 diagnostics firing
 - **Status:** Decision now in team memory, ready for implementation and validation tracking.
+
+---
+
+## 2026-04-30T22:15:00Z — Sprint 4 Milestone 4 Analyzer Rereview Approved
+**From:** Scribe session (Tank rereview outcome)
+- **Issue:** Sprint 4 Milestone 4 analyzer-package rereview completed.
+- **Trinity's Revision:** Modified `SimplicityTools.Analyzers.csproj` to:
+  - Set `PackageType` to `Analyzer`
+  - Suppress normal build-output packing
+  - Pack analyzer DLL/PDB under `analyzers/dotnet/cs/`
+- **Validation Evidence:** Tank verified:
+  - Packed nupkg contains `analyzers/dotnet/cs/SimplicityTools.Analyzers.dll`
+  - No `lib/net10.0/SimplicityTools.Analyzers.dll` entry (legacy path suppressed)
+  - Downstream consumer restore and build emitted `warning SF0001` (analyzer loaded by Roslyn)
+- **Test Coverage Added:** `AnalyzerPackageValidationTests.PackedAnalyzerPackage_UsesAnalyzerLayout_AndReportsDiagnosticsInConsumer` ✅
+- **Release Gate Automated:** `.github/workflows/nuget-publish.yml` now enforces both checks:
+  - Fails if analyzer asset missing from `analyzers/dotnet/cs/`
+  - Fails if analyzer still ships under `lib/net10.0/`
+  - Fails if downstream consumer build does not emit `warning SF0001`
+- **Verdict:** ✅ **APPROVED** — Publish blocker closed for Sprint 4 Milestone 4.
+- **Status:** Analyzer package release-ready. No further revisions needed.
