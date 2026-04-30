@@ -51,3 +51,16 @@
 - **Revision Scope:** SF0001 must either refuse the fix when dependencies exist or rewrite chain safely with regression coverage.
 - **Next:** Await Trinity revision. Decision recorded in `.squad/decisions.md`.
 - **Status:** Tank available for #26 and other Sprint 3 tasks post-review.
+
+---
+
+## 2026-04-30T21:29:31Z — Sprint 4 Foundation Review Rejection & New Revision
+**From:** Scribe cross-agent sync (Tank Sprint 4 review outcome)
+- **Issue:** Sprint 4 foundation review completed on `sprint/4-package-foundation` (Milestone 4 issues #32, #33, #34).
+- **Verdict:** **REJECTED** — Analyzer package structure defective.
+- **Critical Defect:** `SimplicityTools.Analyzers.0.4.0-local.nupkg` packed as normal library (`lib/net10.0/...`) instead of analyzer layout (`analyzers/dotnet/cs/...`). Verified: scratch consumer build emitted **0 warnings**, so SF0001 never executed.
+- **Evidence:** `dotnet build`, `dotnet test`, `dotnet pack`, and `dotnet tool install` all passed; consumer validation failed.
+- **Trinity Assignment:** Repack analyzer with correct layout; add release-validation coverage to prove consumers load the analyzer and emit expected diagnostics before publish approval.
+- **Reviewer Lockout:** None; normal review cycle on next submission.
+- **Critical Path:** M4 completion blocks M5 (library packaging). This revision is the final gate before packaging pipeline advances.
+- **Decision:** Full record in `.squad/decisions.md` under "Sprint 4 Foundation Review — Tank Verdict".

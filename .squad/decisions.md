@@ -355,3 +355,30 @@ Sprint 4 launches Milestone 4: Package Foundation. Three issues total, all assig
 ## Signed Off
 
 Morpheus, 2026-04-30T17:29:31.278-04:00
+
+## Sprint 4 Foundation Review — Tank Verdict
+
+- **Date:** 2026-04-30T17:29:31.278-04:00
+- **Branch:** `sprint/4-package-foundation`
+- **Scope reviewed:** Milestone 4 issues #32, #33, #34
+- **Verdict:** **REJECTED**
+- **Revision owner:** **Trinity**
+
+### Why rejected
+
+1. `SimplicityTools.Analyzers.0.4.0-local.nupkg` is packed as a normal library (`lib/net10.0/SimplicityTools.Analyzers.dll`) instead of an analyzer package layout (`analyzers/dotnet/cs/...`). That means the published analyzer package will not execute diagnostics for consumers.
+2. Tank verified the failure path with a repo-local scratch consumer: after `dotnet add package SimplicityTools.Analyzers --version 0.4.0-local --source ../../packages`, a build of a single-implementation-interface fixture completed with **0 warnings**, so SF0001 never loaded.
+3. The new workflow validates metadata presence and package creation, but it does not validate package usability. In its current form it would greenlight a broken analyzer release.
+
+### Evidence
+
+- `dotnet build SimplicityTools.sln --nologo --verbosity minimal` ✅
+- `dotnet test SimplicityTools.sln --nologo --no-build --verbosity minimal` ✅
+- Local `dotnet pack` for all five publishable projects ✅
+- Local `dotnet tool install SimplicityTools.Cli --tool-path ... --add-source artifacts/tank-review/packages --version 0.4.0-local` ✅ and `dotnet-simplicity analyze samples/Sample.Simplified/Sample.Simplified.sln` ran successfully
+- Analyzer consumer validation ❌: packaged analyzer produced **0 warnings** in a scratch consumer build
+
+### Required revision
+
+- Repack `SimplicityTools.Analyzers` so the analyzer assembly is included in the analyzer package path Roslyn actually consumes.
+- Add release-validation coverage that proves a consuming project loads the packaged analyzer and emits at least one expected diagnostic before approving publish readiness.

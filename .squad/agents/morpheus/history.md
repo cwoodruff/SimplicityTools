@@ -111,3 +111,21 @@ All 7 issues in Milestone 2 (#9–#15) closed. PR #28 (`sprint/2-filters-tca-ext
 - 2026-04-30T06:57:15.306-04:00: Seven analyzers parallelize cleanly because they detect independent architectural anti-patterns (premature abstraction, unused dependencies, complexity, depth, constructor bloat, generic abuse, unbalanced references). No analyzer feeds another.
 - 2026-04-30T06:57:15.306-04:00: Code fixes depend on analyzer contracts, not analyzer completion. Link can start SF0001 code fix once Switch's SF0001 analyzer diagnostic shape stabilizes. This unblocks Wave 2 sooner than serializing all analyzer completion.
 - 2026-04-30T06:57:15.306-04:00: Integration testing (#26) serves as cumulative quality gate. Per-analyzer unit tests validate individual rules; Tank's full suite validates cross-analyzer interactions, performance under load, and baseline tolerance drift on realistic samples.
+
+## Sprint 4 Foundation — Review Outcome
+
+📌 **Sprint 4 Review Completed:** 2026-04-30T21:29:31Z
+
+**Branch Reviewed:** `sprint/4-package-foundation`
+**Issues Reviewed:** #32 (metadata), #33 (CI/CD), #34 (release docs)
+**Verdict:** **REJECTED** — Critical defect in analyzer packaging.
+
+**Defect:** `SimplicityTools.Analyzers.0.4.0-local.nupkg` packed as normal library instead of analyzer layout. Scratch consumer validation confirmed **0 warnings**, so SF0001 never executed.
+
+**Tank Evidence:** Build/test/pack all passed; consumer validation failed. The workflow validates metadata presence but not package usability.
+
+**Revision Assignment:** Trinity owns repacking and adding release-validation coverage. This is the final gate before M5.
+
+**Decision:** Full record in `.squad/decisions.md` under "Sprint 4 Foundation Review — Tank Verdict".
+
+**Coordinator Action:** When Trinity completes revision and passes review, promote M5 issues to ready and spawn Trinity for Wave 1 (package four libraries).
