@@ -279,3 +279,13 @@ The new README:
 ## When to Merge
 
 After next review cycle or immediately if no additional context changes README positioning.
+
+### 2026-04-30T14:13:05.628-04:00: Packaging & DX Assessment — NuGet + Global Tool
+**By:** Link
+**What:** Recommendation to publish SimplicityTools on two channels: (1) SimplicityTools.Cli as a .NET global tool via `dotnet tool install --global`, (2) SimplicityTools.Analyzers, Metrics, Filters, Tca as NuGet packages. No architectural changes needed; gaps are documentation (install badges, PrivateAssets callout in examples).
+**Why:** CLI already configured with `PackAsTool=true`; this is the ecosystem's standard distribution for both tools and libraries. Global tool delivers zero-config first-run. Analyzer auto-load pattern is low-friction for IDE integration. Library distribution enables custom tooling.
+
+### 2026-04-30T14:13:05.628-04:00: Packaging Strategy — Three Independent NuGet Distributions
+**By:** Morpheus
+**What:** Ship three decoupled NuGet packages: (1) SimplicityTools.Cli as global tool, (2) SimplicityTools.Analyzers as standalone analyzer, (3) SimplicityTools.Metrics/Filters/Tca as cohesive library stack. Library packages keep versions in sync; CLI and Analyzer version independently.
+**Why:** Flexible adoption path: CI/CD uses tool, IDE uses analyzer, custom tooling uses libraries. Decoupled versioning allows faster iteration on analyzer rules without blocking tool releases. Multiple audiences already documented in README and implied by five-package plan.

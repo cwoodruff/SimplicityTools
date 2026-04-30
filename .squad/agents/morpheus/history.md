@@ -111,3 +111,16 @@ All 7 issues in Milestone 2 (#9–#15) closed. PR #28 (`sprint/2-filters-tca-ext
 - 2026-04-30T06:57:15.306-04:00: Seven analyzers parallelize cleanly because they detect independent architectural anti-patterns (premature abstraction, unused dependencies, complexity, depth, constructor bloat, generic abuse, unbalanced references). No analyzer feeds another.
 - 2026-04-30T06:57:15.306-04:00: Code fixes depend on analyzer contracts, not analyzer completion. Link can start SF0001 code fix once Switch's SF0001 analyzer diagnostic shape stabilizes. This unblocks Wave 2 sooner than serializing all analyzer completion.
 - 2026-04-30T06:57:15.306-04:00: Integration testing (#26) serves as cumulative quality gate. Per-analyzer unit tests validate individual rules; Tank's full suite validates cross-analyzer interactions, performance under load, and baseline tolerance drift on realistic samples.
+
+## 2026-04-30T18:13:05Z: Packaging Strategy Decision Merged
+
+**Team Context:**
+- Link's parallel DX assessment converged on same recommendation: NuGet packages + global tool
+- Both decisions merged into decisions.md (deduplication on packaging shape)
+- No architectural changes needed; gaps are documentation (install badges, PrivateAssets callout)
+
+**Your Contribution:**
+- Packaging Strategy decision provides versioning guidance: libraries in sync, tool/analyzer independent
+- Actionable next steps captured: package metadata, NuGet pipeline
+
+**Impact:** Packaging assessment complete. Ready for implementation phase.
