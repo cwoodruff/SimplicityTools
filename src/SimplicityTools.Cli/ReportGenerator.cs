@@ -1,22 +1,33 @@
 using System.Globalization;
 using System.Text;
+using SimplicityTools.Filters;
 using SimplicityTools.Metrics;
+
+namespace SimplicityTools.Cli;
 
 internal static class ReportGenerator
 {
     private const string BrandBackgroundColor = "#0D0D0D";
     private const string BrandAccentColor = "#E31B23";
+    private const string PrimaryPathColor = "#4DD0E1";
+    private const string ComplexityColor = "#FFB74D";
+    private const string OnboardingColor = "#AB47BC";
 
-    public static async Task GenerateHtmlReportAsync(SimplicitySnapshot snapshot, string outputDirectory)
+    public static async Task GenerateHtmlReportAsync(SimplicitySnapshot snapshot, string solutionPath, string outputDirectory)
     {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(solutionPath);
+        ArgumentNullException.ThrowIfNull(outputDirectory);
+
         Directory.CreateDirectory(outputDirectory);
         var reportPath = Path.Combine(outputDirectory, "index.html");
+        var historicalSnapshots = await SnapshotHistory.ReadAsync(solutionPath).ConfigureAwait(false);
 
-        var html = GenerateHtmlContent(snapshot);
+        var html = GenerateHtmlContent(snapshot, historicalSnapshots);
         await File.WriteAllTextAsync(reportPath, html, Encoding.UTF8).ConfigureAwait(false);
     }
 
-    private static string GenerateHtmlContent(SimplicitySnapshot snapshot)
+    private static string GenerateHtmlContent(SimplicitySnapshot snapshot, IReadOnlyList<SimplicitySnapshot> historicalSnapshots)
     {
         var sb = new StringBuilder();
 
@@ -34,7 +45,7 @@ internal static class ReportGenerator
         sb.AppendLine(GenerateFilterVerdicts(snapshot));
         sb.AppendLine(GenerateMetricDetail(snapshot));
         sb.AppendLine(GenerateComplexityBudget(snapshot));
-        sb.AppendLine(GenerateTrendAnalysis(snapshot));
+        sb.AppendLine(GenerateTrendAnalysis(snapshot, historicalSnapshots));
         sb.AppendLine(GenerateAppendix(snapshot));
         sb.AppendLine("</body>");
         sb.AppendLine("</html>");
@@ -107,7 +118,8 @@ internal static class ReportGenerator
               margin-bottom: 30px;
             }
 
-            .metric-card {
+            .metric-card,
+            .trend-card {
               background-color: rgba(255, 255, 255, 0.05);
               border: 1px solid {{BrandAccentColor}};
               border-radius: 8px;
@@ -115,7 +127,8 @@ internal static class ReportGenerator
               transition: all 0.3s ease;
             }
 
-            .metric-card:hover {
+            .metric-card:hover,
+            .trend-card:hover {
               background-color: rgba(227, 27, 35, 0.15);
               border-color: {{BrandAccentColor}};
             }
@@ -181,6 +194,7 @@ internal static class ReportGenerator
             .table td {
               padding: 12px 15px;
               border-bottom: 1px solid rgba(227, 27, 35, 0.1);
+              vertical-align: top;
             }
 
             .table tr:hover {
@@ -206,6 +220,83 @@ internal static class ReportGenerator
 
             .status-critical {
               color: {{BrandAccentColor}};
+            }
+
+            .delta-better {
+              color: #2ecc71;
+              font-weight: 600;
+            }
+
+            .delta-worse {
+              color: {{BrandAccentColor}};
+              font-weight: 600;
+            }
+
+            .delta-flat {
+              color: #c0c0c0;
+            }
+
+            .trend-stack {
+              display: grid;
+              gap: 20px;
+            }
+
+            .trend-card {
+              overflow-x: auto;
+            }
+
+            .trend-card h3 {
+              margin-top: 0;
+            }
+
+            .trend-note {
+              color: #c8c8c8;
+              margin-bottom: 18px;
+            }
+
+            .trend-legend {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 12px 18px;
+              margin-bottom: 18px;
+              font-size: 0.9em;
+              color: #d0d0d0;
+            }
+
+            .trend-legend-item {
+              display: inline-flex;
+              align-items: center;
+              gap: 8px;
+            }
+
+            .trend-swatch {
+              width: 12px;
+              height: 12px;
+              border-radius: 999px;
+              display: inline-block;
+            }
+
+            .trend-chart {
+              width: 100%;
+              height: auto;
+              display: block;
+            }
+
+            .chart-axis-label,
+            .chart-value-label,
+            .chart-point-label,
+            .chart-series-label {
+              font-family: inherit;
+            }
+
+            .current-run {
+              white-space: nowrap;
+            }
+
+            code {
+              background-color: rgba(255, 255, 255, 0.08);
+              border-radius: 4px;
+              padding: 2px 6px;
             }
 
             footer {
@@ -250,7 +341,7 @@ internal static class ReportGenerator
             <header>
               <div class="container">
                 <h1>Simplicity Report</h1>
-                <p class="subtitle">Complexity Analysis & Simplicity Metrics</p>
+                <p class="subtitle">Complexity Analysis &amp; Simplicity Metrics</p>
               </div>
             </header>
             """;
@@ -443,27 +534,287 @@ internal static class ReportGenerator
             """;
     }
 
-    private static string GenerateTrendAnalysis(SimplicitySnapshot snapshot)
+    private static string GenerateTrendAnalysis(SimplicitySnapshot snapshot, IReadOnlyList<SimplicitySnapshot> historicalSnapshots)
     {
-        return """
+        if (historicalSnapshots.Count < 2)
+        {
+            return GenerateTrendOnRamp(historicalSnapshots.Count);
+        }
+
+        var trendPoints = BuildTrendPoints(snapshot, historicalSnapshots);
+        var historicalCount = historicalSnapshots.Count;
+
+        return $"""
             <div class="container section">
               <h2>Trend Analysis</h2>
-              <p>This is the baseline snapshot for your solution. Future measurements will be compared against these values to identify trends in complexity growth, onboarding burden, and code health.</p>
-              <div class="verdict">
-                <div class="verdict-title">Baseline Established</div>
-                <div class="verdict-description">
-                  Your simplicity metrics have been recorded as a baseline. Monitor these metrics over time to track:
-                  <ul style="margin-top: 10px; margin-left: 20px; color: #d0d0d0;">
-                    <li>Primary path file count growth</li>
-                    <li>Abstraction layer accumulation</li>
-                    <li>Unused dependency trends</li>
-                    <li>Average method complexity drift</li>
-                    <li>Estimated onboarding time changes</li>
-                  </ul>
+              <p>This report found <span class="highlight">{historicalCount}</span> historical snapshots in <code>.simplicity-history/</code> and layered the current report on top so teams can see where complexity is drifting.</p>
+              <div class="trend-stack">
+                <div class="trend-card">
+                  <h3>Trend Wave</h3>
+                  <p class="trend-note">The SVG chart tracks primary path coverage, average method complexity, onboarding hours, and simplicity score over time with exact values rendered below.</p>
+                  {GenerateTrendLegend()}
+                  {GenerateTrendChart(trendPoints)}
+                </div>
+                <div class="trend-card">
+                  <h3>Historical Filter Scores</h3>
+                  <p class="trend-note">Filter scores are shown as percentages so teams can see whether the solution is becoming easier or harder to work with.</p>
+                  {GenerateHistoricalFilterScoreTable(trendPoints)}
+                </div>
+                <div class="trend-card">
+                  <h3>Complexity Deltas</h3>
+                  <p class="trend-note">Deltas compare each snapshot with the one immediately before it. Positive numbers mean more complexity cost unless noted otherwise.</p>
+                  {GenerateComplexityDeltaTable(trendPoints)}
                 </div>
               </div>
             </div>
             """;
+    }
+
+    private static string GenerateTrendOnRamp(int historicalCount)
+    {
+        var noun = historicalCount == 1 ? "snapshot" : "snapshots";
+
+        return $"""
+            <div class="container section">
+              <h2>Trend Analysis</h2>
+              <p>Trend analysis unlocks when <code>.simplicity-history/</code> contains at least two snapshots. This report found <span class="highlight">{historicalCount}</span> historical {noun}, so the current run is acting as your teaching baseline.</p>
+              <div class="verdict">
+                <div class="verdict-title">What to do next</div>
+                <div class="verdict-description">
+                  Keep serializing snapshots into <code>.simplicity-history/</code>. Once the folder has at least two saved runs, this section will render an inline SVG trend chart, historical filter scores, and complexity deltas automatically.
+                </div>
+              </div>
+            </div>
+            """;
+    }
+
+    private static IReadOnlyList<TrendPoint> BuildTrendPoints(SimplicitySnapshot currentSnapshot, IReadOnlyList<SimplicitySnapshot> historicalSnapshots)
+    {
+        var snapshots = historicalSnapshots.ToList();
+        if (!snapshots.Any(snapshot => snapshot.CollectedAt == currentSnapshot.CollectedAt))
+        {
+            snapshots.Add(currentSnapshot);
+        }
+
+        return snapshots
+            .OrderBy(static snapshot => snapshot.CollectedAt)
+            .Select(snapshot => new TrendPoint(
+                FormatChartDate(snapshot.CollectedAt),
+                snapshot.CollectedAt == currentSnapshot.CollectedAt,
+                snapshot,
+                SnapshotFilterEvaluation.Evaluate(snapshot),
+                CalculateSimplicityScore(snapshot)))
+            .ToArray();
+    }
+
+    private static string GenerateTrendLegend()
+    {
+        return $$"""
+            <div class="trend-legend">
+              <span class="trend-legend-item"><span class="trend-swatch" style="background: {{PrimaryPathColor}};"></span>Primary Path Coverage</span>
+              <span class="trend-legend-item"><span class="trend-swatch" style="background: {{ComplexityColor}};"></span>Avg Method Complexity</span>
+              <span class="trend-legend-item"><span class="trend-swatch" style="background: {{OnboardingColor}};"></span>Onboarding Hours</span>
+              <span class="trend-legend-item"><span class="trend-swatch" style="background: {{BrandAccentColor}};"></span>Simplicity Score</span>
+            </div>
+            """;
+    }
+
+    private static string GenerateTrendChart(IReadOnlyList<TrendPoint> trendPoints)
+    {
+        var metrics = new[]
+        {
+            new TrendMetric("Primary Path Coverage", trendPoint => trendPoint.Snapshot.PrimaryPathRatio * 100, PrimaryPathColor, "F1", "%", 0d, 100d),
+            new TrendMetric("Avg Method Complexity", trendPoint => trendPoint.Snapshot.AverageMethodComplexity, ComplexityColor, "F2", string.Empty, 0d, null),
+            new TrendMetric("Onboarding Hours", trendPoint => trendPoint.Snapshot.EstimatedOnboardingTime.TotalHours, OnboardingColor, "F1", "h", 0d, null),
+            new TrendMetric("Simplicity Score", trendPoint => trendPoint.SimplicityScore, BrandAccentColor, "F0", string.Empty, 0d, 100d)
+        };
+
+        const double width = 1080d;
+        const double height = 620d;
+        const double left = 84d;
+        const double right = 28d;
+        const double top = 28d;
+        const double panelHeight = 105d;
+        const double panelGap = 38d;
+        var chartWidth = width - left - right;
+        var fullChartHeight = metrics.Length * panelHeight + (metrics.Length - 1) * panelGap;
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"<svg class=\"trend-chart\" viewBox=\"0 0 {width.ToString(CultureInfo.InvariantCulture)} {height.ToString(CultureInfo.InvariantCulture)}\" role=\"img\" aria-label=\"Historical trend chart for primary path coverage, average method complexity, onboarding hours, and simplicity score.\">");
+        sb.AppendLine($"<rect x=\"0\" y=\"0\" width=\"{width.ToString(CultureInfo.InvariantCulture)}\" height=\"{height.ToString(CultureInfo.InvariantCulture)}\" rx=\"16\" fill=\"rgba(255,255,255,0.03)\" />");
+
+        if (trendPoints[^1].IsCurrent)
+        {
+            var currentX = GetXPosition(trendPoints.Count, trendPoints.Count - 1, left, chartWidth);
+            sb.AppendLine($"<line x1=\"{FormatNumber(currentX)}\" y1=\"{FormatNumber(top)}\" x2=\"{FormatNumber(currentX)}\" y2=\"{FormatNumber(top + fullChartHeight)}\" stroke=\"rgba(227, 27, 35, 0.28)\" stroke-dasharray=\"6 6\" />");
+            sb.AppendLine($"<text class=\"chart-series-label\" x=\"{FormatNumber(currentX - 48d)}\" y=\"20\" fill=\"{BrandAccentColor}\" font-size=\"11\">Current report</text>");
+        }
+
+        for (var index = 0; index < metrics.Length; index++)
+        {
+            AppendTrendMetricPanel(
+                sb,
+                metrics[index],
+                trendPoints,
+                left,
+                top + (index * (panelHeight + panelGap)),
+                chartWidth,
+                panelHeight,
+                showXAxisLabels: index == metrics.Length - 1);
+        }
+
+        sb.AppendLine("</svg>");
+        return sb.ToString();
+    }
+
+    private static void AppendTrendMetricPanel(
+        StringBuilder builder,
+        TrendMetric metric,
+        IReadOnlyList<TrendPoint> trendPoints,
+        double left,
+        double top,
+        double width,
+        double height,
+        bool showXAxisLabels)
+    {
+        var values = trendPoints.Select(metric.Selector).ToArray();
+        var min = metric.Minimum ?? values.Min();
+        var max = metric.Maximum ?? values.Max();
+
+        if (max <= min)
+        {
+            max = min + 1d;
+        }
+
+        var padding = metric.Maximum is null ? Math.Max((max - min) * 0.1d, 0.5d) : 0d;
+        min = metric.Minimum ?? Math.Max(0d, min - padding);
+        max = metric.Maximum ?? max + padding;
+        var bottom = top + height;
+
+        builder.AppendLine($"<text class=\"chart-series-label\" x=\"16\" y=\"{FormatNumber(top + 14d)}\" fill=\"{metric.Color}\" font-size=\"12\" font-weight=\"600\">{metric.Title}</text>");
+        builder.AppendLine($"<rect x=\"{FormatNumber(left)}\" y=\"{FormatNumber(top)}\" width=\"{FormatNumber(width)}\" height=\"{FormatNumber(height)}\" fill=\"rgba(255,255,255,0.02)\" rx=\"8\" />");
+
+        for (var tickIndex = 0; tickIndex <= 4; tickIndex++)
+        {
+            var ratio = tickIndex / 4d;
+            var y = bottom - (ratio * height);
+            var tickValue = min + ((max - min) * ratio);
+            builder.AppendLine($"<line x1=\"{FormatNumber(left)}\" y1=\"{FormatNumber(y)}\" x2=\"{FormatNumber(left + width)}\" y2=\"{FormatNumber(y)}\" stroke=\"rgba(255,255,255,0.10)\" stroke-width=\"1\" />");
+            builder.AppendLine($"<text class=\"chart-axis-label\" x=\"12\" y=\"{FormatNumber(y + 4d)}\" fill=\"#9a9a9a\" font-size=\"11\">{FormatValue(tickValue, metric.Format, metric.UnitSuffix)}</text>");
+        }
+
+        var points = new List<string>(trendPoints.Count);
+        for (var index = 0; index < trendPoints.Count; index++)
+        {
+            var x = GetXPosition(trendPoints.Count, index, left, width);
+            var y = bottom - (((values[index] - min) / (max - min)) * height);
+            points.Add($"{FormatNumber(x)},{FormatNumber(y)}");
+        }
+
+        builder.AppendLine($"<polyline points=\"{string.Join(' ', points)}\" fill=\"none\" stroke=\"{metric.Color}\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" />");
+
+        for (var index = 0; index < trendPoints.Count; index++)
+        {
+            var x = GetXPosition(trendPoints.Count, index, left, width);
+            var y = bottom - (((values[index] - min) / (max - min)) * height);
+            var radius = trendPoints[index].IsCurrent ? 5d : 4d;
+            var fill = trendPoints[index].IsCurrent ? BrandAccentColor : metric.Color;
+            builder.AppendLine($"<circle cx=\"{FormatNumber(x)}\" cy=\"{FormatNumber(y)}\" r=\"{FormatNumber(radius)}\" fill=\"{fill}\" stroke=\"#f0f0f0\" stroke-width=\"1.5\" />");
+        }
+
+        var lastValue = values[^1];
+        var lastX = GetXPosition(trendPoints.Count, trendPoints.Count - 1, left, width);
+        var lastY = bottom - (((lastValue - min) / (max - min)) * height);
+        builder.AppendLine($"<text class=\"chart-value-label\" x=\"{FormatNumber(lastX + 10d)}\" y=\"{FormatNumber(lastY - 8d)}\" fill=\"{metric.Color}\" font-size=\"11\">{FormatValue(lastValue, metric.Format, metric.UnitSuffix)}</text>");
+
+        if (showXAxisLabels)
+        {
+            for (var index = 0; index < trendPoints.Count; index++)
+            {
+                var x = GetXPosition(trendPoints.Count, index, left, width);
+                builder.AppendLine($"<text class=\"chart-point-label\" x=\"{FormatNumber(x)}\" y=\"{FormatNumber(bottom + 18d)}\" fill=\"#b6b6b6\" font-size=\"11\" text-anchor=\"middle\">{trendPoints[index].Label}</text>");
+            }
+        }
+    }
+
+    private static string GenerateHistoricalFilterScoreTable(IReadOnlyList<TrendPoint> trendPoints)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("<table class=\"table\">");
+        builder.AppendLine("  <thead>");
+        builder.AppendLine("    <tr>");
+        builder.AppendLine("      <th>Snapshot</th>");
+        builder.AppendLine("      <th>TwoAmTest</th>");
+        builder.AppendLine("      <th>HalfRule</th>");
+        builder.AppendLine("      <th>PrimaryPathFirst</th>");
+        builder.AppendLine("      <th>Simplicity Score</th>");
+        builder.AppendLine("    </tr>");
+        builder.AppendLine("  </thead>");
+        builder.AppendLine("  <tbody>");
+
+        foreach (var trendPoint in trendPoints)
+        {
+            builder.AppendLine("    <tr>");
+            builder.AppendLine($"      <td>{FormatTableDate(trendPoint.Snapshot.CollectedAt)}{(trendPoint.IsCurrent ? " <span class=\"badge badge-critical current-run\">Current report</span>" : string.Empty)}</td>");
+
+            foreach (var filter in SnapshotFilterEvaluation.GetFilterOrder())
+            {
+                var verdict = trendPoint.Verdicts[filter];
+                var scoreClass = verdict.Passes ? "status-good" : "status-warn";
+                var badgeClass = verdict.Passes ? "badge-good" : "badge-warn";
+                var badgeText = verdict.Passes ? "Pass" : "Review";
+                builder.AppendLine($"      <td><span class=\"{scoreClass}\">{verdict.Score * 100:F0}%</span><div class=\"metric-subvalue\"><span class=\"badge {badgeClass}\">{badgeText}</span></div></td>");
+            }
+
+            builder.AppendLine($"      <td class=\"highlight\">{trendPoint.SimplicityScore:F0}/100</td>");
+            builder.AppendLine("    </tr>");
+        }
+
+        builder.AppendLine("  </tbody>");
+        builder.AppendLine("</table>");
+        return builder.ToString();
+    }
+
+    private static string GenerateComplexityDeltaTable(IReadOnlyList<TrendPoint> trendPoints)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("<table class=\"table\">");
+        builder.AppendLine("  <thead>");
+        builder.AppendLine("    <tr>");
+        builder.AppendLine("      <th>Snapshot</th>");
+        builder.AppendLine("      <th>Avg Complexity</th>");
+        builder.AppendLine("      <th>Δ</th>");
+        builder.AppendLine("      <th>Onboarding</th>");
+        builder.AppendLine("      <th>Δ</th>");
+        builder.AppendLine("      <th>Abstraction Layers</th>");
+        builder.AppendLine("      <th>Δ</th>");
+        builder.AppendLine("      <th>Unused Deps</th>");
+        builder.AppendLine("      <th>Δ</th>");
+        builder.AppendLine("    </tr>");
+        builder.AppendLine("  </thead>");
+        builder.AppendLine("  <tbody>");
+
+        TrendPoint? previous = null;
+        foreach (var trendPoint in trendPoints)
+        {
+            builder.AppendLine("    <tr>");
+            builder.AppendLine($"      <td>{FormatTableDate(trendPoint.Snapshot.CollectedAt)}{(trendPoint.IsCurrent ? " <span class=\"badge badge-critical current-run\">Current report</span>" : string.Empty)}</td>");
+            builder.AppendLine($"      <td class=\"highlight\">{trendPoint.Snapshot.AverageMethodComplexity:F2}</td>");
+            builder.AppendLine($"      <td>{FormatWorseningDelta(previous is null ? null : trendPoint.Snapshot.AverageMethodComplexity - previous.Snapshot.AverageMethodComplexity, "F2")}</td>");
+            builder.AppendLine($"      <td class=\"highlight\">{trendPoint.Snapshot.EstimatedOnboardingTime.TotalHours:F1}h</td>");
+            builder.AppendLine($"      <td>{FormatWorseningDelta(previous is null ? null : trendPoint.Snapshot.EstimatedOnboardingTime.TotalHours - previous.Snapshot.EstimatedOnboardingTime.TotalHours, "F1", "h")}</td>");
+            builder.AppendLine($"      <td class=\"highlight\">{trendPoint.Snapshot.AbstractionLayerCount}</td>");
+            builder.AppendLine($"      <td>{FormatWorseningDelta(previous is null ? null : trendPoint.Snapshot.AbstractionLayerCount - previous.Snapshot.AbstractionLayerCount)}</td>");
+            builder.AppendLine($"      <td class=\"highlight\">{trendPoint.Snapshot.UnusedDependencyCount}</td>");
+            builder.AppendLine($"      <td>{FormatWorseningDelta(previous is null ? null : trendPoint.Snapshot.UnusedDependencyCount - previous.Snapshot.UnusedDependencyCount)}</td>");
+            builder.AppendLine("    </tr>");
+
+            previous = trendPoint;
+        }
+
+        builder.AppendLine("  </tbody>");
+        builder.AppendLine("</table>");
+        return builder.ToString();
     }
 
     private static string GenerateAppendix(SimplicitySnapshot snapshot)
@@ -508,20 +859,97 @@ internal static class ReportGenerator
     {
         var score = 100.0;
 
-        // Penalize for premature abstraction
         score -= snapshot.PrematureAbstractionRatio * 30;
-
-        // Penalize for unused dependencies
         score -= Math.Min(snapshot.UnusedDependencyCount * 3, 20);
 
-        // Penalize for high average complexity
         var complexityPenalty = Math.Max(0, (snapshot.AverageMethodComplexity - 3) / 10 * 20);
         score -= complexityPenalty;
 
-        // Penalize for low primary path coverage
-        if (snapshot.PrimaryPathRatio < 0.5)
-            score -= (0.5 - snapshot.PrimaryPathRatio) * 30;
+        var primaryPathPenalty = Math.Max(0, (0.8 - snapshot.PrimaryPathRatio) / 0.8 * 30);
+        score -= primaryPathPenalty;
 
         return Math.Max(0, Math.Min(100, score));
     }
+
+    private static string FormatWorseningDelta(int? delta)
+    {
+        if (delta is null)
+        {
+            return "<span class=\"delta-flat\">Baseline</span>";
+        }
+
+        return FormatDelta(delta.Value, delta.Value > 0, delta.Value < 0, string.Empty);
+    }
+
+    private static string FormatWorseningDelta(double? delta, string format, string suffix = "")
+    {
+        if (delta is null)
+        {
+            return "<span class=\"delta-flat\">Baseline</span>";
+        }
+
+        return FormatDelta(delta.Value.ToString(format, CultureInfo.InvariantCulture), delta.Value > 0, delta.Value < 0, suffix);
+    }
+
+    private static string FormatDelta(int value, bool isWorse, bool isBetter, string suffix)
+    {
+        var formatted = value > 0
+            ? $"+{value.ToString(CultureInfo.InvariantCulture)}{suffix}"
+            : $"{value.ToString(CultureInfo.InvariantCulture)}{suffix}";
+        var cssClass = isWorse ? "delta-worse" : isBetter ? "delta-better" : "delta-flat";
+        return $"<span class=\"{cssClass}\">{formatted}</span>";
+    }
+
+    private static string FormatDelta(string formattedValue, bool isWorse, bool isBetter, string suffix)
+    {
+        var displayValue = formattedValue.StartsWith("-", StringComparison.Ordinal)
+            ? $"{formattedValue}{suffix}"
+            : $"+{formattedValue}{suffix}";
+
+        if (!isWorse && !isBetter)
+        {
+            displayValue = $"0{suffix}";
+        }
+
+        var cssClass = isWorse ? "delta-worse" : isBetter ? "delta-better" : "delta-flat";
+        return $"<span class=\"{cssClass}\">{displayValue}</span>";
+    }
+
+    private static double GetXPosition(int totalPoints, int index, double left, double width)
+    {
+        if (totalPoints <= 1)
+        {
+            return left + (width / 2d);
+        }
+
+        return left + ((width * index) / (totalPoints - 1d));
+    }
+
+    private static string FormatChartDate(DateTimeOffset value) =>
+        value.ToString("MMM d", CultureInfo.InvariantCulture);
+
+    private static string FormatTableDate(DateTimeOffset value) =>
+        value.ToString("MMM d, yyyy", CultureInfo.InvariantCulture);
+
+    private static string FormatValue(double value, string format, string suffix) =>
+        $"{value.ToString(format, CultureInfo.InvariantCulture)}{suffix}";
+
+    private static string FormatNumber(double value) =>
+        value.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private sealed record TrendPoint(
+        string Label,
+        bool IsCurrent,
+        SimplicitySnapshot Snapshot,
+        IReadOnlyDictionary<FilterName, FilterVerdict> Verdicts,
+        double SimplicityScore);
+
+    private sealed record TrendMetric(
+        string Title,
+        Func<TrendPoint, double> Selector,
+        string Color,
+        string Format,
+        string UnitSuffix,
+        double? Minimum,
+        double? Maximum);
 }

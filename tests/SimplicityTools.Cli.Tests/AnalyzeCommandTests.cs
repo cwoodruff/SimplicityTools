@@ -11,6 +11,9 @@ namespace SimplicityTools.Cli.Tests;
 
 public sealed class AnalyzeCommandTests
 {
+    private static readonly SemaphoreSlim BuildLock = new(1, 1);
+    private static bool cliBuilt;
+
     [Fact]
     public async Task Collector_MatchesSampleBaselines()
     {
@@ -431,6 +434,7 @@ public sealed class AnalyzeCommandTests
                 Assert.Contains("Metric Detail", htmlContent);
                 Assert.Contains("Complexity Budget", htmlContent);
                 Assert.Contains("Trend Analysis", htmlContent);
+                Assert.Contains("Trend analysis unlocks when <code>.simplicity-history/</code> contains at least two snapshots.", htmlContent);
                 Assert.Contains("Appendix", htmlContent);
 
                 Assert.DoesNotContain("http://", htmlContent);
@@ -473,6 +477,72 @@ public sealed class AnalyzeCommandTests
             Assert.Contains(sample.AbstractionLayerCount.ToString(CultureInfo.InvariantCulture), htmlContent);
             Assert.Contains(sample.ExternalDependencyCount.ToString(CultureInfo.InvariantCulture), htmlContent);
             Assert.Contains(sample.UnusedDependencyCount.ToString(CultureInfo.InvariantCulture), htmlContent);
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(workspace);
+        }
+    }
+
+    [Fact]
+    public async Task ReportCommand_RendersTrendWaveWhenHistoryContainsMultipleSnapshots()
+    {
+        await BuildCliAsync();
+        var workspace = CreateSampleWorkspace("Sample.Simplified");
+
+        try
+        {
+            var solutionPath = Path.Combine(workspace, "Sample.Simplified.sln");
+            var historyDirectory = Path.Combine(workspace, ".simplicity-history");
+            Directory.CreateDirectory(historyDirectory);
+
+            await WriteSnapshotAsync(
+                Path.Combine(historyDirectory, "2026-04-28T090000Z.json"),
+                new SimplicitySnapshot(
+                    2,
+                    23,
+                    4,
+                    3,
+                    0,
+                    1,
+                    2,
+                    2.40d,
+                    TimeSpan.FromHours(18),
+                    DateTimeOffset.Parse("2026-04-28T09:00:00Z", CultureInfo.InvariantCulture)));
+
+            await WriteSnapshotAsync(
+                Path.Combine(historyDirectory, "2026-04-29T090000Z.json"),
+                new SimplicitySnapshot(
+                    2,
+                    23,
+                    5,
+                    2,
+                    0,
+                    0,
+                    1,
+                    2.10d,
+                    TimeSpan.FromHours(14),
+                    DateTimeOffset.Parse("2026-04-29T09:00:00Z", CultureInfo.InvariantCulture)));
+
+            var result = await RunProcessAsync(
+                "dotnet",
+                [GetCliAssemblyPath(), "report", solutionPath],
+                workspace);
+
+            Assert.Equal(0, result.ExitCode);
+            AssertMissingConfigWarning(result.StandardError, workspace);
+
+            var reportPath = Path.Combine(workspace, "simplicity-report", "index.html");
+            var htmlContent = await File.ReadAllTextAsync(reportPath);
+
+            Assert.Contains("<svg class=\"trend-chart\"", htmlContent);
+            Assert.Contains("Trend Wave", htmlContent);
+            Assert.Contains("Historical Filter Scores", htmlContent);
+            Assert.Contains("Complexity Deltas", htmlContent);
+            Assert.Contains("Current report", htmlContent);
+            Assert.Contains("Apr 28, 2026", htmlContent);
+            Assert.Contains("Apr 29, 2026", htmlContent);
+            Assert.DoesNotContain("Trend analysis unlocks when <code>.simplicity-history/</code> contains at least two snapshots.", htmlContent);
         }
         finally
         {
@@ -585,6 +655,18 @@ public sealed class AnalyzeCommandTests
             : null;
     }
 
+    private static async Task WriteSnapshotAsync(string path, SimplicitySnapshot snapshot)
+    {
+        var json = JsonSerializer.Serialize(
+            snapshot,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web)
+            {
+                WriteIndented = true
+            });
+
+        await File.WriteAllTextAsync(path, json);
+    }
+
     private static async Task RestoreOptionalFileAsync(string path, string? originalContent)
     {
         if (originalContent is null)
@@ -602,12 +684,32 @@ public sealed class AnalyzeCommandTests
 
     private static async Task BuildCliAsync()
     {
-        var result = await RunProcessAsync(
-            "dotnet",
-            ["build", GetRepositoryPath("src", "SimplicityTools.Cli", "SimplicityTools.Cli.csproj"), "--nologo", "--verbosity", "quiet"],
-            GetRepositoryRoot());
+        if (cliBuilt)
+        {
+            return;
+        }
 
-        Assert.Equal(0, result.ExitCode);
+        await BuildLock.WaitAsync();
+
+        try
+        {
+            if (cliBuilt)
+            {
+                return;
+            }
+
+            var result = await RunProcessAsync(
+                "dotnet",
+                ["build", GetRepositoryPath("src", "SimplicityTools.Cli", "SimplicityTools.Cli.csproj"), "--nologo", "--verbosity", "quiet"],
+                GetRepositoryRoot());
+
+            Assert.Equal(0, result.ExitCode);
+            cliBuilt = true;
+        }
+        finally
+        {
+            BuildLock.Release();
+        }
     }
 
     private static string GetCliAssemblyPath()

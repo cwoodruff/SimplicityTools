@@ -20,8 +20,8 @@ internal static class SnapshotDiffReportBuilder
         ArgumentNullException.ThrowIfNull(current);
 
         var regressions = new List<string>();
-        var baselineVerdicts = EvaluateFilters(baseline);
-        var currentVerdicts = EvaluateFilters(current);
+        var baselineVerdicts = SnapshotFilterEvaluation.Evaluate(baseline);
+        var currentVerdicts = SnapshotFilterEvaluation.Evaluate(current);
 
         AddMetricRegression(
             regressions,
@@ -42,7 +42,7 @@ internal static class SnapshotDiffReportBuilder
                 $"UnusedDependencyCount increased from {baseline.UnusedDependencyCount} to {current.UnusedDependencyCount}.");
         }
 
-        foreach (var filter in GetFilterOrder())
+        foreach (var filter in SnapshotFilterEvaluation.GetFilterOrder())
         {
             var scoreDelta = currentVerdicts[filter].Score - baselineVerdicts[filter].Score;
             if (scoreDelta < -FilterScoreRegressionThreshold)
@@ -73,7 +73,7 @@ internal static class SnapshotDiffReportBuilder
         builder.AppendLine();
         builder.AppendLine("Filter score delta");
 
-        foreach (var filter in GetFilterOrder())
+        foreach (var filter in SnapshotFilterEvaluation.GetFilterOrder())
         {
             builder.AppendLine(
                 $"- {filter}: {FormatDoubleMetric(baselineVerdicts[filter].Score, currentVerdicts[filter].Score)}");
@@ -100,23 +100,6 @@ internal static class SnapshotDiffReportBuilder
             regressions.Add(
                 $"{metricName} increased by {delta.ToString("F2", CultureInfo.InvariantCulture)} (threshold +{threshold.ToString("F2", CultureInfo.InvariantCulture)}).");
         }
-    }
-
-    private static IReadOnlyDictionary<FilterName, FilterVerdict> EvaluateFilters(SimplicitySnapshot snapshot)
-    {
-        return new Dictionary<FilterName, FilterVerdict>
-        {
-            [FilterName.TwoAmTest] = TwoAmTestEvaluator.Evaluate(snapshot),
-            [FilterName.HalfRule] = HalfRuleEvaluator.Evaluate(snapshot),
-            [FilterName.PrimaryPathFirst] = PrimaryPathFirstEvaluator.Evaluate(snapshot)
-        };
-    }
-
-    private static IEnumerable<FilterName> GetFilterOrder()
-    {
-        yield return FilterName.TwoAmTest;
-        yield return FilterName.HalfRule;
-        yield return FilterName.PrimaryPathFirst;
     }
 
     private static string FormatIntMetric(int baseline, int current)

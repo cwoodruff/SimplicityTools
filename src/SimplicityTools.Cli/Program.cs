@@ -82,7 +82,7 @@ internal static class CommandLineEntryPoint
         var collector = new SimplicityCollector();
         var snapshot = await collector.CollectAsync(args[0]).ConfigureAwait(false);
         var outputDirectory = "./simplicity-report";
-        await ReportGenerator.GenerateHtmlReportAsync(snapshot, outputDirectory).ConfigureAwait(false);
+        await ReportGenerator.GenerateHtmlReportAsync(snapshot, args[0], outputDirectory).ConfigureAwait(false);
         Console.WriteLine($"Report generated to {Path.Combine(outputDirectory, "index.html")}");
         return 0;
     }

@@ -27,8 +27,10 @@
  - 2026-04-29T21:22:50.867-04:00: When snapshot inputs do not expose a richer metric yet, mapping evaluators to the closest existing deterministic signal is better than adding ambient heuristics mid-sprint; note the gap explicitly and keep the evaluator formulas stable.
   - 2026-04-29T21:22:50.867-04:00: TCA stays easier to validate when the library owns only deterministic cost formulas and receives configuration assumptions as explicit inputs, instead of reaching into repo-local config files.
   - 2026-04-29T21:22:50.867-04:00: Using filter composite scores directly for opportunity-cost math gives the calculator a stable input contract while preserving one place to evolve scoring behavior.
- - 2026-04-30T06:57:15.306-04:00: For SF0007, explicit `[PrimaryPath]` annotations must fully define the comparison set when present; convention-only files in `Controllers`, `Endpoints`, `Handlers`, or `Pages` revert to supporting files and can still be diagnosed.
- - 2026-04-30T06:57:15.306-04:00: SF0005 should stay scoped to classes only; broadening constructor-count warnings to structs turns data-carrier shapes into false positives instead of surfacing service objects doing too much.
+- 2026-04-30T06:57:15.306-04:00: For SF0007, explicit `[PrimaryPath]` annotations must fully define the comparison set when present; convention-only files in `Controllers`, `Endpoints`, `Handlers`, or `Pages` revert to supporting files and can still be diagnosed.
+- 2026-04-30T06:57:15.306-04:00: SF0005 should stay scoped to classes only; broadening constructor-count warnings to structs turns data-carrier shapes into false positives instead of surfacing service objects doing too much.
+- 2026-04-30T06:57:15.306-04:00: For SF0001, removing a base interface safely requires inlining its members into direct dependent interfaces before dropping the inheritance edge; otherwise consumers typed to the surviving interface lose inherited members and the fix breaks compilation.
+- 2026-04-30T06:57:15.306-04:00: Explicit interface implementations need the same revision pass to check the original specifier symbol before rewriting, because Roslyn semantic lookups on already-rewritten nodes are no longer anchored to the original syntax tree.
 
 ---
 
