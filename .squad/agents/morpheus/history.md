@@ -124,3 +124,41 @@ All 7 issues in Milestone 2 (#9–#15) closed. PR #28 (`sprint/2-filters-tca-ext
 - Actionable next steps captured: package metadata, NuGet pipeline
 
 **Impact:** Packaging assessment complete. Ready for implementation phase.
+
+## Packaging Rollout Planning
+
+📌 **Completed:** 2026-04-30T16:59:28.031-04:00
+
+**Packaging Roadmap Created:** Four-milestone strategy for NuGet publication and global tool distribution.
+
+**Milestones 4–7 (18 issues, 2–3 weeks to dry-run):**
+- **M4 (Package Foundation, 3 issues):** Metadata setup, CI/CD pipeline, versioning strategy
+- **M5 (NuGet Libraries, 5 issues):** Package and validate four core libraries (Metrics, Filters, Tca, Analyzers)
+- **M6 (Global Tool, 4 issues):** Package CLI as global tool, zero-config validation, install documentation
+- **M7 (Packaging UX, 6 issues):** Install badges, quickstart, integration guides, troubleshooting, CI/CD examples
+
+**Key Decisions:**
+- Five packages total: four libraries (version-synced) + one global tool (independent versioning)
+- Analyzer uses PrivateAssets=all to avoid transitive dependency
+- SemVer versioning from git tags, all library versions synced
+- Zero-config first-run is non-negotiable; drives all tool validation
+- PrivateAssets callout critical for consumption experience
+- Integration testing gates packaging (local test feed validation, both samples)
+
+**Team Routing:** Link owns M4/M6/M7 (DX), Trinity owns M5 core libs, Switch owns M5 analyzer, Tank owns integration testing M5/M6
+
+**Impact:** Toolkit moves from local builds to published packages; enables teams to install via `dotnet tool install --global SimplicityTools.Cli` and use libraries via NuGet.org
+
+**Decision Document:** `.squad/decisions/inbox/morpheus-packaging-roadmap.md` — complete packaging architecture, versioning strategy, four-milestone structure, team routing, and NuGet metadata template.
+
+## Learnings
+
+- Packaging roadmap separates infrastructure (M4: metadata, CI/CD) from product (M5–M6) from UX (M7). This gates work cleanly and prevents rushing documentation.
+- PrivateAssets=all decision keeps the analyzer package simple for consumers: add one PackageReference with PrivateAssets, get diagnostics, no transitive dependency. This is a critical UX win.
+- Version syncing across four core libraries reduces support surface: one SemVer story for Metrics/Filters/Tca/Analyzers. CLI can drift if needed, but core libraries move together.
+- Integration testing in M5/M6 is part of packaging, not testing. Local test-feed validation and zero-config tool testing belong in the milestone DoD, not in a separate test phase.
+- Zero-config first-run validation drives tool testing strategy: after install, analyze must work without config or environment setup. This is a product constraint, not a testing preference.
+
+📌 **Status:** Packaging roadmap live on GitHub (issues #27–#44 in milestones 4–7). Team can begin M4 work. Next gate: M4 completion unblocks M5.
+
+📌 Packaging roadmap complete on 2026-04-30T16:59:28.031-04:00. Delivered: Four-milestone packaging strategy (M4–M7), 18 GitHub issues (#27–#44), and critical decisions on package versioning, PrivateAssets=all, and zero-config validation before production. Scribe consolidated decision into `.squad/decisions.md` on 2026-04-30T21:04:20Z.

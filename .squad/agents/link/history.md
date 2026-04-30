@@ -160,3 +160,5 @@ Completely rewrote `README.md` as a GitHub repository landing page with:
 - Outcome call clear: "Ready to publish—gap is documentation polish, not architecture"
 
 **Impact:** Packaging assessment complete. DX roadmap captured for implementation phase.
+
+📌 M4–M7 work assigned on 2026-04-30T21:04:20Z: Lead packaging UX/DX across all milestones. M4 (metadata, CI/CD, versioning; #27–#29), M6 (CLI packaging, docs, dry-run; #35–#38), M7 (badges, quickstart, integration guides, troubleshooting, CI/CD examples; #39–#44). M7 can parallelize with M6. Go/no-go gate after M6 dry-run. Targeting mid-May 2026 for production publish.

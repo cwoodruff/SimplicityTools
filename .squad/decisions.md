@@ -289,3 +289,8 @@ After next review cycle or immediately if no additional context changes README p
 **By:** Morpheus
 **What:** Ship three decoupled NuGet packages: (1) SimplicityTools.Cli as global tool, (2) SimplicityTools.Analyzers as standalone analyzer, (3) SimplicityTools.Metrics/Filters/Tca as cohesive library stack. Library packages keep versions in sync; CLI and Analyzer version independently.
 **Why:** Flexible adoption path: CI/CD uses tool, IDE uses analyzer, custom tooling uses libraries. Decoupled versioning allows faster iteration on analyzer rules without blocking tool releases. Multiple audiences already documented in README and implied by five-package plan.
+
+### 2026-04-30T16:59:28.031-04:00: Packaging Rollout — Four Milestones
+**By:** Morpheus
+**What:** Execute packaging in four sequential milestones: M4 (metadata, CI/CD, versioning; issues #27–#29), M5 (NuGet libraries Metrics/Filters/Tca/Analyzers; #30–#34), M6 (CLI global tool, validation, dry-run; #35–#38), M7 (packaging UX and docs; #39–#44). Five packages total: four core libraries versioned together, CLI versioned independently. All libraries use SemVer tagged on main; CI/CD reads tags and builds .nupkg. Analyzer package uses PrivateAssets=all to avoid transitive runtime dependency.
+**Why:** Strict milestone sequencing prevents blocked parallelism and speculative work. M4 gates all packaging; M5 gates CLI; M6 gates documentation. Metadata-first approach ensures proper .nuspec, license, icon, docs URLs from day one. PrivateAssets=all keeps consumer library graphs clean. Decoupled CLI versioning allows independent release cadence. Zero-config promise validated in M6 before any production publish. M7 can run parallel to M6; go/no-go gate after M6 dry-run.

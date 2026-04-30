@@ -98,3 +98,5 @@
 **Decision merged:** Tank's integration-wave3 decision now in `.squad/decisions.md`. Decision states the final Sprint 3 gate uses a process-level xUnit performance gate + BenchmarkDotNet harness; no CI workflow changes needed.
 - **Artifact:** `.squad/orchestration-log/2026-04-30T10-57-15-Tank.md`
 - **Status:** Tank Sprint 3 completion logged.
+
+📌 M5–M6 work assigned on 2026-04-30T21:04:20Z: Validate NuGet library packages on both samples (#34 in M5), then validate CLI global tool zero-config first-run on both samples (#36 in M6). Zero-config promise is non-negotiable validation gate before production. Coordinate with Trinity, Switch, and Link.
