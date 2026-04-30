@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/cwoodruff/SimplicityTools/blob/dev/docs/simplicity-schema.json",
+  "title": "SimplicityTools configuration",
+  "description": "Configuration for TCA inputs and filter thresholds used by dotnet-simplicity.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "tca": {
+      "type": "object",
+      "description": "Team-specific inputs used for Total Cost of Architecture calculations.",
+      "additionalProperties": false,
+      "properties": {
+        "teamSize": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 8
+        },
+        "averageEngineerMonthlySalaryUsd": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 15000
+        },
+        "estimatedMonthlyIncidentCount": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 4
+        },
+        "onCallHourlyRateUsd": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 150
+        },
+        "attritionCoefficientPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 15
+        }
+      }
+    },
+    "filters": {
+      "type": "object",
+      "description": "Thresholds used by filter evaluation and report guidance.",
+      "additionalProperties": false,
+      "properties": {
+        "primaryPathRatioTarget": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.6
+        },
+        "prematureAbstractionRatioTarget": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.25
+        },
+        "maxMethodComplexity": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 5
+        },
+        "maxOnboardingHours": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 40
+        },
+        "passingScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.7
+        }
+      }
+    }
+  }
+}

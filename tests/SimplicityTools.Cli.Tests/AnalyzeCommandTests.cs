@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using SimplicityTools.Cli;
+using SimplicityTools.Filters;
 using SimplicityTools.Metrics;
 using Xunit;
 
@@ -45,13 +47,353 @@ public sealed class AnalyzeCommandTests
                 GetRepositoryRoot());
 
             Assert.Equal(0, result.ExitCode);
-            Assert.True(string.IsNullOrWhiteSpace(result.StandardError), result.StandardError);
+            AssertMissingConfigWarning(result.StandardError, Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!);
 
             var actual = NormalizeLineEndings(result.StandardOutput).Trim();
             var summaryDate = ParseSummaryDate(actual);
             var expected = sample.ToSnapshot(summaryDate).ToSummary();
             Assert.Equal(expected, actual);
         }
+    }
+
+    [Fact]
+    public async Task BaselineCommand_WritesSnapshotNextToSolutionAndPrintsConfirmation()
+    {
+        await BuildCliAsync();
+        var baselines = await LoadBaselinesAsync();
+        var sample = baselines.Samples.Single(static sample => sample.Name == "Sample.Simplified");
+        var solutionPath = GetRepositoryPath("samples", "Sample.Simplified", "Sample.Simplified.sln");
+        var solutionDirectory = Path.GetDirectoryName(solutionPath)!;
+        var baselinePath = Path.Combine(solutionDirectory, ".simplicity-baseline.json");
+        var originalContent = await ReadOptionalFileAsync(baselinePath);
+
+        try
+        {
+            await File.WriteAllTextAsync(baselinePath, "{\"stale\":true}");
+
+            var result = await RunProcessAsync(
+                "dotnet",
+                [GetCliAssemblyPath(), "baseline", solutionPath],
+                GetRepositoryRoot());
+
+            Assert.Equal(0, result.ExitCode);
+            AssertMissingConfigWarning(result.StandardError, solutionDirectory);
+            Assert.True(File.Exists(baselinePath), $"Baseline file not found at {baselinePath}");
+
+            var standardOutput = NormalizeLineEndings(result.StandardOutput).Trim();
+            var snapshot = await LoadSnapshotAsync(baselinePath);
+            Assert.Contains(snapshot.ToSummary(), standardOutput);
+            Assert.Contains($"Baseline written to {baselinePath}", standardOutput);
+            Assert.Equal(sample.TotalProjects, snapshot.TotalProjects);
+            Assert.Equal(sample.TotalFiles, snapshot.TotalFiles);
+            Assert.Equal(sample.PrimaryPathFileCount, snapshot.PrimaryPathFileCount);
+            Assert.Equal(sample.AbstractionLayerCount, snapshot.AbstractionLayerCount);
+            Assert.Equal(sample.ExternalDependencyCount, snapshot.ExternalDependencyCount);
+            Assert.Equal(sample.UnusedDependencyCount, snapshot.UnusedDependencyCount);
+            Assert.Equal(sample.InterfacesWithSingleImplementation, snapshot.InterfacesWithSingleImplementation);
+            AssertWithinTolerance(sample.AverageMethodComplexity, snapshot.AverageMethodComplexity, 0.05d, sample.Name, nameof(snapshot.AverageMethodComplexity));
+            AssertTimeSpanWithinTolerance(sample.EstimatedOnboardingTime, snapshot.EstimatedOnboardingTime, 0.10d, sample.Name);
+            Assert.NotEqual(default, snapshot.CollectedAt);
+        }
+        finally
+        {
+            await RestoreOptionalFileAsync(baselinePath, originalContent);
+        }
+    }
+
+    [Fact]
+    public async Task BaselineCommand_OverwritesExistingBaselineFile()
+    {
+        await BuildCliAsync();
+        var solutionPath = GetRepositoryPath("samples", "Sample.OverEngineered", "Sample.OverEngineered.sln");
+        var baselinePath = Path.Combine(Path.GetDirectoryName(solutionPath)!, ".simplicity-baseline.json");
+        var originalContent = await ReadOptionalFileAsync(baselinePath);
+
+        try
+        {
+            await File.WriteAllTextAsync(baselinePath, "stale baseline");
+
+            var result = await RunProcessAsync(
+                "dotnet",
+                [GetCliAssemblyPath(), "baseline", solutionPath],
+                GetRepositoryRoot());
+
+            Assert.Equal(0, result.ExitCode);
+
+            var baselineContent = await File.ReadAllTextAsync(baselinePath);
+            Assert.DoesNotContain("stale baseline", baselineContent);
+            Assert.Contains("\"totalProjects\":", baselineContent);
+            Assert.Contains("\"collectedAt\":", baselineContent);
+        }
+        finally
+        {
+            await RestoreOptionalFileAsync(baselinePath, originalContent);
+        }
+    }
+
+    [Fact]
+    public async Task DiffCommand_PrintsMetricAndFilterDeltasAgainstBaseline()
+    {
+        await BuildCliAsync();
+        var solutionPath = GetRepositoryPath("samples", "Sample.Simplified", "Sample.Simplified.sln");
+        var solutionDirectory = Path.GetDirectoryName(solutionPath)!;
+        var baselinePath = Path.Combine(solutionDirectory, ".simplicity-baseline.json");
+        var originalContent = await ReadOptionalFileAsync(baselinePath);
+
+        try
+        {
+            var collector = new SimplicityCollector();
+            var currentSnapshot = await collector.CollectAsync(solutionPath);
+            var baselineSnapshot = currentSnapshot with
+            {
+                TotalFiles = currentSnapshot.TotalFiles - 3,
+                CollectedAt = new DateTimeOffset(2026, 04, 01, 0, 0, 0, TimeSpan.Zero)
+            };
+
+            await BaselineSnapshotFile.WriteAsync(solutionPath, baselineSnapshot);
+
+            var result = await RunProcessAsync(
+                "dotnet",
+                [GetCliAssemblyPath(), "diff", solutionPath],
+                GetRepositoryRoot());
+
+            Assert.Equal(0, result.ExitCode);
+            AssertMissingConfigWarning(result.StandardError, solutionDirectory);
+
+            var output = NormalizeLineEndings(result.StandardOutput).Trim();
+            var baselinePrimaryPathScore = PrimaryPathFirstEvaluator.Evaluate(baselineSnapshot).Score;
+            var currentPrimaryPathScore = PrimaryPathFirstEvaluator.Evaluate(currentSnapshot).Score;
+
+            Assert.Contains("Simplicity Diff", output);
+            Assert.Contains($"Baseline file: {baselinePath}", output);
+            Assert.Contains($"- Total files: {baselineSnapshot.TotalFiles} -> {currentSnapshot.TotalFiles} (+3)", output);
+            Assert.Contains(
+                string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"- {FilterName.PrimaryPathFirst}: {baselinePrimaryPathScore:F2} -> {currentPrimaryPathScore:F2} ({currentPrimaryPathScore - baselinePrimaryPathScore:F2})"),
+                output);
+            Assert.Contains("Regression status: no regressions detected.", output);
+        }
+        finally
+        {
+            await RestoreOptionalFileAsync(baselinePath, originalContent);
+        }
+    }
+
+    [Fact]
+    public async Task DiffCommand_FailsOnRegressionWhenRequested()
+    {
+        await BuildCliAsync();
+        var solutionPath = GetRepositoryPath("samples", "Sample.Simplified", "Sample.Simplified.sln");
+        var solutionDirectory = Path.GetDirectoryName(solutionPath)!;
+        var baselinePath = Path.Combine(solutionDirectory, ".simplicity-baseline.json");
+        var originalContent = await ReadOptionalFileAsync(baselinePath);
+
+        try
+        {
+            var collector = new SimplicityCollector();
+            var currentSnapshot = await collector.CollectAsync(solutionPath);
+            var baselineSnapshot = currentSnapshot with
+            {
+                TotalFiles = currentSnapshot.PrimaryPathFileCount,
+                AverageMethodComplexity = currentSnapshot.AverageMethodComplexity - 0.6d,
+                CollectedAt = new DateTimeOffset(2026, 04, 01, 0, 0, 0, TimeSpan.Zero)
+            };
+
+            await BaselineSnapshotFile.WriteAsync(solutionPath, baselineSnapshot);
+
+            var result = await RunProcessAsync(
+                "dotnet",
+                [GetCliAssemblyPath(), "diff", solutionPath, "--fail-on-regression"],
+                GetRepositoryRoot());
+
+            Assert.Equal(1, result.ExitCode);
+            AssertMissingConfigWarning(result.StandardError, solutionDirectory);
+
+            var output = NormalizeLineEndings(result.StandardOutput).Trim();
+            var primaryPathScoreDelta = PrimaryPathFirstEvaluator.Evaluate(currentSnapshot).Score - PrimaryPathFirstEvaluator.Evaluate(baselineSnapshot).Score;
+            var complexityDelta = currentSnapshot.AverageMethodComplexity - baselineSnapshot.AverageMethodComplexity;
+
+            Assert.Contains("Regression status: 2 regression(s) detected.", output);
+            Assert.Contains(
+                $"AverageMethodComplexity increased by {complexityDelta.ToString("F2", CultureInfo.InvariantCulture)} (threshold +0.50).",
+                output);
+            Assert.Contains(
+                $"PrimaryPathFirst score decreased by {Math.Abs(primaryPathScoreDelta).ToString("F2", CultureInfo.InvariantCulture)} (threshold -0.10).",
+                output);
+        }
+        finally
+        {
+            await RestoreOptionalFileAsync(baselinePath, originalContent);
+        }
+    }
+
+    [Fact]
+    public async Task BudgetCommand_PrintsAllFourDimensionsAgainstDefaultThresholds()
+    {
+        await BuildCliAsync();
+        var solutionPath = GetRepositoryPath("samples", "Sample.Simplified", "Sample.Simplified.sln");
+        var solutionDirectory = Path.GetDirectoryName(solutionPath)!;
+
+        var result = await RunProcessAsync(
+            "dotnet",
+            [GetCliAssemblyPath(), "budget", solutionPath],
+            GetRepositoryRoot());
+
+        Assert.Equal(0, result.ExitCode);
+        AssertMissingConfigWarning(result.StandardError, solutionDirectory);
+
+        var output = NormalizeLineEndings(result.StandardOutput).Trim();
+
+        Assert.Contains("Complexity Budget", output);
+        Assert.Contains("Status:", output);
+        Assert.Contains("Cognitive Load", output);
+        Assert.Contains("Operational Surface", output);
+        Assert.Contains("Change Safety", output);
+        Assert.Contains("Discoverability", output);
+        Assert.Contains("Onboarding time:", output);
+        Assert.Contains("target <= 40.0h", output);
+        Assert.Contains("Premature abstraction ratio:", output);
+        Assert.Contains("target <= 0.25", output);
+        Assert.Contains("Average method complexity:", output);
+        Assert.Contains("target <= 5.00", output);
+        Assert.Contains("Primary path ratio:", output);
+        Assert.Contains("target >= 0.60", output);
+    }
+
+    [Fact]
+    public async Task BudgetCommand_UsesThresholdOverridesFromSimplicityJson()
+    {
+        await BuildCliAsync();
+        var workspace = CreateSampleWorkspace("Sample.Simplified");
+
+        try
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(workspace, "simplicity.json"),
+                """
+                {
+                  "filters": {
+                    "primaryPathRatioTarget": 0.95,
+                    "prematureAbstractionRatioTarget": 0.05,
+                    "maxMethodComplexity": 1.5,
+                    "maxOnboardingHours": 10
+                  }
+                }
+                """);
+
+            var result = await RunProcessAsync(
+                "dotnet",
+                [GetCliAssemblyPath(), "budget", Path.Combine(workspace, "Sample.Simplified.sln")],
+                GetRepositoryRoot());
+
+            Assert.Equal(0, result.ExitCode);
+            Assert.True(string.IsNullOrWhiteSpace(result.StandardError), result.StandardError);
+
+            var output = NormalizeLineEndings(result.StandardOutput).Trim();
+
+            Assert.Contains("target <= 10.0h", output);
+            Assert.Contains("target <= 0.05", output);
+            Assert.Contains("target <= 1.50", output);
+            Assert.Contains("target >= 0.95", output);
+            Assert.Contains("OVER BUDGET", output);
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(workspace);
+        }
+    }
+
+    [Fact]
+    public async Task WatchCommandRunner_ReanalyzesAfterFileChangesAndPrintsFilterVerdicts()
+    {
+        var workspace = CreateSampleWorkspace("Sample.Simplified");
+        try
+        {
+            var solutionPath = Path.Combine(workspace, "Sample.Simplified.sln");
+            var watchedFile = Directory
+                .GetFiles(workspace, "*.cs", SearchOption.AllDirectories)
+                .First(static path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal) &&
+                                       !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal));
+            using var outputWriter = new StringWriter(CultureInfo.InvariantCulture);
+            using var errorWriter = new StringWriter(CultureInfo.InvariantCulture);
+            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+
+            var runner = new WatchCommandRunner(
+                solutionPath,
+                outputWriter,
+                errorWriter,
+                debounceDelay: TimeSpan.FromMilliseconds(150));
+
+            var runTask = runner.RunAsync(cancellationTokenSource.Token);
+            try
+            {
+                await WaitForConditionAsync(
+                    () => NormalizeLineEndings(outputWriter.ToString()).Contains("Initial snapshot", StringComparison.Ordinal),
+                    TimeSpan.FromSeconds(10));
+
+                await File.AppendAllTextAsync(watchedFile, $"{Environment.NewLine}// watch test pulse");
+
+                await WaitForConditionAsync(
+                    () => NormalizeLineEndings(outputWriter.ToString()).Contains("Updated snapshot", StringComparison.Ordinal),
+                    TimeSpan.FromSeconds(10));
+
+                await Task.Delay(1000);
+            }
+            finally
+            {
+                cancellationTokenSource.Cancel();
+            }
+
+            var exitCode = await runTask;
+            Assert.Equal(0, exitCode);
+
+            var output = NormalizeLineEndings(outputWriter.ToString());
+            var error = NormalizeLineEndings(errorWriter.ToString());
+
+            Assert.Contains($"Watching {solutionPath}", output);
+            Assert.Contains("Press Ctrl+C to stop.", output);
+            Assert.Contains("Initial snapshot", output);
+            Assert.Contains("Updated snapshot", output);
+            Assert.Contains("Change detected:", output);
+            Assert.Contains("Filter Verdicts", output);
+            Assert.Contains("TwoAmTest", output);
+            Assert.Contains("HalfRule", output);
+            Assert.Contains("PrimaryPathFirst", output);
+            Assert.Equal(1, CountOccurrences(output, "Updated snapshot"));
+            Assert.Equal(1, CountOccurrences(error, "Warning: simplicity.json was not found"));
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(workspace);
+        }
+    }
+
+    [Fact]
+    public async Task WatchChangeDebouncer_CollapsesBurstIntoSingleUpdate()
+    {
+        var notifications = new List<WatchChangeNotification>();
+        var callbackCompletion = new TaskCompletionSource<WatchChangeNotification>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var shutdownSource = new CancellationTokenSource();
+        using var debouncer = new WatchChangeDebouncer(
+            TimeSpan.FromMilliseconds(75),
+            notification =>
+            {
+                notifications.Add(notification);
+                callbackCompletion.TrySetResult(notification);
+                return Task.CompletedTask;
+            },
+            shutdownSource.Token);
+
+        debouncer.Signal(new WatchChangeNotification(WatcherChangeTypes.Changed, "/repo/first.cs", PreviousFullPath: null));
+        await Task.Delay(25);
+        debouncer.Signal(new WatchChangeNotification(WatcherChangeTypes.Changed, "/repo/second.cs", PreviousFullPath: null));
+
+        var notification = await callbackCompletion.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await Task.Delay(150);
+
+        Assert.Single(notifications);
+        Assert.Equal("second.cs", Path.GetFileName(notification.FullPath));
     }
 
     [Fact]
@@ -62,20 +404,19 @@ public sealed class AnalyzeCommandTests
 
         foreach (var sample in baselines.Samples)
         {
-            var tempDir = Path.Combine(Path.GetTempPath(), $"simplicity-test-{Guid.NewGuid()}");
-            Directory.CreateDirectory(tempDir);
+            var workspace = CreateWorkspace();
 
             try
             {
                 var result = await RunProcessAsync(
                     "dotnet",
                     [GetCliAssemblyPath(), "report", GetRepositoryPath(sample.SolutionPath)],
-                    tempDir);
+                    workspace);
 
                 Assert.Equal(0, result.ExitCode);
-                Assert.True(string.IsNullOrWhiteSpace(result.StandardError), result.StandardError);
+                AssertMissingConfigWarning(result.StandardError, Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!);
 
-                var reportPath = Path.Combine(tempDir, "simplicity-report", "index.html");
+                var reportPath = Path.Combine(workspace, "simplicity-report", "index.html");
                 Assert.True(File.Exists(reportPath), $"Report file not found at {reportPath}");
 
                 var htmlContent = await File.ReadAllTextAsync(reportPath);
@@ -99,13 +440,7 @@ public sealed class AnalyzeCommandTests
             }
             finally
             {
-                try
-                {
-                    Directory.Delete(tempDir, recursive: true);
-                }
-                catch
-                {
-                }
+                DeleteDirectoryIfExists(workspace);
             }
         }
     }
@@ -117,19 +452,19 @@ public sealed class AnalyzeCommandTests
         var baselines = await LoadBaselinesAsync();
         var sample = baselines.Samples.First();
 
-        var tempDir = Path.Combine(Path.GetTempPath(), $"simplicity-test-{Guid.NewGuid()}");
-        Directory.CreateDirectory(tempDir);
+        var workspace = CreateWorkspace();
 
         try
         {
             var result = await RunProcessAsync(
                 "dotnet",
                 [GetCliAssemblyPath(), "report", GetRepositoryPath(sample.SolutionPath)],
-                tempDir);
+                workspace);
 
             Assert.Equal(0, result.ExitCode);
+            AssertMissingConfigWarning(result.StandardError, Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!);
 
-            var reportPath = Path.Combine(tempDir, "simplicity-report", "index.html");
+            var reportPath = Path.Combine(workspace, "simplicity-report", "index.html");
             var htmlContent = await File.ReadAllTextAsync(reportPath);
 
             Assert.Contains(sample.TotalProjects.ToString(CultureInfo.InvariantCulture), htmlContent);
@@ -141,13 +476,89 @@ public sealed class AnalyzeCommandTests
         }
         finally
         {
-            try
-            {
-                Directory.Delete(tempDir, recursive: true);
-            }
-            catch
-            {
-            }
+            DeleteDirectoryIfExists(workspace);
+        }
+    }
+
+    [Fact]
+    public void ConfigurationLoader_UsesDefaultsAndWarningWhenFileIsMissing()
+    {
+        var solutionPath = GetRepositoryPath("samples", "Sample.Simplified", "Sample.Simplified.sln");
+        using var writer = new StringWriter(CultureInfo.InvariantCulture);
+
+        var configuration = SimplicityConfigurationLoader.LoadForSolution(solutionPath, writer);
+
+        Assert.Equal(SimplicityConfiguration.Defaults, configuration);
+        AssertMissingConfigWarning(writer.ToString(), Path.GetDirectoryName(solutionPath)!);
+    }
+
+    [Fact]
+    public void ConfigurationLoader_MergesPartialOverridesWithDefaults()
+    {
+        var workspace = CreateWorkspace();
+
+        try
+        {
+            var solutionPath = CreatePlaceholderSolution(workspace);
+            File.WriteAllText(
+                Path.Combine(workspace, "simplicity.json"),
+                """
+                {
+                  "tca": {
+                    "teamSize": 12
+                  },
+                  "filters": {
+                    "passingScore": 0.85
+                  }
+                }
+                """);
+
+            using var writer = new StringWriter(CultureInfo.InvariantCulture);
+            var configuration = SimplicityConfigurationLoader.LoadForSolution(solutionPath, writer);
+
+            Assert.Equal(12, configuration.Tca.TeamSize);
+            Assert.Equal(SimplicityConfiguration.Defaults.Tca.AverageEngineerMonthlySalaryUsd, configuration.Tca.AverageEngineerMonthlySalaryUsd);
+            Assert.Equal(0.85d, configuration.Filters.PassingScore);
+            Assert.Equal(SimplicityConfiguration.Defaults.Filters.MaxMethodComplexity, configuration.Filters.MaxMethodComplexity);
+            Assert.Equal(string.Empty, writer.ToString());
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(workspace);
+        }
+    }
+
+    [Fact]
+    public async Task AnalyzeCommand_FailsFastForInvalidConfiguration()
+    {
+        await BuildCliAsync();
+        var workspace = CreateSampleWorkspace("Sample.Simplified");
+
+        try
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(workspace, "simplicity.json"),
+                """
+                {
+                  "filters": {
+                    "passingScore": 1.5
+                  }
+                }
+                """);
+
+            var result = await RunProcessAsync(
+                "dotnet",
+                [GetCliAssemblyPath(), "analyze", Path.Combine(workspace, "Sample.Simplified.sln")],
+                GetRepositoryRoot());
+
+            Assert.Equal(1, result.ExitCode);
+            Assert.Contains("Invalid simplicity.json", result.StandardError);
+            Assert.Contains("$.filters.passingScore must be less than or equal to 1", result.StandardError);
+            Assert.True(string.IsNullOrWhiteSpace(result.StandardOutput), result.StandardOutput);
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(workspace);
         }
     }
 
@@ -158,6 +569,35 @@ public sealed class AnalyzeCommandTests
         {
             PropertyNameCaseInsensitive = true
         }) ?? throw new InvalidOperationException("Could not load sample baselines.");
+    }
+
+    private static async Task<SimplicitySnapshot> LoadSnapshotAsync(string baselinePath)
+    {
+        await using var stream = File.OpenRead(baselinePath);
+        return await JsonSerializer.DeserializeAsync<SimplicitySnapshot>(stream, new JsonSerializerOptions(JsonSerializerDefaults.Web))
+            ?? throw new InvalidOperationException($"Could not load baseline snapshot from '{baselinePath}'.");
+    }
+
+    private static async Task<string?> ReadOptionalFileAsync(string path)
+    {
+        return File.Exists(path)
+            ? await File.ReadAllTextAsync(path)
+            : null;
+    }
+
+    private static async Task RestoreOptionalFileAsync(string path, string? originalContent)
+    {
+        if (originalContent is null)
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+
+            return;
+        }
+
+        await File.WriteAllTextAsync(path, originalContent);
     }
 
     private static async Task BuildCliAsync()
@@ -245,6 +685,91 @@ public sealed class AnalyzeCommandTests
     private static string NormalizeLineEndings(string value)
     {
         return value.Replace("\r\n", "\n", StringComparison.Ordinal);
+    }
+
+    private static int CountOccurrences(string value, string substring)
+    {
+        var count = 0;
+        var currentIndex = 0;
+
+        while ((currentIndex = value.IndexOf(substring, currentIndex, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            currentIndex += substring.Length;
+        }
+
+        return count;
+    }
+
+    private static void AssertMissingConfigWarning(string standardError, string expectedDirectory)
+    {
+        var normalized = NormalizeLineEndings(standardError).Trim();
+        Assert.Equal($"Warning: simplicity.json was not found in '{expectedDirectory}'. Using built-in defaults for TCA inputs and filter thresholds.", normalized);
+    }
+
+    private static string CreateSampleWorkspace(string sampleDirectoryName)
+    {
+        var sourceDirectory = GetRepositoryPath("samples", sampleDirectoryName);
+        var workspace = CreateWorkspace();
+        CopyDirectory(sourceDirectory, workspace);
+        return workspace;
+    }
+
+    private static string CreatePlaceholderSolution(string workspace)
+    {
+        var solutionPath = Path.Combine(workspace, "placeholder.sln");
+        File.WriteAllText(solutionPath, "Microsoft Visual Studio Solution File, Format Version 12.00");
+        return solutionPath;
+    }
+
+    private static string CreateWorkspace()
+    {
+        var workspace = GetRepositoryPath("tests", "SimplicityTools.Cli.Tests", ".workspace", Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture));
+        Directory.CreateDirectory(workspace);
+        return workspace;
+    }
+
+    private static void CopyDirectory(string sourceDirectory, string destinationDirectory)
+    {
+        Directory.CreateDirectory(destinationDirectory);
+
+        foreach (var directory in Directory.GetDirectories(sourceDirectory, "*", SearchOption.AllDirectories))
+        {
+            var relativePath = Path.GetRelativePath(sourceDirectory, directory);
+            Directory.CreateDirectory(Path.Combine(destinationDirectory, relativePath));
+        }
+
+        foreach (var file in Directory.GetFiles(sourceDirectory, "*", SearchOption.AllDirectories))
+        {
+            var relativePath = Path.GetRelativePath(sourceDirectory, file);
+            var destinationPath = Path.Combine(destinationDirectory, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+            File.Copy(file, destinationPath, overwrite: true);
+        }
+    }
+
+    private static void DeleteDirectoryIfExists(string path)
+    {
+        if (Directory.Exists(path))
+        {
+            Directory.Delete(path, recursive: true);
+        }
+    }
+
+    private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (condition())
+            {
+                return;
+            }
+
+            await Task.Delay(100);
+        }
+
+        throw new Xunit.Sdk.XunitException($"Condition was not satisfied within {timeout}.");
     }
 
     private static string GetRepositoryPath(params string[] segments)
