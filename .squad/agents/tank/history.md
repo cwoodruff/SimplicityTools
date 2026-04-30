@@ -87,3 +87,14 @@
 **Locked:** Tank reviewer lockout remains in effect until next phase unblocks.
 
 **Next wave:** Tank available for #26 (integration testing) and any Sprint 3 final-gate tasks per Morpheus routing.
+
+- 2026-04-30T06:57:15.306-04:00: For CLI performance gates, pair a real process-level p95 test with a BenchmarkDotNet harness. The xUnit check makes `dotnet test` fail loudly when the budget regresses, and the benchmark keeps the runtime distribution visible instead of reducing performance to one anecdotal run.
+
+📌 **Sprint 3 issue #26 integration + performance validation completed (2026-04-30T06:57:15.306-04:00):** Added `AnalyzeCommandPerformanceTests` to measure 15 process-level `analyze` runs against `Sample.OverEngineered` and fail if p95 reaches 5 seconds, plus a `tests/SimplicityTools.Benchmarks` BenchmarkDotNet harness for the same command. Validation: `dotnet test SimplicityTools.sln --nologo` passed locally; focused CLI sample integration tests passed (3/3); BenchmarkDotNet short run measured mean 3.549 s and P95 3.658 s on `Sample.OverEngineered`.
+
+---
+
+## 2026-04-30T10:57:15Z — Scribe Consolidation
+**Decision merged:** Tank's integration-wave3 decision now in `.squad/decisions.md`. Decision states the final Sprint 3 gate uses a process-level xUnit performance gate + BenchmarkDotNet harness; no CI workflow changes needed.
+- **Artifact:** `.squad/orchestration-log/2026-04-30T10-57-15-Tank.md`
+- **Status:** Tank Sprint 3 completion logged.

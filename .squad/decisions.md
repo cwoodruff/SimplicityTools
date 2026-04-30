@@ -62,6 +62,12 @@
 **What:** Pass 3 treats inbound-reference percentile as a file-level score aggregated across named types declared in the file, and it suppresses percentile matches when every candidate has zero inbound references.
 **Why:** The metric is reported at file granularity, so the heuristic needs a file-level signal even when a source file declares more than one type. Suppressing the all-zero case avoids turning "nothing stands out" into a noisy false-positive blanket across the solution.
 
+# Tank Decision — Integration Wave 3
+
+- **Date:** 2026-04-30T06:57:15.306-04:00
+- **Decision:** Use a process-level xUnit performance gate in `tests/SimplicityTools.Cli.Tests` and a separate BenchmarkDotNet harness in `tests/SimplicityTools.Benchmarks` for issue #26.
+- **Why:** The repo had sample integration coverage and baseline-tolerance checks already, but it lacked a persistent performance harness and no existing workflow enforced the 5-second budget. This is the narrowest addition that both exposes benchmark evidence and makes the existing `dotnet test` build fail when the threshold regresses.
+- **Impact:** No GitHub Actions workflow change was needed. Any CI path that already runs `dotnet test SimplicityTools.sln --nologo` now picks up the p95 gate, and the benchmark project remains available for deeper runtime inspection.
 ## Governance
 
 - All meaningful changes require team consensus
