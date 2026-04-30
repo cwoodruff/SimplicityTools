@@ -202,3 +202,20 @@ SF0001 is not approval-ready. The code fix must either:
 
 Add a regression that covers the dependent-interface scenario so this bug does not come back.
 
+
+### 2026-04-30T06:57:15.306-04:00: Trinity decision — SF0001 code-fix revision
+**By:** Trinity
+**Scope:** Sprint 3 issues #23 and #24, focused on the SF0001 code fix.
+**Decision:** When removing a single-implementation interface that sits at the base of a source interface chain, the code fix must preserve downstream compileability by copying the removed interface's members into each direct dependent interface before dropping the base-interface reference.
+**Why:** Rejecting the fix whenever a dependent interface exists would leave the diagnostic without a safe remediation path for a common Roslyn case. Rewriting only consumer types is not sufficient, because callers typed to the dependent interface still need the inherited member surface after the base interface is removed.
+**Notes:** Keep SF0002 package-removal behavior unchanged unless a concrete defect appears. Preserve explicit-interface implementation cleanup so implementations become callable through the surviving surface.
+
+### 2026-04-30T06:57:15.306-04:00: Tank rereview — Sprint 3 code fixes (#23, #24) — APPROVED
+**By:** Tank
+**Revision author:** Trinity
+**Verdict:** Approved
+**Why:** The prior SF0001 rejection point is resolved: removing `IPricer` now preserves the dependent-interface chain by copying inherited members onto `ICheckoutPricer` and rewriting explicit `IPricer.Price()` implementations to public concrete members. SF0002 still holds up. Added a multiline `PackageReference` regression and the code fix removed the unused dependency without breaking XML shape or preview/apply behavior.
+**Evidence:**
+- `dotnet build src/SimplicityTools.Analyzers/SimplicityTools.Analyzers.csproj --nologo`
+- Focused reruns for `SingleImplementationInterfaceCodeFixProvider_PreservesDependentInterfaceChains`, `UnusedDependencyCodeFixProvider_RemovesPackageReferenceWithPreviewSafeRewrite`, and `UnusedDependencyCodeFixProvider_RemovesMultilinePackageReferenceWithoutBreakingXml`
+- `dotnet test tests/SimplicityTools.Analyzers.Tests/SimplicityTools.Analyzers.Tests.csproj --nologo --no-build` → 20 tests passed
