@@ -399,3 +399,18 @@ Morpheus, 2026-04-30T17:29:31.278-04:00
 **By:** Morpheus
 **What:** Sprint 5 launches Milestone 5: Release Packaging — the final upstream gate before the toolkit moves to distribution and global tool delivery. Branch `sprint/5-release-packaging` created from origin/main. Five issues assigned per critical-path wave structure: Wave 1 has Trinity on #35 (Package Metrics) and Switch on #38 (Package Analyzers) in parallel; Wave 2 routes Trinity to #36 (Filters) after #35 completes; Wave 3 routes Trinity to #37 (Tca) after #36 completes; Wave 4 routes Tank to #39 (Integration Validation) after all four packages complete. Critical path: #35 → #36 → #37 → #39. Parallel: #38 with #35.
 **Why:** Packages all four core libraries (Metrics, Filters, Tca, Analyzers) with complete metadata, dependency graphs, and integration validation. This milestone establishes the NuGet and IDE distribution foundation. Each issue has one-to-one mapping to NuGet targets. Trinity owns the Metrics → Filters → Tca dependency chain; Switch owns Analyzers in parallel (self-contained); Tank validates all four together. No speculative work—each issue has concrete deliverable with strict DoD.
+
+### 2026-04-30T19:09:43.583-04:00: Milestone 5 release gate rejection
+**By:** Tank
+**What:** Reject Milestone 5 release approval until `.github/workflows/nuget-publish.yml` is repaired. The analyzer-consumer validation script in that workflow calls `ET.fromstring(...)` but never imports `xml.etree.ElementTree as ET`, so the CI gate fails with `NameError` even though the packed Metrics, Filters, Tca, and Analyzers artifacts themselves validate locally.
+**Why:** Release confidence for this milestone depends on the workflow proving the same package contracts we checked by hand. Local package-validation tests and a repo-local all-package consumer build are strong evidence, but they do not override a broken publish gate; if CI cannot execute the analyzer validation step, the branch/tag path is not releasable. Reassign the workflow revision to **Link** under reviewer lockout for the failing artifact.
+
+### 2026-04-30T19:09:43.583-04:00: Analyzer package release contract
+**By:** Switch
+**What:** `SimplicityTools.Analyzers` should ship as a development-only analyzer package: target `netstandard2.0` for Roslyn host compatibility, pack only under `analyzers/dotnet/cs/`, and suppress nuspec dependency groups so consumers get diagnostics/code fixes without compile-time package assets.
+**Why:** Sprint 4 proved the layout contract, but releasable analyzer packages still need the Roslyn host contract and a clean consumer asset graph. The combination of `DevelopmentDependency=true`, `SuppressDependenciesWhenPacking=true`, and consumer validation against `project.assets.json` closes the remaining release gap and removes the NU5128 warning that came from pretending the package had normal framework dependencies.
+
+### 2026-04-30T19:09:43.583-04:00: Metrics package validation shape
+**By:** Trinity
+**What:** `SimplicityTools.Metrics` package validation should prove three things together: the packed `.nupkg` contains the repo-level README/icon metadata assets, the `lib/net10.0/` payload is limited to the library DLL plus XML docs, and a downstream consumer can restore/build against the packed package from a repo-local folder source.
+**Why:** Local `dotnet pack` success alone does not prove the shipped asset set is clean for consumers. Checking the actual `.nupkg` contents and then compiling a fresh consumer against that package catches missing docs, accidental extra assemblies, and package-shape regressions before the Filters/Tca packages copy the same pattern.

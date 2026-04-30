@@ -36,3 +36,26 @@
 **Milestone gate:** M4 → M5 established. Trinity (library packaging) blocked until M4 complete.
 
 **Status:** Scribe merged inbox decisions. Link ready to execute Wave 1.
+
+## 2026-04-30T23:53:39Z - Milestone 5 Workflow Repair Assignment
+
+**Spawn:** Link DevRel agent for Milestone 5 publish workflow repair.
+
+**Context:** Tank rejected M5 release approval due to analyzer-consumer validation gate failure in `.github/workflows/nuget-publish.yml`. The workflow script calls `ET.fromstring(...)` without importing `xml.etree.ElementTree as ET`, causing `NameError` on CI execution.
+
+**Task scope:** Repair workflow import issue and validate analyzer-consumer validation gate before Milestone 5 moves to release.
+
+**Decisions merged into team memory:**
+- **Milestone 5 release gate rejection:** Tank identified workflow blocker
+- **Analyzer package release contract:** Switch defined netstandard2.0 target + analyzers/dotnet/cs/ layout + SuppressDependencies
+- **Metrics package validation shape:** Trinity defined nupkg contents + consumer build validation
+
+**Inbox processed:** 3 files merged to decisions.md, deleted from inbox
+
+**Status:** Link spawned (background mode, claude-sonnet-4.6) to fix workflow and restore M5 release readiness.
+
+## 2026-04-30T19:52:08.101-04:00 - Milestone 5 release workflow repair ✓
+
+- Fixed the analyzer-consumer validation block in `.github/workflows/nuget-publish.yml` so its nuspec parsing now imports `xml.etree.ElementTree as ET` before calling `ET.fromstring(...)`.
+- Tightened the same validation step to clear `artifacts/analyzer-consumer-validation` before each run so reruns prove the package from the current build instead of inheriting stale restore state.
+- Local proof used the packed `SimplicityTools.Analyzers` artifact and reran the workflow’s analyzer-consumer validation logic end to end; the validation completed successfully and emitted the expected analyzer warning.
