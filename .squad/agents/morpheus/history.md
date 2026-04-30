@@ -129,3 +129,37 @@ All 7 issues in Milestone 2 (#9–#15) closed. PR #28 (`sprint/2-filters-tca-ext
 **Decision:** Full record in `.squad/decisions.md` under "Sprint 4 Foundation Review — Tank Verdict".
 
 **Coordinator Action:** When Trinity completes revision and passes review, promote M5 issues to ready and spawn Trinity for Wave 1 (package four libraries).
+
+## Sprint 5 Launch
+
+📌 **Completed:** 2026-04-30T19:09:43.583-04:00
+
+**Branch Created:** `sprint/5-release-packaging` — Pushed to origin. All team members tracking this branch.
+
+**5 Open Issues in Milestone 5:** Release Packaging (Library NuGet Distribution)
+
+**Wave Structure & Assignment:**
+- **Wave 1 (Ready Now):** Trinity → #35 (Package Metrics). Switch → #38 (Package Analyzers). Parallel.
+- **Wave 2 (After #35):** Trinity → #36 (Package Filters).
+- **Wave 3 (After #36):** Trinity → #37 (Package Tca).
+- **Wave 4 (After #35 + #36 + #37 + #38):** Tank → #39 (Validate all packages).
+
+**Critical Path:** #35 → #36 → #37 → #39. Parallel: #38 with #35.
+
+**Key Decisions:**
+- Metrics is foundational (no dependencies) and must complete before Filters/Tca can finalize packaging.
+- Filters depends on Metrics; Tca depends on Metrics + Filters. Hard sequence enforces dependency graph contract.
+- Analyzers are self-contained (no compile-time library dependency) and proceed in parallel with #35, unblocking Wave 2 faster.
+- Tank's integration validation (#39) is the final gate before publishing: local test feed restore, both sample projects, verify dependency graph resolution.
+- All packaging includes XML docs, complete metadata (RepositoryUrl, Authors, LicenseExpression), and unit test coverage.
+
+**DoD:** All 5 issues closed with passing tests. All packages valid .nupkg with no internals leaked. Integration validation passes on both samples. Dependency graph resolves correctly. Zero NuGet warnings. Ready to publish.
+
+**Decision Document:** `.squad/decisions/inbox/morpheus-sprint5-launch.md` — Complete Sprint 5 launch plan with wave structure, dependency breakdown, and per-issue DoD.
+
+**Learnings:**
+- 2026-04-30T19:09:43.583-04:00: Release packaging is a pure dependency-driven sequence: Metrics (independent) → Filters → Tca. Analyzers parallelize cleanly because they have no library compile-time dependencies. Tank's integration validation (Wave 4) is not parallelizable and must run last to catch dependency graph errors.
+- 2026-04-30T19:09:43.583-04:00: NuGet metadata is now non-negotiable per issue DoD: each package must include GeneratePackageOnBuild, PackageVersion (from git tag), PackageIcon, RepositoryUrl, LicenseExpression, Authors, Description, ReadmeFile. This is the product-facing packaging contract.
+- 2026-04-30T19:09:43.583-04:00: Analyzer packaging learned from Sprint 4 rejection: local test feed validation that proves the analyzer fires diagnostics in consumers is now part of Tank's Wave 4 integration test. No package can ship without consumer validation proof.
+
+📌 **Status:** Sprint 5 branch live, 5 issues assigned and labeled (squad:trinity, squad:switch, squad:tank). Wave 1 ready for Trinity and Switch to start immediately. Decision document complete and stored in inbox for Scribe consolidation.

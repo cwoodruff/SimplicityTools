@@ -58,3 +58,15 @@ Strong release proof needs one real consumer install for each delivery surface; 
 - **Learning:** Analyzer package rereview cleared once both gates matched the real Roslyn load path: the nupkg contained `analyzers/dotnet/cs/SimplicityTools.Analyzers.dll` with no `lib/net10.0/` copy, and a downstream package consumer emitted `warning SF0001` during `dotnet build`.
 
 📌 **Sprint 4 Milestone 4 analyzer-package rereview approved (2026-04-30T22:15:00Z):** Re-reviewed Trinity's analyzer-packaging revision for the prior publish blocker. `SimplicityTools.Analyzers.csproj` now suppresses normal build output packing and explicitly packs the analyzer assembly under `analyzers/dotnet/cs/`. New regression `AnalyzerPackageValidationTests.PackedAnalyzerPackage_UsesAnalyzerLayout_AndReportsDiagnosticsInConsumer` passed locally, and a repo-local consumer restore/build against the packed nupkg emitted `warning SF0001`. Workflow `nuget-publish.yml` now enforces the same release gate by failing if the analyzer ships under `lib/net10.0/` or if the consumer build does not emit SF0001. Verdict: **Approved**; publish blocker closed for Sprint 4 Milestone 4.
+
+## Sprint 5 Launch — Release Packaging (Milestone 5)
+
+**2026-04-30T19:09:43.583-04:00: Morpheus Lead Spawned, Wave 4 Routed**
+
+- **Branch:** `sprint/5-release-packaging` created from main and pushed to origin.
+- **Tank's M5 Assignment:** Own #39 (Validate NuGet library package dependencies and metadata) in Wave 4.
+  - **Wave 4 (After all libraries):** #39 runs after Trinity completes #35, #36, #37 and Switch completes #38. All four packages must exist before integration validation begins.
+  - **Integration Scope:** Publish all four packages to a local test NuGet feed. Create a fresh test project that PackageReferences all four. Restore and build succeeds. Dependency graph resolves correctly in Visual Studio Package Manager and `dotnet add package`. Run Sample.Simplified and Sample.OverEngineered against local packages. Verify analyzer diagnostics fire and no warnings/errors introduced. Document validation script in CONTRIBUTING.md for future releases.
+  - **Quality Gate:** Tank's #39 validation is the final gate before publish approval. Zero unintended symbols or internal types exposed. Zero NuGet warnings during pack or restore.
+- **Critical Path:** Tank's validation blocks publish readiness. No publish to nuget.org until #39 closes with approval.
+- **Dependencies:** Waits for Trinity (#35, #36, #37 complete) and Switch (#38 complete) before starting.

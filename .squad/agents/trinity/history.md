@@ -97,3 +97,19 @@
   - Fails if downstream consumer build does not emit `warning SF0001`
 - **Verdict:** ✅ **APPROVED** — Publish blocker closed for Sprint 4 Milestone 4.
 - **Status:** Analyzer package release-ready. No further revisions needed.
+
+## Sprint 5 Launch — Release Packaging (Milestone 5)
+
+**2026-04-30T19:09:43.583-04:00: Morpheus Lead Spawned, Wave 1 Routed**
+
+- **Branch:** `sprint/5-release-packaging` created from main and pushed to origin.
+- **Trinity's M5 Assignment:** Owns Metrics → Filters → Tca dependency chain.
+  - **Wave 1:** #35 (Package Metrics) — foundational, no library dependencies. Entry point.
+  - **Wave 2:** #36 (Package Filters) — depends on #35 complete. Filters declares Metrics in csproj.
+  - **Wave 3:** #37 (Package Tca) — depends on #36 complete. Tca declares Metrics + Filters.
+  - **Critical Path:** #35 → #36 → #37 → Tank's #39 (Integration Validation).
+- **#35 DoD (Wave 1):** Metrics csproj has GeneratePackageOnBuild, PackageVersion, PackageIcon, RepositoryUrl, LicenseExpression, Authors, Description, ReadmeFile. `dotnet pack src/SimplicityTools.Metrics/` produces valid .nupkg. .nupkg contains XML docs for all public types. No internal symbols or test-only code in package. Unit tests pass.
+- **#36 DoD (Wave 2):** Same packaging properties as #35. PackageDependencies correctly declares `SimplicityTools.Metrics`. Dependency graph resolves: Filters → Metrics. No internal symbols exposed. Unit tests pass.
+- **#37 DoD (Wave 3):** Same packaging properties. PackageDependencies declares both `SimplicityTools.Metrics` and `SimplicityTools.Filters`. Dependency graph resolves: Tca → Filters → Metrics. XML docs complete. No internals leaked. Unit tests pass.
+- **Switch Parallel:** #38 (Package Analyzers) runs in parallel with #35. Uses `analyzers/dotnet/cs/` layout from Sprint 4 lessons. Includes all 7 SF00X analyzers and code fix DLLs.
+- **Tank Integration Gate:** #39 (Validate all packages) runs Wave 4 after all libraries complete. Publishes to local test feed, validates restore in both samples, confirms zero metadata conflicts.

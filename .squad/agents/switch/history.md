@@ -29,3 +29,16 @@
 📌 **Sprint 2 issue #11 TCA revision assigned (2026-04-30T01:22:50Z):** Tank rejected Trinity's TCA calculator implementation. Revision ownership now under my lockout. Gap analysis: (1) Required-filter failure-path coverage — add tests for missing TwoAmTest, HalfRule, or PrimaryPathFirst verdicts; (2) Non-default-culture executive-summary formatting — ensure `ToExecutiveSummary()` uses culture-agnostic formatting. Task: Implement missing edge-case tests and resubmit for Tank approval. Decision logged.
 - 2026-04-30T06:57:15.306-04:00: SF0002 is safest when it only evaluates package references that actually contribute compile-time metadata references and then proves usage through Roslyn-bound symbols; build-only packages should not be punished for having nothing to bind against.
 - 2026-04-30T06:57:15.306-04:00: SF0007 needs an explicit primary-path baseline (annotation first, convention second). If the analyzer uses inbound-reference popularity to decide what counts as primary path, it teaches a circular rule and over-reports support code that merely became central by accident.
+
+## Sprint 5 Launch — Release Packaging (Milestone 5)
+
+**2026-04-30T19:09:43.583-04:00: Morpheus Lead Spawned, Wave 1 Routed**
+
+- **Branch:** `sprint/5-release-packaging` created from main and pushed to origin.
+- **Switch's M5 Assignment:** Own #38 (Package SimplicityTools.Analyzers) in Wave 1 parallel with Trinity's #35.
+  - **Leverage:** Analyzer package layout established in Sprint 4 (Milestone 4) — uses `analyzers/dotnet/cs/` path from Roslyn consumption spec.
+  - **Wave 1 (Ready Now):** #38 is foundational and self-contained. No compile-time library dependencies. Can proceed in parallel with Trinity's #35.
+  - **Analyzer Packaging Spec:** csproj uses `PrivateAssets="all"` for all dependencies. Analyzer assembly packed under `analyzers/dotnet/cs/`, not `lib/`. No build-output packing.
+- **#38 DoD (Wave 1):** All 7 SF00X analyzers included in pack. All code fix DLLs included. Test: add package to Sample.Simplified, build succeeds, SF0001 diagnostic fires. Test: add package to Sample.OverEngineered, build succeeds, all SF00X diagnostics present. Unit tests pass.
+- **Validation Proof:** Package validation script must inspect .nupkg for `analyzers/dotnet/cs/SimplicityTools.Analyzers.dll` and fail if `lib/net10.0/SimplicityTools.Analyzers.dll` present (prevents regression to Sprint 4 blocker).
+- **Critical Path Synchronization:** #38 runs parallel with #35 (Metrics), unblocking Tank's #39 integration validation after both complete. No blocking dependencies between Switch and Trinity.
