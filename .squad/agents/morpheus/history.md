@@ -29,6 +29,16 @@
 
 📌 Scribe consolidated Morpheus sprint decision into `.squad/decisions.md` on 2026-04-29T11:27:53Z. Decision merging and orchestration logging complete. Decision inbox cleared.
 
+## Sprint 1 Completion
+
+📌 **Completed:** 2026-04-29T21:17:34.293-04:00
+
+**GitHub Cleanup:** All 8 Sprint 1 issues (#1–#8) closed with completion comment. Milestone 1: Metrics & Core Collection marked closed in GitHub. Decision logged to `.squad/decisions/inbox/morpheus-sprint-1-github-cleanup.md`.
+
+📌 **Documented:** 2026-04-30T01:19:49Z
+
+**Scribe Merged:** Sprint 1 GitHub cleanup decision consolidated into `.squad/decisions.md`. Orchestration log written. All team closure documentation complete. Sprint 1 marked complete in GitHub with Milestone 2 (Filters + TCA + CLI Extensions) ready for Sprint 2 execution.
+
 ## Sprint 1 Kick-Off
 
 📌 **Completed:** 2026-04-29T07:32:23.826-04:00
