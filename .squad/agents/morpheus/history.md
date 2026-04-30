@@ -54,6 +54,7 @@
 - Sprint 2 represents decision-support layer: filters measure domain health, TCA quantifies architectural cost, CLI commands provide day-to-day feedback loop.
 - 2026-04-29T21:22:50.867-04:00: Wave structure enforces FilterVerdict as the semantic contract for all downstream CLI work; TCA MoneyRange becomes the unit of cost reasoning. Link's CLI commands depend critically on both structures before Wave 3 can unblock.
 - 2026-04-29T21:22:50.867-04:00: simplicity.json schema (configurable team parameters + filter thresholds) is independent of filter evaluator logic and can be prototyped in parallel. Budget command depends on both schema (for thresholds) and TCA costs (for the 5-category model); this drives Wave 2→Wave 3 sequencing.
+- 2026-04-30T06:50:56.199-04:00: **Sprint 2 Closure:** All 7 issues (#9–#15) closed and Milestone 2 closed after PR #28 merge. Decision documented in `.squad/decisions/inbox/morpheus-sprint-2-github-cleanup.md`. Ready to transition to Sprint 3 (Analyzers + Code Fixes) planning and execution.
 
 📌 **Completed:** 2026-04-29T07:32:23.826-04:00
 
@@ -75,3 +76,22 @@
 **Unblocking Mechanism:** Issue comments document ownership and blocking criteria. After #1 compiles, Wave 2 can start. No speculative work. Each task has a concrete measured prerequisite.
 
 **DoD per Milestone:** Validated against both sample solutions (Sample.OverEngineered and Sample.Simplified). Zero-config promise enforced by CLI validation.
+
+## Sprint 2 Completion
+
+📌 **Completed:** 2026-04-30T06:50:56.199-04:00
+
+**Sprint 2 Closure:** All 7 issues in Milestone 2 (#9–#15) are now closed. PR #28 (`sprint/2-filters-tca-extensions`) merged to main. GitHub milestone state reflects reality.
+
+**Closed Issues:**
+- #9: Filter evaluators implementation
+- #10: simplicity.json schema and defaults
+- #11: TCA calculator implementation
+- #12: CLI baseline command
+- #13: CLI diff and regression detection
+- #14: CLI budget command
+- #15: CLI watch command
+
+**Milestone Closed:** "Milestone 2: Filters + TCA + CLI Extensions" is now closed.
+
+**Next Phase:** Sprint 3 execution planning (Roslyn Analyzers + Code Fixes) ready to begin.

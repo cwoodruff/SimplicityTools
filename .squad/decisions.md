@@ -117,3 +117,8 @@
 **By:** Link
 **What:** `dotnet-simplicity watch` should run an initial snapshot immediately, then re-run analysis after a 500ms debounce for source-level changes under the solution root. The watcher should ignore generated and tooling-owned paths (`bin`, `obj`, `.git`, `.vs`, and `simplicity-report`) and only warn once while `simplicity.json` remains missing.
 **Why:** A live CLI that retriggers itself on analyzer/build output or repeats the same missing-config warning on every save turns feedback into noise. This guard keeps watch mode useful in the first five minutes while still reacting to real code and config edits.
+
+### 2026-04-30T06:50:56.199-04:00: Sprint 2 GitHub Cleanup
+**By:** Morpheus
+**What:** Closed all 7 open issues in Milestone 2 ("Milestone 2: Filters + TCA + CLI Extensions") after PR #28 (`sprint/2-filters-tca-extensions`) was merged to main. Closed the milestone itself. Issues #9–#15 all received completion notes: "Sprint 2 work completed and merged. All implementation requirements met."
+**Why:** All planned work for Sprint 2 was delivered via PR #28 and merged. GitHub milestone and issue state now reflect reality: Sprint 2 complete, ready to move to Sprint 3 execution planning.
