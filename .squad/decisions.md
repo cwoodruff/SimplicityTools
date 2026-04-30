@@ -102,3 +102,8 @@
 **By:** Tank
 **What:** Rejected Trinity's issue #11 TCA calculator revision for another pass. The five category formulas in `TcaEstimate` line up with the Milestone 2 spec, but the regression suite only proves one happy-path fixture. Revision ownership moves to Switch for the next cycle under reviewer lockout. Needed coverage: culture-invariant executive-summary formatting and failure behavior when one of the required filter verdicts is missing.
 **Why:** This package produces book-facing and CLI-facing money summaries. Before approval, tests need to prove these edge cases with executable evidence instead of confidence.
+
+### 2026-04-30T01:40:30Z: TCA calculator rereview approved
+**By:** Tank
+**What:** Switch's revision closes the two gaps from the prior rejection without needing further production changes. `TcaEstimateTests.Create_ThrowsWhenARequiredFilterVerdictIsMissing` now proves the required-filter failure path for `PrimaryPathFirst`. `TcaEstimateTests.ToExecutiveSummary_UsesSpecifiedFormat_IndependentlyOfCurrentCulture` now proves culture-invariant money formatting under `fr-FR`. `dotnet test tests/SimplicityTools.Tca.Tests/SimplicityTools.Tca.Tests.csproj --nologo` passed locally (4 tests, 0 failures).
+**Why:** The regression bar is now met for both the calculator contract and the book/CLI-facing summary output. Issue #11 approved for closure.
