@@ -112,3 +112,8 @@
 **By:** Link
 **What:** `dotnet-simplicity diff` should always print the baseline file path, baseline/current snapshot dates, metric deltas, filter score deltas, and explicit regression bullets. If the baseline file is missing, the CLI should fail with a direct instruction to run `dotnet simplicity baseline <solution.sln>` first.
 **Why:** Diff is both a CI gate and a first-run learning surface. Teams need the command to explain what changed and what to do next without digging through docs or guessing why the build failed.
+
+### 2026-04-29T21:22:50.867-04:00: Watch command self-loop guard
+**By:** Link
+**What:** `dotnet-simplicity watch` should run an initial snapshot immediately, then re-run analysis after a 500ms debounce for source-level changes under the solution root. The watcher should ignore generated and tooling-owned paths (`bin`, `obj`, `.git`, `.vs`, and `simplicity-report`) and only warn once while `simplicity.json` remains missing.
+**Why:** A live CLI that retriggers itself on analyzer/build output or repeats the same missing-config warning on every save turns feedback into noise. This guard keeps watch mode useful in the first five minutes while still reacting to real code and config edits.

@@ -74,3 +74,17 @@
 **Rationale:** These four thresholds already exist, are documented, and line up with the budget dimensions without expanding the configuration schema mid-sprint. This keeps the first-run experience clear: teams can tune one config file and see budget output change right away.
 
 **Logged:** 2026-04-30T02:01:24Z
+
+### 2026-04-29T21:22:50.867-04:00: watch command live feedback ✓
+
+**Issue #15 Completed.** Added `dotnet-simplicity watch <solution.sln>` so the CLI now stays in the foreground, prints an initial snapshot immediately, and re-runs analysis with filter verdicts after debounced file changes under the solution root.
+
+**Implementation:** The watch flow uses `FileSystemWatcher` with a 500ms debounce, reloads `simplicity.json` validation on each pass, and suppresses repeated missing-config warnings while the file remains absent. To protect first-run usability, the watcher ignores `bin`, `obj`, `.git`, `.vs`, and `simplicity-report` paths so analysis output and build artifacts do not trigger self-refresh loops.
+
+**Testing:** Added CLI coverage for the debouncer and a real watch-runner flow that mutates a copied sample workspace, verifies one refreshed snapshot, and checks the console output includes all three filter verdicts. Full CLI tests and the full solution test suite passed after the change.
+
+**Outcome:** Sprint 2 now has a teaching-friendly live mode that answers “what changed and what should I look at next?” without flooding the console.
+
+### 2026-04-30T02:13:09Z: Watch command decision archived ✓
+
+**Scribe Sync:** Watch command self-loop guard decision merged from inbox into `.squad/decisions.md` active decisions log. Sprint 2 all seven issues (#9–#15) now complete. Ready for Sprint 3 planning (Roslyn Analyzers + Code Fixes).
