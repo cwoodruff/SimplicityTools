@@ -37,3 +37,20 @@
 - 2026-04-29T21:22:50.867-04:00: The TCA package cleared review once the suite proved both failure behavior for a missing required filter verdict and culture-invariant executive-summary formatting under `fr-FR`. For book-facing strings, a tiny culture scope test buys real regression safety.
 
 📌 **Sprint 2 issue #11 TCA rereview approved (2026-04-30T01:40:30Z):** Rereview of Switch's TCA calculator revision completed. Verdict: **Approved**. Both gap coverage requirements now met: `TcaEstimateTests.Create_ThrowsWhenARequiredFilterVerdictIsMissing` proves required-filter failure path for `PrimaryPathFirst`; `TcaEstimateTests.ToExecutiveSummary_UsesSpecifiedFormat_IndependentlyOfCurrentCulture` proves culture-invariant money formatting under `fr-FR`. Local test run: 4 tests, 0 failures. Regression bar is now met for both calculator contract and book/CLI-facing summary output. Issue #11 approved for closure.
+- 2026-04-30T06:57:15.306-04:00: Trend-report review is stronger when I seed `.simplicity-history` with real JSON snapshots and inspect the generated HTML for actual filter-score rows and delta cells, not just section headers. The report promise is user-facing, so the evidence needs to show the inline SVG and the historical tables rendered together.
+
+📌 **Sprint 3 issue #25 trend-report review approved (2026-04-30T06:57:15.306-04:00):** Reviewed Link's HTML trend analysis implementation. Verified `SnapshotHistory` reads `.simplicity-history/*.json`, the report renders a no-JS inline SVG trend view once two historical snapshots exist, and the HTML includes historical filter-score rows plus complexity delta rows. Focused validation: `dotnet test tests/SimplicityTools.Cli.Tests/SimplicityTools.Cli.Tests.csproj --nologo --filter "FullyQualifiedName~ReportCommand_"` passed locally (3 tests, 0 failures), and a seeded sample workspace produced the expected SVG/chart/table output.
+- 2026-04-30T06:57:15.306-04:00: Analyzer reviews need adversarial edge cases, not just one positive and one negative per rule. For primary-path heuristics, mixed-mode fixtures (explicit annotations plus conventional folders) catch real baseline bugs that simple happy paths miss.
+- 2026-04-30T06:57:15.306-04:00: When an issue scope says "classes," write the regression that proves structs stay silent. Constructor analyzers are eager to overreach if the symbol filter is even slightly loose.
+
+📌 **Sprint 3 issues #16-#22 analyzer review (2026-04-30T06:57:15.306-04:00):** Reviewed Switch's analyzer implementation. Verdict: **Rejected** for revision. Baseline validation passed (`dotnet build src/SimplicityTools.Analyzers/SimplicityTools.Analyzers.csproj --nologo`; `dotnet test tests/SimplicityTools.Analyzers.Tests/SimplicityTools.Analyzers.Tests.csproj --nologo`, 14 tests). Reviewer scratch checks exposed two uncovered contract failures: SF0005 currently flags 8-parameter structs even though issue #20 scopes the rule to classes, and SF0007 incorrectly exempts conventional primary-path folders after `[PrimaryPath]` annotations become the baseline. Revision ownership transferred to Trinity under reviewer lockout. Decision logged in inbox.
+
+---
+
+## 2026-04-30T10:57:15Z — Orchestration Snapshot
+**From:** Scribe cross-agent sync
+- **Trend Chart Review:** Approved. Status: Closed.
+- **Analyzers Wave 1 Review:** Rejected. SF0005 + SF0007 issues identified.
+- **Lockout:** Tank reviewer lockout applied. Trinity owns analyzer revision.
+- **Availability:** Tank remains open for #26 (Integration Testing) and other Sprint 3 tasks.
+

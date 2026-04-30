@@ -137,3 +137,25 @@
 **By:** Switch
 **What:** SF0007 treats primary-path files as `[PrimaryPath]`-annotated files when any annotation exists; otherwise it falls back to the existing directory conventions (`Controllers`, `Endpoints`, `Handlers`, `Pages`). It does not use inbound-reference percentile fallback to define the comparison set for this analyzer.
 **Why:** Using inbound references to define the primary-path baseline for an over-reference diagnostic would be circular and noisy. The analyzer needs a stable comparison set that developers can explain and intentionally shape.
+
+### 2026-04-30T06:57:15.306-04:00: Sprint 3 Analyzer Wave 1 Rejection Notice
+**By:** Tank
+**Verdict:** Rejected for revision
+**Revision owner:** Trinity
+
+## What I checked
+- Local implementation for SF0001-SF0007 in `src/SimplicityTools.Analyzers/`
+- Analyzer regression suite in `tests/SimplicityTools.Analyzers.Tests/`
+- Local validation: `dotnet build src/SimplicityTools.Analyzers/SimplicityTools.Analyzers.csproj --nologo`
+- Local validation: `dotnet test tests/SimplicityTools.Analyzers.Tests/SimplicityTools.Analyzers.Tests.csproj --nologo`
+
+## Why this is rejected
+1. **SF0005 is diagnosing structs even though issue #20 scopes the rule to classes.** `ConstructorParameterCountAnalyzer` explicitly analyzes both `TypeKind.Class` and `TypeKind.Struct`, so an 8-parameter struct primary constructor produces SF0005. That is a false positive against the stated analyzer contract.
+2. **SF0007 suppresses conventional primary-path files even after annotations take over the baseline.** Team decision says `[PrimaryPath]` annotations define the primary-path set when any annotation exists. The analyzer uses annotations for the baseline, but still exempts any file in `Controllers/`, `Endpoints/`, `Handlers/`, or `Pages/` from diagnostics. In mixed mode, an over-referenced conventional controller can slip through with no warning.
+3. **The current tests do not cover either failure mode.** Existing analyzer tests are happy-path plus one basic negative case per rule. They do not protect against the struct false positive or the mixed annotated/conventional primary-path scenario.
+
+## Required revision bar
+- Narrow SF0005 to classes only and add regression coverage proving structs are ignored.
+- Fix SF0007 mixed-mode behavior so conventional folders are only treated as primary-path files when no annotations exist anywhere in the compilation.
+- Add regression tests for both cases before resubmitting.
+
