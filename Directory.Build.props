@@ -1,0 +1,42 @@
+<Project>
+  <PropertyGroup>
+    <IsSimplicityPackage>false</IsSimplicityPackage>
+    <IsSimplicityLibraryPackage>false</IsSimplicityLibraryPackage>
+
+    <IsSimplicityPackage Condition="'$(MSBuildProjectName)' == 'SimplicityTools.Metrics'">true</IsSimplicityPackage>
+    <IsSimplicityPackage Condition="'$(MSBuildProjectName)' == 'SimplicityTools.Filters'">true</IsSimplicityPackage>
+    <IsSimplicityPackage Condition="'$(MSBuildProjectName)' == 'SimplicityTools.Tca'">true</IsSimplicityPackage>
+    <IsSimplicityPackage Condition="'$(MSBuildProjectName)' == 'SimplicityTools.Analyzers'">true</IsSimplicityPackage>
+    <IsSimplicityPackage Condition="'$(MSBuildProjectName)' == 'SimplicityTools.Cli'">true</IsSimplicityPackage>
+
+    <IsSimplicityLibraryPackage Condition="'$(MSBuildProjectName)' == 'SimplicityTools.Metrics'">true</IsSimplicityLibraryPackage>
+    <IsSimplicityLibraryPackage Condition="'$(MSBuildProjectName)' == 'SimplicityTools.Filters'">true</IsSimplicityLibraryPackage>
+    <IsSimplicityLibraryPackage Condition="'$(MSBuildProjectName)' == 'SimplicityTools.Tca'">true</IsSimplicityLibraryPackage>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsSimplicityPackage)' == 'true'">
+    <Authors>Chris Woody Woodruff</Authors>
+    <Company>SimplicityTools</Company>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/cwoodruff/SimplicityTools/blob/main/docs/using-the-simplicity-tools.md</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/cwoodruff/SimplicityTools</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>simplicitytools-icon.png</PackageIcon>
+    <PackageTags>dotnet;complexity;architecture;roslyn;cli;analyzers;simplicity</PackageTags>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <Version Condition="'$(Version)' == '' and '$(IsSimplicityLibraryPackage)' == 'true'">0.4.0-local</Version>
+    <Version Condition="'$(Version)' == '' and '$(MSBuildProjectName)' == 'SimplicityTools.Analyzers'">0.4.0-local</Version>
+    <Version Condition="'$(Version)' == '' and '$(MSBuildProjectName)' == 'SimplicityTools.Cli'">0.4.0-local</Version>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsSimplicityPackage)' == 'true'">
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Link="README.md" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)assets/nuget/simplicitytools-icon.png" Pack="true" PackagePath="\" Link="simplicitytools-icon.png" Visible="false" />
+  </ItemGroup>
+</Project>

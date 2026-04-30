@@ -5,7 +5,9 @@
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
     <PackageId>SimplicityTools.Analyzers</PackageId>
+    <PackageType>Analyzer</PackageType>
     <Description>Roslyn analyzer package for Simplicity-First diagnostics.</Description>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
     <EnforceExtendedAnalyzerRules>false</EnforceExtendedAnalyzerRules>
     <NoWarn>$(NoWarn);RS1030;RS1038;RS1041;RS2008</NoWarn>
   </PropertyGroup>
@@ -15,7 +17,19 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
+
+  <Target Name="PackRoslynAnalyzerArtifacts" BeforeTargets="_GetPackageFiles">
+    <ItemGroup>
+      <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+      <None Include="$(OutputPath)$(AssemblyName).pdb" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" Condition="Exists('$(OutputPath)$(AssemblyName).pdb')" />
+    </ItemGroup>
+  </Target>
+
 </Project>
