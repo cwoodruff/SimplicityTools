@@ -29,7 +29,31 @@
 
 📌 Scribe consolidated Morpheus sprint decision into `.squad/decisions.md` on 2026-04-29T11:27:53Z. Decision merging and orchestration logging complete. Decision inbox cleared.
 
-## Sprint 1 Kick-Off
+## Sprint 2 Kick-Off
+
+📌 **Completed:** 2026-04-29T21:22:50.867-04:00
+
+**Branch Created:** `sprint/2-filters-tca-extensions` — Pushed to origin. All team members tracking this branch.
+
+**Wave Structure & Assignment:**
+- **Wave 1 (Ready Now):** Trinity → #9 (Filter evaluators: TwoAmTest, HalfRule, PrimaryPathFirst). Link → #10 (simplicity.json schema). Parallel.
+- **Wave 2 (After #9 complete):** Trinity → #11 (TCA calculator: 5 cost categories, MoneyRange).
+- **Wave 3 (After #9 + #10 + #11 complete):** Link → #12 (CLI baseline command).
+- **Wave 4 (After #12 complete):** Link → #13 (CLI diff), #14 (CLI budget), #15 (CLI watch). Parallel.
+
+**Critical Path:** #9 → #11 → #14 (filter verdicts → TCA costs → budget command). Secondary: #10 → #14, #9 → #12 → #13, #9 → #15.
+
+**Key Decision:** Wave 1 launches both Trinity (core filters) and Link (config schema) in parallel. Trinity's filter verdict structure unblocks all downstream CLI work. TCA calculator (Wave 2) depends on FilterVerdict shape. All CLI commands (Wave 4) parallelizable once baseline output exists.
+
+**Unblocking Mechanism:** Issue comments document ownership and blocking criteria. GitHub labels `squad:trinity` and `squad:link` route work. Coordinator tracks dependencies and promotes to "in progress" as blockers clear.
+
+**DoD per Issue:** Code compiles, unit tests pass, integration tests validate against Sample.Simplified and Sample.OverEngineered. Zero-config promise enforced.
+
+## Learnings
+
+- Sprint 2 represents decision-support layer: filters measure domain health, TCA quantifies architectural cost, CLI commands provide day-to-day feedback loop.
+- 2026-04-29T21:22:50.867-04:00: Wave structure enforces FilterVerdict as the semantic contract for all downstream CLI work; TCA MoneyRange becomes the unit of cost reasoning. Link's CLI commands depend critically on both structures before Wave 3 can unblock.
+- 2026-04-29T21:22:50.867-04:00: simplicity.json schema (configurable team parameters + filter thresholds) is independent of filter evaluator logic and can be prototyped in parallel. Budget command depends on both schema (for thresholds) and TCA costs (for the 5-category model); this drives Wave 2→Wave 3 sequencing.
 
 📌 **Completed:** 2026-04-29T07:32:23.826-04:00
 
