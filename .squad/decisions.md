@@ -62,6 +62,12 @@
 **What:** Pass 3 treats inbound-reference percentile as a file-level score aggregated across named types declared in the file, and it suppresses percentile matches when every candidate has zero inbound references.
 **Why:** The metric is reported at file granularity, so the heuristic needs a file-level signal even when a source file declares more than one type. Suppressing the all-zero case avoids turning "nothing stands out" into a noisy false-positive blanket across the solution.
 
+# Tank Decision — Integration Wave 3
+
+- **Date:** 2026-04-30T06:57:15.306-04:00
+- **Decision:** Use a process-level xUnit performance gate in `tests/SimplicityTools.Cli.Tests` and a separate BenchmarkDotNet harness in `tests/SimplicityTools.Benchmarks` for issue #26.
+- **Why:** The repo had sample integration coverage and baseline-tolerance checks already, but it lacked a persistent performance harness and no existing workflow enforced the 5-second budget. This is the narrowest addition that both exposes benchmark evidence and makes the existing `dotnet test` build fail when the threshold regresses.
+- **Impact:** No GitHub Actions workflow change was needed. Any CI path that already runs `dotnet test SimplicityTools.sln --nologo` now picks up the p95 gate, and the benchmark project remains available for deeper runtime inspection.
 ## Governance
 
 - All meaningful changes require team consensus
@@ -117,3 +123,159 @@
 **By:** Link
 **What:** `dotnet-simplicity watch` should run an initial snapshot immediately, then re-run analysis after a 500ms debounce for source-level changes under the solution root. The watcher should ignore generated and tooling-owned paths (`bin`, `obj`, `.git`, `.vs`, and `simplicity-report`) and only warn once while `simplicity.json` remains missing.
 **Why:** A live CLI that retriggers itself on analyzer/build output or repeats the same missing-config warning on every save turns feedback into noise. This guard keeps watch mode useful in the first five minutes while still reacting to real code and config edits.
+
+### 2026-04-30T06:57:15.306-04:00: Trend history contract
+**By:** Link
+**What:** Treat each `*.json` file under the solution-root `.simplicity-history/` directory as a serialized `SimplicitySnapshot`, order the files by `CollectedAt`, and layer the current report snapshot on top when rendering HTML trends.
+**Why:** This keeps the trend input format aligned with the existing snapshot JSON shape instead of inventing a second history schema. The report can stay zero-config on the first run, teach teams how to unlock trends, and upgrade automatically once at least two historical snapshots exist.
+
+### 2026-04-30T06:57:15.306-04:00: Sprint 3 Launch: Roslyn Analyzers + Code Fixes
+**By:** Morpheus
+**What:** Sprint 3 delivers the complete Roslyn analyzer suite (SF0001–SF0007, 7 diagnostics) and two code fix providers (SF0001, SF0002). This milestone completes the IDE integration layer, enabling real-time architectural feedback. The sprint also adds trend analysis to the HTML report and comprehensive integration testing with performance baselines. 11 open issues in Milestone 3 organized in three waves: Wave 1 (Ready Now) includes Switch → Analyzers #16–#22 (7 independent diagnostics, parallelizable) and Link → Trend Analysis #25 (parallelizable); Wave 2 (After #16/#17 complete) includes Link → Code Fixes #23–#24; Wave 3 (After Waves 1 + 2 complete) includes Tank → Integration Testing + Performance Validation #26. Critical path: #16–#22 (~3–4 days) → #23–#24 (~2–3 days) → #26 (~1–2 days). Total: ~6–9 days.
+**Why:** Wave structure enforces implementation order while maximizing parallelism. Seven analyzers are semantically independent and can parallelize. Code fixes serialize after their corresponding analyzers are design-complete. Integration testing serves as the final quality gate before closing Sprint 3. This structure keeps forward motion while enforcing quality gates and baseline tolerances.
+
+### 2026-04-30T06:57:15.306-04:00: SF0002 package-usage truth stays compiler-backed
+**By:** Switch
+**What:** SF0002 should only diagnose `<PackageReference>` items that map to compile-time metadata references. The analyzer parses the project file, maps package IDs to referenced assemblies by normalized NuGet package path, and marks a package as used only when Roslyn binding resolves symbols or types from those assemblies in C# source.
+**Why:** This keeps the warning tied to what the compiler can actually see instead of namespace-string guesses. It also avoids false positives for build-only or analyzer-only packages that contribute no compile assets.
+
+### 2026-04-30T06:57:15.306-04:00: SF0007 primary-path baseline is explicit, not circular
+**By:** Switch
+**What:** SF0007 treats primary-path files as `[PrimaryPath]`-annotated files when any annotation exists; otherwise it falls back to the existing directory conventions (`Controllers`, `Endpoints`, `Handlers`, `Pages`). It does not use inbound-reference percentile fallback to define the comparison set for this analyzer.
+**Why:** Using inbound references to define the primary-path baseline for an over-reference diagnostic would be circular and noisy. The analyzer needs a stable comparison set that developers can explain and intentionally shape.
+
+### 2026-04-30T06:57:15.306-04:00: Sprint 3 Analyzer Wave 1 Rejection Notice
+**By:** Tank
+**Verdict:** Rejected for revision
+**Revision owner:** Trinity
+
+## What I checked
+- Local implementation for SF0001-SF0007 in `src/SimplicityTools.Analyzers/`
+- Analyzer regression suite in `tests/SimplicityTools.Analyzers.Tests/`
+- Local validation: `dotnet build src/SimplicityTools.Analyzers/SimplicityTools.Analyzers.csproj --nologo`
+- Local validation: `dotnet test tests/SimplicityTools.Analyzers.Tests/SimplicityTools.Analyzers.Tests.csproj --nologo`
+
+## Why this is rejected
+1. **SF0005 is diagnosing structs even though issue #20 scopes the rule to classes.** `ConstructorParameterCountAnalyzer` explicitly analyzes both `TypeKind.Class` and `TypeKind.Struct`, so an 8-parameter struct primary constructor produces SF0005. That is a false positive against the stated analyzer contract.
+2. **SF0007 suppresses conventional primary-path files even after annotations take over the baseline.** Team decision says `[PrimaryPath]` annotations define the primary-path set when any annotation exists. The analyzer uses annotations for the baseline, but still exempts any file in `Controllers/`, `Endpoints/`, `Handlers/`, or `Pages/` from diagnostics. In mixed mode, an over-referenced conventional controller can slip through with no warning.
+3. **The current tests do not cover either failure mode.** Existing analyzer tests are happy-path plus one basic negative case per rule. They do not protect against the struct false positive or the mixed annotated/conventional primary-path scenario.
+
+## Required revision bar
+- Narrow SF0005 to classes only and add regression coverage proving structs are ignored.
+- Fix SF0007 mixed-mode behavior so conventional folders are only treated as primary-path files when no annotations exist anywhere in the compilation.
+- Add regression tests for both cases before resubmitting.
+
+### 2026-04-30T06:57:15.306-04:00: Sprint 3 Analyzer Wave 1 Rereview Approved
+**By:** Tank
+**Verdict:** Approved
+**What:** The revised analyzer artifact clears both prior rejection points.
+
+1. **SF0005 is back inside scope.** `ConstructorParameterCountAnalyzer` now exits unless the named type is a source `TypeKind.Class`, so 8-parameter structs no longer get warned.
+2. **SF0007 baseline is now explicit when annotations exist.** `NonPrimaryPathOverReferencedAnalyzer` builds the comparison set from `[PrimaryPath]`-annotated files whenever any annotation exists, and conventional `Controllers/Endpoints/Handlers/Pages` files are treated as supporting files in that mixed mode.
+
+**Evidence:**
+- Analyzer-only rereview harness passed: 16 tests, 0 failures
+- Focused rerun for the prior rejection cases passed: 2 tests, 0 failures
+  - `ConstructorParameterCountAnalyzer_DoesNotReportStructPrimaryConstructorAboveThreshold`
+  - `NonPrimaryPathOverReferencedAnalyzer_TreatsConventionalFilesAsSupportingWhenAnnotationsExist`
+
+**Why:** The earlier contract breaks are now covered by executable regressions instead of optimistic prose. Issues #16-#22 approved for closure.
+
+### 2026-04-30T06:57:15.306-04:00: Tank review — Sprint 3 code fixes (#23, #24)
+**By:** Tank
+**Verdict:** Rejected for revision
+**Revision owner:** Trinity
+
+#### Evidence
+
+- Baseline validation passed:
+  - `dotnet build src/SimplicityTools.Analyzers/SimplicityTools.Analyzers.csproj --nologo`
+  - `dotnet test tests/SimplicityTools.Analyzers.Tests/SimplicityTools.Analyzers.Tests.csproj --nologo`
+  - Result: 18 analyzer/code-fix tests passed locally.
+- Focused scratch validation for SF0002 passed:
+  - Removing an unused multiline `PackageReference` still produced preview operations and valid XML after rewrite.
+- Focused scratch validation for SF0001 failed the contract:
+  - Scenario: `ICheckoutPricer : IPricer`, `DefaultPricer : ICheckoutPricer`, and a caller typed to `ICheckoutPricer`.
+  - Applying `SingleImplementationInterfaceCodeFixProvider` to `IPricer` removed `IPricer`, left `ICheckoutPricer` in place, and stripped the inherited `Price()` member path.
+  - Result: the updated project no longer compiled because callers typed to `ICheckoutPricer` lost access to `Price()`.
+
+#### Required revision
+
+SF0001 is not approval-ready. The code fix must either:
+
+1. refuse to offer the fix when dependent interfaces still rely on the target interface contract, or
+2. rewrite the dependent-interface chain safely and prove the result still compiles.
+
+Add a regression that covers the dependent-interface scenario so this bug does not come back.
+
+
+### 2026-04-30T06:57:15.306-04:00: Trinity decision — SF0001 code-fix revision
+**By:** Trinity
+**Scope:** Sprint 3 issues #23 and #24, focused on the SF0001 code fix.
+**Decision:** When removing a single-implementation interface that sits at the base of a source interface chain, the code fix must preserve downstream compileability by copying the removed interface's members into each direct dependent interface before dropping the base-interface reference.
+**Why:** Rejecting the fix whenever a dependent interface exists would leave the diagnostic without a safe remediation path for a common Roslyn case. Rewriting only consumer types is not sufficient, because callers typed to the dependent interface still need the inherited member surface after the base interface is removed.
+**Notes:** Keep SF0002 package-removal behavior unchanged unless a concrete defect appears. Preserve explicit-interface implementation cleanup so implementations become callable through the surviving surface.
+
+### 2026-04-30T06:57:15.306-04:00: Tank rereview — Sprint 3 code fixes (#23, #24) — APPROVED
+**By:** Tank
+**Revision author:** Trinity
+**Verdict:** Approved
+**Why:** The prior SF0001 rejection point is resolved: removing `IPricer` now preserves the dependent-interface chain by copying inherited members onto `ICheckoutPricer` and rewriting explicit `IPricer.Price()` implementations to public concrete members. SF0002 still holds up. Added a multiline `PackageReference` regression and the code fix removed the unused dependency without breaking XML shape or preview/apply behavior.
+**Evidence:**
+- `dotnet build src/SimplicityTools.Analyzers/SimplicityTools.Analyzers.csproj --nologo`
+- Focused reruns for `SingleImplementationInterfaceCodeFixProvider_PreservesDependentInterfaceChains`, `UnusedDependencyCodeFixProvider_RemovesPackageReferenceWithPreviewSafeRewrite`, and `UnusedDependencyCodeFixProvider_RemovesMultilinePackageReferenceWithoutBreakingXml`
+- `dotnet test tests/SimplicityTools.Analyzers.Tests/SimplicityTools.Analyzers.Tests.csproj --nologo --no-build` → 20 tests passed
+# README Positioning Decision
+
+**By:** Link (DevRel)  
+**Date:** 2026-04-30T08:24:49.761-04:00  
+**Status:** Ready for merge to decisions.md
+
+## What
+
+Rewrote `README.md` as a GitHub repository landing page that speaks to both engineering teams and stakeholders.
+
+## Structure
+
+1. **Opening hook** — Value statement + problem framing (2 paragraphs)
+2. **The Problem** — Why complexity matters to teams (3 short questions)
+3. **What You Get** — Five tools table with use-case context
+4. **Zero-Config First Run** — Prove the zero-config promise with three inline commands
+5. **Build Into Your Workflow** — CI baseline/diff, live watch mode
+6. **What Gets Measured** — Four categories: structural, code, verdicts, cost
+7. **Analyzer Code Fixes** — Surface SF0001 and SF0002 as immediate value
+8. **For Developers** — Install path, build path, library usage, link to full guide
+9. **For Stakeholders** — Cost framing, use cases, ROI story
+10. **Project Structure** — Directory tree + tests location
+11. **Key Design Decisions** — Five bullet points on zero deps, zero config, self-contained reports, teaching approach, validation
+12. **Next Steps** — Four clear calls-to-action
+
+## Key Claims (All grounded in shipped behavior)
+
+- Six CLI commands: `analyze`, `report`, `baseline`, `diff`, `budget`, `watch` ✓
+- Zero config + sensible defaults ✓
+- Self-contained HTML reports ✓
+- Seven analyzers (SF0001–SF0007) ✓
+- Two code fixes (SF0001, SF0002) ✓
+- Three filter verdicts (TwoAmTest, HalfRule, PrimaryPathFirst) ✓
+- TCA cost model (team size, salary, incidents, on-call rate, attrition) ✓
+- Two sample solutions (Simplified: 2 projects; OverEngineered: 12 projects) ✓
+
+## Why
+
+The current README was a three-line stub pointing at docs. This failed the landing-page test:
+- Didn't surface the value proposition
+- Didn't explain *what* SimplicityTools does or *why*
+- Didn't distinguish between developer use cases and stakeholder communication
+- Assumed visitors already knew what "Simplicity-First" meant
+
+The new README:
+- Opens with a problem statement that resonates across roles
+- Foregrounds the zero-config promise and five-tool ecosystem
+- Separates developer onboarding from stakeholder cost/benefit messaging
+- Keeps the full guide link but makes the README itself scannable and complete
+- Frames TCA and filter verdicts as the "why" that metrics alone don't provide
+
+## When to Merge
+
+After next review cycle or immediately if no additional context changes README positioning.

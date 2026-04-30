@@ -75,3 +75,39 @@
 **Unblocking Mechanism:** Issue comments document ownership and blocking criteria. After #1 compiles, Wave 2 can start. No speculative work. Each task has a concrete measured prerequisite.
 
 **DoD per Milestone:** Validated against both sample solutions (Sample.OverEngineered and Sample.Simplified). Zero-config promise enforced by CLI validation.
+
+## Sprint 2 Execution & Completion
+
+📌 **Sprint 2 Completion:** 2026-04-30T06:50:56.199-04:00
+
+All 7 issues in Milestone 2 (#9–#15) closed. PR #28 (`sprint/2-filters-tca-extensions`) merged to main.
+
+**Closed Issues:** #9 (Filters), #10 (schema), #11 (TCA), #12 (baseline), #13 (diff), #14 (budget), #15 (watch).
+
+**Milestone Closed:** Milestone 2: Filters + TCA + CLI Extensions.
+
+## Sprint 3 Launch
+
+📌 **Completed:** 2026-04-30T06:57:15.306-04:00
+
+**Branch Created:** `sprint/3-analyzers-code-fixes` — Pushed to origin.
+
+**11 Open Issues in Milestone 3:** Roslyn Analyzers + Code Fixes
+
+**Wave Structure & Assignment:**
+- **Wave 1 (Ready Now):** Switch → #16–#22 (All 7 SF00X analyzers, parallelizable). Link → #25 (Trend analysis). No inter-dependencies.
+- **Wave 2 (After #16/#17 complete):** Link → #23–#24 (Code fixes for SF0001, SF0002). Depend on analyzer contracts finalized.
+- **Wave 3 (After Waves 1+2 complete):** Tank → #26 (Integration testing + performance validation). Final quality gate.
+
+**Critical Path:** #16–#22 (~3–4 days) → #23–#24 (~2–3 days) → #26 (~1–2 days). Parallel: #25 with Wave 1. Total ~6–9 days.
+
+**Key Decision:** Seven analyzers are semantically independent; each detects a distinct architectural anti-pattern using Roslyn symbol analysis. Code fixes serialize after analyzer contracts stabilize, not after full analyzer completion—this unblocks Wave 2 faster.
+
+**DoD:** All 7 analyzers compile and emit diagnostics on both samples with unit test coverage. Code fixes apply without breaking compilation. Integration suite passes tolerance thresholds (int exact, float ±5%, TimeSpan ±10%). Performance <5s P95 on OverEngineered. Trend analysis renders in HTML. All 11 issues closed.
+
+## Learnings
+
+- Sprint 3 represents the IDE integration tier: seven independent Roslyn analyzers implementing Simplicity-First rules (SF000X).
+- 2026-04-30T06:57:15.306-04:00: Seven analyzers parallelize cleanly because they detect independent architectural anti-patterns (premature abstraction, unused dependencies, complexity, depth, constructor bloat, generic abuse, unbalanced references). No analyzer feeds another.
+- 2026-04-30T06:57:15.306-04:00: Code fixes depend on analyzer contracts, not analyzer completion. Link can start SF0001 code fix once Switch's SF0001 analyzer diagnostic shape stabilizes. This unblocks Wave 2 sooner than serializing all analyzer completion.
+- 2026-04-30T06:57:15.306-04:00: Integration testing (#26) serves as cumulative quality gate. Per-analyzer unit tests validate individual rules; Tank's full suite validates cross-analyzer interactions, performance under load, and baseline tolerance drift on realistic samples.

@@ -7,7 +7,7 @@
     <PackageId>SimplicityTools.Analyzers</PackageId>
     <Description>Roslyn analyzer package for Simplicity-First diagnostics.</Description>
     <EnforceExtendedAnalyzerRules>false</EnforceExtendedAnalyzerRules>
-    <NoWarn>$(NoWarn);RS1041;RS2008</NoWarn>
+    <NoWarn>$(NoWarn);RS1030;RS1038;RS1041;RS2008</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,5 +16,6 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
   </ItemGroup>
 </Project>

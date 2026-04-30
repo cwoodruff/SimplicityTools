@@ -27,3 +27,27 @@
  - 2026-04-29T21:22:50.867-04:00: When snapshot inputs do not expose a richer metric yet, mapping evaluators to the closest existing deterministic signal is better than adding ambient heuristics mid-sprint; note the gap explicitly and keep the evaluator formulas stable.
   - 2026-04-29T21:22:50.867-04:00: TCA stays easier to validate when the library owns only deterministic cost formulas and receives configuration assumptions as explicit inputs, instead of reaching into repo-local config files.
   - 2026-04-29T21:22:50.867-04:00: Using filter composite scores directly for opportunity-cost math gives the calculator a stable input contract while preserving one place to evolve scoring behavior.
+- 2026-04-30T06:57:15.306-04:00: For SF0007, explicit `[PrimaryPath]` annotations must fully define the comparison set when present; convention-only files in `Controllers`, `Endpoints`, `Handlers`, or `Pages` revert to supporting files and can still be diagnosed.
+- 2026-04-30T06:57:15.306-04:00: SF0005 should stay scoped to classes only; broadening constructor-count warnings to structs turns data-carrier shapes into false positives instead of surfacing service objects doing too much.
+- 2026-04-30T06:57:15.306-04:00: For SF0001, removing a base interface safely requires inlining its members into direct dependent interfaces before dropping the inheritance edge; otherwise consumers typed to the surviving interface lose inherited members and the fix breaks compilation.
+- 2026-04-30T06:57:15.306-04:00: Explicit interface implementations need the same revision pass to check the original specifier symbol before rewriting, because Roslyn semantic lookups on already-rewritten nodes are no longer anchored to the original syntax tree.
+
+---
+
+## 2026-04-30T10:57:15Z — Orchestration Snapshot
+**From:** Scribe cross-agent sync
+- **Analyzer Revision Assigned:** Trinity owns SF0005 + SF0007 fixes under reviewer lockout.
+- **Scope:** Narrow SF0005 to classes, fix SF0007 mixed-mode behavior, add regression tests.
+- **Reviewer Lockout:** Tank cannot review this revision; resubmit to Morpheus or use decision consensus.
+- **Critical Path:** This is blocking issue #23 (Code Fixes) from Wave 2.
+
+---
+
+## 2026-04-30T10:57:15Z — Scribe cross-agent sync
+**Code-Fix Review Rejection & Trinity Assignment:**
+- **Issue:** Sprint 3 issues #23-#24 code-fix review completed. SF0001 dependent-interface-chain bug found and rejected.
+- **Evidence:** `SingleImplementationInterfaceCodeFixProvider` removes base `IPricer` while `ICheckoutPricer : IPricer` remains, breaking callers typed to dependent interface.
+- **Verdict:** Rejected. Trinity assigned for revision (reviewer lockout: Tank locked out).
+- **Revision Scope:** SF0001 must either refuse the fix when dependencies exist or rewrite chain safely with regression coverage.
+- **Next:** Await Trinity revision. Decision recorded in `.squad/decisions.md`.
+- **Status:** Tank available for #26 and other Sprint 3 tasks post-review.
