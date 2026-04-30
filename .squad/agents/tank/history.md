@@ -54,3 +54,13 @@
 - **Lockout:** Tank reviewer lockout applied. Trinity owns analyzer revision.
 - **Availability:** Tank remains open for #26 (Integration Testing) and other Sprint 3 tasks.
 
+- 2026-04-30T06:57:15.306-04:00: On a shared sprint branch, analyzer rereview can stay honest by running an analyzer-only harness that reuses the real test infrastructure and strips code-fix tests from the scratch copy, instead of patching teammates' in-flight files. That lets me verify the diagnostics contract without contaminating unrelated work.
+
+📌 **Sprint 3 issues #16-#22 analyzer rereview approved (2026-04-30T06:57:15.306-04:00):** Reviewed Trinity's analyzer revision for the prior SF0005 and SF0007 rejection points. `ConstructorParameterCountAnalyzer` now limits diagnostics to `TypeKind.Class`, and `NonPrimaryPathOverReferencedAnalyzer` now uses `[PrimaryPath]` annotations as the sole baseline whenever any annotation exists. Validation: analyzer-only rereview harness passed 16 analyzer tests with 0 failures, and the two targeted regressions (`ConstructorParameterCountAnalyzer_DoesNotReportStructPrimaryConstructorAboveThreshold` and `NonPrimaryPathOverReferencedAnalyzer_TreatsConventionalFilesAsSupportingWhenAnnotationsExist`) passed again in a focused 2-test rerun. Verdict: **Approved**.
+
+---
+
+## 2026-04-30T10:57:15Z — Scribe cross-agent sync
+**Decision merged:** Tank's analyzer rereview verdict is now in `.squad/decisions.md` alongside the prior rejection notice. This provides the team with the complete decision arc (rejection → revision → approval).
+- **Status:** Decisions archived and synced.
+- **Next:** Issues #16-#22 approved for closure. No blocking reviewers on other Sprint 3 tasks.

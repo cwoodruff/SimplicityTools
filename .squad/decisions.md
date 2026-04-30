@@ -159,3 +159,19 @@
 - Fix SF0007 mixed-mode behavior so conventional folders are only treated as primary-path files when no annotations exist anywhere in the compilation.
 - Add regression tests for both cases before resubmitting.
 
+### 2026-04-30T06:57:15.306-04:00: Sprint 3 Analyzer Wave 1 Rereview Approved
+**By:** Tank
+**Verdict:** Approved
+**What:** The revised analyzer artifact clears both prior rejection points.
+
+1. **SF0005 is back inside scope.** `ConstructorParameterCountAnalyzer` now exits unless the named type is a source `TypeKind.Class`, so 8-parameter structs no longer get warned.
+2. **SF0007 baseline is now explicit when annotations exist.** `NonPrimaryPathOverReferencedAnalyzer` builds the comparison set from `[PrimaryPath]`-annotated files whenever any annotation exists, and conventional `Controllers/Endpoints/Handlers/Pages` files are treated as supporting files in that mixed mode.
+
+**Evidence:**
+- Analyzer-only rereview harness passed: 16 tests, 0 failures
+- Focused rerun for the prior rejection cases passed: 2 tests, 0 failures
+  - `ConstructorParameterCountAnalyzer_DoesNotReportStructPrimaryConstructorAboveThreshold`
+  - `NonPrimaryPathOverReferencedAnalyzer_TreatsConventionalFilesAsSupportingWhenAnnotationsExist`
+
+**Why:** The earlier contract breaks are now covered by executable regressions instead of optimistic prose. Issues #16-#22 approved for closure.
+
