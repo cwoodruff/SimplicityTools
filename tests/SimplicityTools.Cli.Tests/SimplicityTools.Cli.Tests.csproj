@@ -22,5 +22,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SimplicityTools.Metrics\SimplicityTools.Metrics.csproj" />
+    <ProjectReference Include="..\..\src\SimplicityTools.Cli\SimplicityTools.Cli.csproj" />
   </ItemGroup>
 </Project>

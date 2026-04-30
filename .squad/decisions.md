@@ -77,3 +77,43 @@
 **By:** Link
 **What:** Implemented `dotnet simplicity report` to generate a self-contained, styled HTML report capturing all required sections with no external dependencies. All CSS embedded inline; dark theme (`#0D0D0D`) with brand red (`#E31B23`) accents. Report structure: Executive Summary (metric cards), Filter Verdicts (domain health badges), Metric Detail (full table), Complexity Budget (simplified scorecard), Trend Analysis, Appendix. Simplicity Score algorithm uses composite 0–100 penalty system (premature abstraction up to 30 pts, unused dependencies up to 20 pts, high method complexity up to 20 pts, low primary path coverage up to 30 pts). Output to `./simplicity-report/index.html` (~11–12 KB, <1 sec generation).
 **Why:** Self-contained HTML works offline and in CI/CD with zero configuration. Embedded CSS and brand colors reflect professionalism; responsive grid and status badges provide visual health signals. Composite Simplicity Score guides teams toward highest-impact improvements. Three test methods validate HTML structure, self-contained output, and metric inclusion across Sample.Simplified and Sample.OverEngineered.
+
+### 2026-04-29T21:22:50.867-04:00: Sprint 2 Execution Plan
+**By:** Morpheus
+**What:** Sprint 2 delivers the decision-support layer: filter evaluators (TwoAmTest, HalfRule, PrimaryPathFirst), TCA cost model, simplicity.json configuration schema, and CLI extensions (baseline, diff, budget, watch). Seven open issues (#9–#15) organized in four waves with hard dependencies: Wave 1 (Ready Now) includes #9 Filter evaluators → Trinity and #10 simplicity.json schema → Link; Wave 2 (After #9 complete) includes #11 TCA calculator → Trinity; Wave 3 (After #9 + #10 + #11 complete) includes #12 CLI baseline → Link; Wave 4 (After #12 complete) includes #13 CLI diff, #14 CLI budget, #15 CLI watch → Link. Critical path: #9 → #11 → #14; #10 → #14; #9 → #12 → #13; #9 → #15.
+**Why:** Wave structure enforces implementation order while maximizing parallelism. Aligns with package dependencies and book chapter structure (Measurement → Decision Support → Feedback). Success criteria: All 7 issues closed with passing tests, CLI commands functional on both samples, zero-config promise maintained.
+
+### 2026-04-29T21:22:50.867-04:00: Filter evaluator metric mapping
+**By:** Trinity
+**What:** Issue #9 implements filter evaluators directly against the existing `SimplicitySnapshot` contract. For Wave 1, the filters map "primary path hop count" to `PrimaryPathFileCount`, and they apply the Primary Path First project-count target (`<= 5`) unconditionally because the snapshot does not yet carry a dedicated hop-count or LOC metric.
+**Why:** This keeps the Filters package deterministic and shippable without expanding the Metrics contract mid-sprint. If a later milestone adds explicit hop-count or LOC inputs, the evaluators can swap to those metrics without changing the public `FilterVerdict` shape.
+
+### 2026-04-29T21:22:50.867-04:00: simplicity.json partial override policy
+**By:** Link
+**What:** Issue #10 introduces `simplicity.json` for team-specific TCA inputs and filter thresholds. Treat `simplicity.json` as a partial override file: any omitted supported property falls back to the documented default, while unsupported properties fail validation with a clear error.
+**Why:** This keeps first-run customization lightweight for teams that only need to tune one or two inputs, while protecting the CLI from silent typos and drift between the schema and runtime behavior.
+
+### 2026-04-29T21:22:50.867-04:00: TCA calculation boundary
+**By:** Trinity
+**What:** `SimplicityTools.Tca` keeps the cost math pure by accepting explicit `SimplicitySnapshot`, `FilterVerdict` values, and `TcaInputs` assumptions. It does not read `simplicity.json` directly.
+**Why:** This keeps the core package deterministic and testable while leaving environment-specific configuration loading in the CLI layer.
+
+### 2026-04-29T21:22:50.867-04:00: TCA review verdict
+**By:** Tank
+**What:** Rejected Trinity's issue #11 TCA calculator revision for another pass. The five category formulas in `TcaEstimate` line up with the Milestone 2 spec, but the regression suite only proves one happy-path fixture. Revision ownership moves to Switch for the next cycle under reviewer lockout. Needed coverage: culture-invariant executive-summary formatting and failure behavior when one of the required filter verdicts is missing.
+**Why:** This package produces book-facing and CLI-facing money summaries. Before approval, tests need to prove these edge cases with executable evidence instead of confidence.
+
+### 2026-04-30T01:40:30Z: TCA calculator rereview approved
+**By:** Tank
+**What:** Switch's revision closes the two gaps from the prior rejection without needing further production changes. `TcaEstimateTests.Create_ThrowsWhenARequiredFilterVerdictIsMissing` now proves the required-filter failure path for `PrimaryPathFirst`. `TcaEstimateTests.ToExecutiveSummary_UsesSpecifiedFormat_IndependentlyOfCurrentCulture` now proves culture-invariant money formatting under `fr-FR`. `dotnet test tests/SimplicityTools.Tca.Tests/SimplicityTools.Tca.Tests.csproj --nologo` passed locally (4 tests, 0 failures).
+**Why:** The regression bar is now met for both the calculator contract and the book/CLI-facing summary output. Issue #11 approved for closure.
+
+### 2026-04-29T21:22:50.867-04:00: Diff output should teach the next step
+**By:** Link
+**What:** `dotnet-simplicity diff` should always print the baseline file path, baseline/current snapshot dates, metric deltas, filter score deltas, and explicit regression bullets. If the baseline file is missing, the CLI should fail with a direct instruction to run `dotnet simplicity baseline <solution.sln>` first.
+**Why:** Diff is both a CI gate and a first-run learning surface. Teams need the command to explain what changed and what to do next without digging through docs or guessing why the build failed.
+
+### 2026-04-29T21:22:50.867-04:00: Watch command self-loop guard
+**By:** Link
+**What:** `dotnet-simplicity watch` should run an initial snapshot immediately, then re-run analysis after a 500ms debounce for source-level changes under the solution root. The watcher should ignore generated and tooling-owned paths (`bin`, `obj`, `.git`, `.vs`, and `simplicity-report`) and only warn once while `simplicity.json` remains missing.
+**Why:** A live CLI that retriggers itself on analyzer/build output or repeats the same missing-config warning on every save turns feedback into noise. This guard keeps watch mode useful in the first five minutes while still reacting to real code and config edits.
