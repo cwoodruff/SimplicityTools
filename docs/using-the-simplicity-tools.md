@@ -14,6 +14,22 @@ This repository currently ships five user-facing packages:
 
 If you only use one thing first, use the CLI.
 
+## Package install surfaces
+
+The published packages are grouped on purpose:
+
+- `SimplicityTools.Metrics`, `SimplicityTools.Filters`, and `SimplicityTools.Tca` ship as one version line.
+- `SimplicityTools.Analyzers` can release on its own cadence.
+- `SimplicityTools.Cli` can release on its own cadence as the global tool.
+
+Git tags drive published versions:
+
+- `libraries/vX.Y.Z`
+- `analyzers/vX.Y.Z`
+- `cli/vX.Y.Z`
+
+The release checklist and local test-publish flow live in [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+
 ## Prerequisites
 
 - .NET 10 SDK installed (`net10.0` is the current target in this repo)

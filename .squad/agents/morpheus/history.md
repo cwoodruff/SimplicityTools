@@ -162,3 +162,20 @@ All 7 issues in Milestone 2 (#9–#15) closed. PR #28 (`sprint/2-filters-tca-ext
 📌 **Status:** Packaging roadmap live on GitHub (issues #27–#44 in milestones 4–7). Team can begin M4 work. Next gate: M4 completion unblocks M5.
 
 📌 Packaging roadmap complete on 2026-04-30T16:59:28.031-04:00. Delivered: Four-milestone packaging strategy (M4–M7), 18 GitHub issues (#27–#44), and critical decisions on package versioning, PrivateAssets=all, and zero-config validation before production. Scribe consolidated decision into `.squad/decisions.md` on 2026-04-30T21:04:20Z.
+## Sprint 4 Foundation — Review Outcome
+
+📌 **Sprint 4 Review Completed:** 2026-04-30T21:29:31Z
+
+**Branch Reviewed:** `sprint/4-package-foundation`
+**Issues Reviewed:** #32 (metadata), #33 (CI/CD), #34 (release docs)
+**Verdict:** **REJECTED** — Critical defect in analyzer packaging.
+
+**Defect:** `SimplicityTools.Analyzers.0.4.0-local.nupkg` packed as normal library instead of analyzer layout. Scratch consumer validation confirmed **0 warnings**, so SF0001 never executed.
+
+**Tank Evidence:** Build/test/pack all passed; consumer validation failed. The workflow validates metadata presence but not package usability.
+
+**Revision Assignment:** Trinity owns repacking and adding release-validation coverage. This is the final gate before M5.
+
+**Decision:** Full record in `.squad/decisions.md` under "Sprint 4 Foundation Review — Tank Verdict".
+
+**Coordinator Action:** When Trinity completes revision and passes review, promote M5 issues to ready and spawn Trinity for Wave 1 (package four libraries).
