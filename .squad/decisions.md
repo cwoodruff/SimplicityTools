@@ -107,3 +107,8 @@
 **By:** Tank
 **What:** Switch's revision closes the two gaps from the prior rejection without needing further production changes. `TcaEstimateTests.Create_ThrowsWhenARequiredFilterVerdictIsMissing` now proves the required-filter failure path for `PrimaryPathFirst`. `TcaEstimateTests.ToExecutiveSummary_UsesSpecifiedFormat_IndependentlyOfCurrentCulture` now proves culture-invariant money formatting under `fr-FR`. `dotnet test tests/SimplicityTools.Tca.Tests/SimplicityTools.Tca.Tests.csproj --nologo` passed locally (4 tests, 0 failures).
 **Why:** The regression bar is now met for both the calculator contract and the book/CLI-facing summary output. Issue #11 approved for closure.
+
+### 2026-04-29T21:22:50.867-04:00: Diff output should teach the next step
+**By:** Link
+**What:** `dotnet-simplicity diff` should always print the baseline file path, baseline/current snapshot dates, metric deltas, filter score deltas, and explicit regression bullets. If the baseline file is missing, the CLI should fail with a direct instruction to run `dotnet simplicity baseline <solution.sln>` first.
+**Why:** Diff is both a CI gate and a first-run learning surface. Teams need the command to explain what changed and what to do next without digging through docs or guessing why the build failed.
