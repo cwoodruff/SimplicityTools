@@ -175,3 +175,30 @@
 
 **Why:** The earlier contract breaks are now covered by executable regressions instead of optimistic prose. Issues #16-#22 approved for closure.
 
+### 2026-04-30T06:57:15.306-04:00: Tank review — Sprint 3 code fixes (#23, #24)
+**By:** Tank
+**Verdict:** Rejected for revision
+**Revision owner:** Trinity
+
+#### Evidence
+
+- Baseline validation passed:
+  - `dotnet build src/SimplicityTools.Analyzers/SimplicityTools.Analyzers.csproj --nologo`
+  - `dotnet test tests/SimplicityTools.Analyzers.Tests/SimplicityTools.Analyzers.Tests.csproj --nologo`
+  - Result: 18 analyzer/code-fix tests passed locally.
+- Focused scratch validation for SF0002 passed:
+  - Removing an unused multiline `PackageReference` still produced preview operations and valid XML after rewrite.
+- Focused scratch validation for SF0001 failed the contract:
+  - Scenario: `ICheckoutPricer : IPricer`, `DefaultPricer : ICheckoutPricer`, and a caller typed to `ICheckoutPricer`.
+  - Applying `SingleImplementationInterfaceCodeFixProvider` to `IPricer` removed `IPricer`, left `ICheckoutPricer` in place, and stripped the inherited `Price()` member path.
+  - Result: the updated project no longer compiled because callers typed to `ICheckoutPricer` lost access to `Price()`.
+
+#### Required revision
+
+SF0001 is not approval-ready. The code fix must either:
+
+1. refuse to offer the fix when dependent interfaces still rely on the target interface contract, or
+2. rewrite the dependent-interface chain safely and prove the result still compiles.
+
+Add a regression that covers the dependent-interface scenario so this bug does not come back.
+
