@@ -64,3 +64,15 @@
 - **Reviewer Lockout:** None; normal review cycle on next submission.
 - **Critical Path:** M4 completion blocks M5 (library packaging). This revision is the final gate before packaging pipeline advances.
 - **Decision:** Full record in `.squad/decisions.md` under "Sprint 4 Foundation Review — Tank Verdict".
+- 2026-04-30T17:29:31.278-04:00: Roslyn consumer validation is only trustworthy when the packed analyzer is restored into a real downstream project from a repo-root artifact path; consumer fixtures under `bin/` can mask diagnostics, and `PrivateAssets="all"` on the validation `PackageReference` suppresses the analyzer path we need to prove.
+
+---
+
+## 2026-04-30T21:29:31Z — Decision Archived
+**From:** Scribe session (post-Tank verdict)
+- **Action:** Trinity's analyzer packaging revision decision merged from inbox into shared decision log.
+- **Decision Point:** 2026-04-30T17:29:31.278-04:00 — Analyzer packaging repacked per Tank revision
+  - Scope: `SimplicityTools.Analyzers` must pack under `analyzers/dotnet/cs/` with normal `lib/` output suppressed
+  - Validation: Must inspect `.nupkg` for correct analyzer path; must fail if legacy `lib/net10.0/` path exists
+  - Consumer validation: Must prove packaging restores into downstream project with expected SF0001 diagnostics firing
+- **Status:** Decision now in team memory, ready for implementation and validation tracking.

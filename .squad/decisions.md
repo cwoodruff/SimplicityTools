@@ -382,3 +382,9 @@ Morpheus, 2026-04-30T17:29:31.278-04:00
 
 - Repack `SimplicityTools.Analyzers` so the analyzer assembly is included in the analyzer package path Roslyn actually consumes.
 - Add release-validation coverage that proves a consuming project loads the packaged analyzer and emits at least one expected diagnostic before approving publish readiness.
+
+### 2026-04-30T17:29:31.278-04:00: Analyzer packaging repacked per Tank revision
+**By:** Trinity
+**What:** `SimplicityTools.Analyzers` must pack as a Roslyn analyzer package by suppressing normal `lib/` output and placing the analyzer assembly under `analyzers/dotnet/cs/`.
+**Why:** The rejected package installed cleanly but behaved like a normal library, so downstream consumers emitted zero Simplicity diagnostics. Publish validation now has to prove the actual consumer contract: restore the packed analyzer into a scratch project and confirm `SF0001` fires.
+**Validation:** Package validation must inspect the `.nupkg` for `analyzers/dotnet/cs/SimplicityTools.Analyzers.dll` and fail if `lib/net10.0/SimplicityTools.Analyzers.dll` is present. Consumer validation must reference the package normally (no `PrivateAssets="all"`) and build from a repo-root artifact path.
