@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <PackageId>SimplicityTools.Tca</PackageId>
+    <Description>TCA translation layer for the Simplicity-First .NET Toolkit.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SimplicityTools.Metrics\SimplicityTools.Metrics.csproj" />
+    <ProjectReference Include="..\SimplicityTools.Filters\SimplicityTools.Filters.csproj" />
+  </ItemGroup>
+</Project>

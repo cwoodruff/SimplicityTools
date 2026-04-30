@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Sample.OverEngineered.Domain/Sample.OverEngineered.Domain.csproj" />
+    <ProjectReference Include="../Sample.OverEngineered.Infrastructure/Sample.OverEngineered.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
