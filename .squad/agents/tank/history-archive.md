@@ -59,3 +59,20 @@ Recent decision cycles and learnings remain in main history.md.
 - **Status:** Tank Sprint 3 completion logged.
 
 - 2026-04-30T17:29:31.278-04:00: Sprint 4 package review rejected. Strong release proof needs one real consumer install for each delivery surface; metadata-only pack validation missed that the analyzer nupkg was laid out as lib/ instead of analyzers/dotnet/cs, so consumer builds loaded zero SimplicityTools diagnostics.
+
+## 2026-04-30T21:27:33Z: Sprint 5–6 Orchestration (Archived from history.md)
+
+### Sprint 5 Milestone 4 → 5 Transition
+- Sprint 4 Analyzer Package rereview approved (2026-04-30T22:15:00Z): Confirmed analyzer packing layout (`analyzers/dotnet/cs/` instead of `lib/`), consumer diagnostic validation passed (`warning SF0001` emitted).
+- Sprint 5 Milestone 5 release gate rejection: Metrics, Filters, Tca packages validated locally; Analyzers package shape confirmed; integration consumer build succeeded. However, `.github/workflows/nuget-publish.yml` blocked with Python import error. Reassigned workflow fix to Link.
+- Sprint 5 Milestone 5 workflow rereview approved (2026-04-30T19:52:08.101-04:00): Link fixed Python import, stale workspace cleanup verified. Both reruns of analyzer-consumer validation passed; no false passes from stale state.
+
+### Key Learnings
+- Workflow rereviews need adversarial testing: inject stale state, prove cleanup works on next run.
+- Release confidence requires both local proof AND CI gate execution; missing imports invalidate otherwise-correct packages.
+- Performance testing: pair xUnit process-level p95 gate with BenchmarkDotNet harness; `dotnet test` fails loudly when budget regresses.
+
+### Sprint 6 Assignment
+- Tank owns #41 (Validate global tool zero-config first-run) in Wave 2 of Milestone 6.
+- Wave 2 starts after Link completes #40 (global tool package contract proof).
+

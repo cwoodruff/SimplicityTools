@@ -441,3 +441,15 @@ Morpheus, 2026-04-30T17:29:31.278-04:00
 - `dotnet test tests/SimplicityTools.Analyzers.Tests/SimplicityTools.Analyzers.Tests.csproj --configuration Release --no-build --verbosity minimal --filter FullyQualifiedName~AnalyzerPackageValidationTests`
 - `dotnet pack src/SimplicityTools.Analyzers/SimplicityTools.Analyzers.csproj --configuration Release --no-build --output artifacts/packages -p:Version=0.4.0-ci.tankreview --verbosity minimal`
 - Two end-to-end reruns of the workflow's analyzer-consumer validation logic against the packed nupkg both passed, both emitted `warning SF0001`, and the second run removed an injected stale sentinel before rebuilding.
+
+### 2026-04-30T21:27:33.453-04:00: Sprint 6 kickoff and routing
+**By:** Morpheus
+**What:** Start Milestone 6 on `sprint/6-global-tool-packaging` with Link owning #40 and #42 in Wave 1, Tank owning #41 after local tool install is proven, and Link closing with #43 after validation and docs converge.
+**Why:** The global tool package contract is the only true upstream dependency in this milestone. Keeping #40 as the contract task preserves the zero-config first-run promise, lets documentation move in parallel without speculative abstraction, and keeps release dry-run work gated on evidence instead of hope.
+
+
+### 2026-04-30T21:27:33.453-04:00: GitHub wrap-up for Sprint 5 & 6 complete
+**By:** Morpheus
+**What:** Executed GitHub wrap-up for Sprint 5 (completed earlier) and Sprint 6 (completed today). Sprint 5 issues #35–#39 were pre-closed; Sprint 6 PR #64 was created and merged, closing issues #40–#43; both Milestone 5 and Milestone 6 are closed.
+**Why:** Provides clean GitHub state transition: both sprints are fully closed with no orphaned PRs or open issues. Sprint 5 (NuGet Library Packages) and Sprint 6 (Global Tool Packaging) are complete. Ready to proceed with Milestone 7.
+
