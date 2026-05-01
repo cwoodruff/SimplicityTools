@@ -860,7 +860,182 @@ Then refactor until:
 2. run `dotnet simplicity report ...`
 3. publish `simplicity-report/index.html` as a build artifact
 
+## CI/CD Integration
+
+SimplicityTools integrates naturally into any CI/CD pipeline. The most common pattern: establish a baseline, protect it in PRs, and fail the build if complexity regresses.
+
+### GitHub Actions
+
+Install the tool and run analysis as part of your workflow:
+
+```yaml
+name: Complexity Check
+on: [pull_request, push]
+
+jobs:
+  simplicity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      
+      - name: Install SimplicityTools
+        run: dotnet tool install --global SimplicityTools.Cli
+      
+      - name: Add tool to PATH
+        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+      
+      - name: Restore solution
+        run: dotnet restore
+      
+      - name: Run complexity analysis
+        run: dotnet simplicity analyze YourSolution.sln
+      
+      - name: Check regression (PRs only)
+        if: github.event_name == 'pull_request'
+        run: dotnet simplicity diff YourSolution.sln --fail-on-regression
+```
+
+**Key points:**
+- `actions/setup-dotnet` installs the .NET SDK on the runner
+- Add `~/.dotnet/tools` to `$GITHUB_PATH` so the CLI is discoverable
+- Use `--fail-on-regression` to fail the build if complexity increases
+- Conditional step: only check regression on PRs, always analyze on main
+
+**With trend tracking:**
+
+To keep a trend report across builds, save historical snapshots:
+
+```yaml
+- name: Save snapshot for trends
+  run: |
+    mkdir -p .simplicity-history
+    cp $(dotnet simplicity snapshot YourSolution.sln) .simplicity-history/$(date +%Y-%m-%d).json
+  continue-on-error: true
+
+- name: Generate trend report
+  run: dotnet simplicity report YourSolution.sln
+  continue-on-error: true
+
+- name: Upload report
+  uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: complexity-report
+    path: simplicity-report/
+```
+
+### Azure Pipelines
+
+Define stages and use the official .NET task:
+
+```yaml
+trigger:
+  - main
+  - pull_request
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  - task: UseDotNet@2
+    inputs:
+      version: '10.0.x'
+    displayName: 'Install .NET SDK'
+  
+  - script: dotnet tool install --global SimplicityTools.Cli
+    displayName: 'Install SimplicityTools'
+  
+  - script: echo "##vso[task.prependpath]$HOME/.dotnet/tools"
+    displayName: 'Add tool to PATH'
+  
+  - script: dotnet restore
+    displayName: 'Restore'
+  
+  - script: dotnet simplicity analyze $(Build.SourcesDirectory)/YourSolution.sln
+    displayName: 'Run analysis'
+  
+  - script: dotnet simplicity diff $(Build.SourcesDirectory)/YourSolution.sln --fail-on-regression
+    displayName: 'Check regression'
+    condition: eq(variables['Build.Reason'], 'PullRequest')
+```
+
+**Key points:**
+- `UseDotNet@2` task handles SDK installation
+- Use `$(Build.SourcesDirectory)` for the repo path
+- Add tools to PATH using `##vso[task.prependpath]`
+- Condition the regression check to PRs only
+
+### GitLab CI
+
+Use a container image that includes the .NET SDK:
+
+```yaml
+stages:
+  - analyze
+
+complexity-check:
+  image: mcr.microsoft.com/dotnet/sdk:10.0
+  stage: analyze
+  script:
+    - dotnet tool install --global SimplicityTools.Cli
+    - export PATH="$HOME/.dotnet/tools:$PATH"
+    - dotnet restore
+    - dotnet simplicity analyze $CI_PROJECT_DIR/YourSolution.sln
+    - dotnet simplicity diff $CI_PROJECT_DIR/YourSolution.sln --fail-on-regression || true
+  artifacts:
+    paths:
+      - simplicity-report/
+      - .simplicity-baseline.json
+    expire_in: 30 days
+  only:
+    - branches
+```
+
+**Key points:**
+- `mcr.microsoft.com/dotnet/sdk:10.0` includes the SDK pre-installed
+- Export the tool path before running commands
+- Use `$CI_PROJECT_DIR` for the repo path
+- Add `|| true` after regression check if you want the job to succeed even on regression (optional; remove for strict gating)
+- Artifacts are kept for 30 days for trend analysis
+
+### General CI/CD checklist
+
+Regardless of platform, ensure:
+
+1. **SDK is installed:** Use the platform's native setup task (e.g., `actions/setup-dotnet`, `UseDotNet@2`, container image)
+2. **Global tool is installed:** Run `dotnet tool install --global SimplicityTools.Cli` in each job
+3. **Tool is discoverable:** Add `~/.dotnet/tools` (or `$USERPROFILE\.dotnet\tools` on Windows) to `PATH`
+4. **Solution is restored:** Run `dotnet restore` before analysis
+5. **Baseline is committed:** Check `.simplicity-baseline.json` into your repo so `diff --fail-on-regression` works
+6. **Artifacts are saved:** If using trend reports, commit `.simplicity-history/*.json` files or save them as build artifacts
+
+### Gate PR merges on complexity regression
+
+**Pattern:** Fail the build if complexity increases without explicit approval.
+
+Set up your CI:
+```bash
+dotnet simplicity baseline YourSolution.sln  # run once locally
+git add .simplicity-baseline.json
+git commit -m "Add complexity baseline"
+```
+
+Then in your CI pipeline, add:
+```bash
+dotnet simplicity diff YourSolution.sln --fail-on-regression
+```
+
+Now any PR that increases complexity will fail the build. Developers either:
+- Reduce complexity before merging
+- Commit an explicit update to the baseline (with team approval)
+
 ## Sample solutions in this repo
+
 
 The repo includes two teaching samples:
 
@@ -872,6 +1047,11 @@ The repo includes two teaching samples:
 These are useful for demos, docs screenshots, and CI examples because the test suite already validates the commands against them.
 
 ## Troubleshooting
+
+For comprehensive troubleshooting guidance covering installation, PATH issues, analyzer visibility, permissions, CI/CD integration, and advanced diagnostics, see [`docs/troubleshooting.md`](troubleshooting.md).
+
+**Quick reference for common questions:**
+
 
 ### “`simplicity.json` was not found”
 
