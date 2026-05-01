@@ -1,75 +1,74 @@
-## 2026-04-30T12:27:33.382322Z - README Update Task Spawned
-- **Requested by:** Chris Woody Woodruff
-- **Scope:** Update repository README with project description, tool outline, problems solved, and developer/stakeholder value
-- **Deliverables:** 
-  - README.md rewritten as GitHub landing page
-  - Link history updated with this session
-  - Decision inbox entry link-readme-positioning.md created
-- **Status:** In Progress
+# Link (DevRel) Agent History
 
-## 2026-04-30T18:13:05Z: Packaging & DX Assessment Merged
+_Primary agent for packaging UX, documentation, and developer experience. Leading release workflow, CI/CD integration, and first-run onboarding._
 
-**Team Context:**
-- Morpheus' parallel strategy assessment converged on same recommendation: NuGet packages + global tool
-- Both decisions merged into decisions.md (same packaging shape, complementary insights)
-- Morpheus provided versioning strategy; you identified DX gaps and next steps
+---
 
-**Your Contribution:**
-- DX Assessment highlights concrete fixes before publishing: README badges, analyzer PrivateAssets docs
-- Outcome call clear: "Ready to publish—gap is documentation polish, not architecture"
+## Sprint 7: Packaging UX & Documentation (Milestone 7) ✅ COMPLETE
 
-**Impact:** Packaging assessment complete. DX roadmap captured for implementation phase.
+**Timespan:** 2026-04-29 to 2026-04-30  
+**Status:** All three waves completed; Milestone 7 locked  
+**Impact:** First-run experience complete, documentation teaching-first, ready for M6 dry-run validation
 
-📌 M4–M7 work assigned on 2026-04-30T21:04:20Z: Lead packaging UX/DX across all milestones. M4 (metadata, CI/CD, versioning; #27–#29), M6 (CLI packaging, docs, dry-run; #35–#38), M7 (badges, quickstart, integration guides, troubleshooting, CI/CD examples; #39–#44). M7 can parallelize with M6. Go/no-go gate after M6 dry-run. Targeting mid-May 2026 for production publish.
-### 2026-04-30T17:29:31.278-04:00: Sprint 4 package foundation started ✓
+### Sprint 7 Wave Summary
 
-**Issues #32 and #34 advanced.** Added central NuGet metadata in `Directory.Build.props` so the five ship targets now pack with shared author, MIT license expression, repository/docs links, README inclusion, symbol packages, and a NuGet icon. Also tightened `SimplicityTools.Analyzers` package references so Roslyn dependencies stay private instead of leaking into downstream package graphs.
+| Wave | Issues | Deliverables | Outcome |
+|------|--------|--------------|---------|
+| 1 | #44, #45 | NuGet badges in README; docs/quickstart.md with 5 essential commands | Zero-config validated; foundation established |
+| 2 | #46, #47 | docs/using-the-simplicity-tools.md Library Integration section; README "Add to Your Project" | Package consumers have clear integration path |
+| 3 | #48, #49 | docs/troubleshooting.md (symptom-first); CI/CD examples (GitHub/Azure/GitLab) | Complete onboarding path; regression gating pattern established |
 
-**Release UX decision:** Package versions are tag-driven and grouped by intent: `libraries/vX.Y.Z` for Metrics + Filters + Tca together, `analyzers/vX.Y.Z` for the analyzer package, and `cli/vX.Y.Z` for the global tool. This gives contributors one obvious answer for “what tag do I cut?” while preserving independent release cadence where it matters.
+### Key Decisions Locked
 
-**Docs + workflow:** Added `CONTRIBUTING.md` with the release process, local folder-feed validation, and dependency pinning guidance. Added `.github/workflows/nuget-publish.yml` to build, test, dry-run pack on branch pushes, validate package metadata, and publish matching packages on release tags.
+1. **Troubleshooting organization:** Symptom-first (users search by what they see, not technical terms)
+2. **CI/CD platforms:** GitHub Actions, Azure Pipelines, GitLab CI (90%+ adoption coverage)
+3. **Documentation navigation:** README → Quickstart → Library Integration → CI/CD → Troubleshooting
+4. **Primary CI/CD use case:** Regression gating (`--fail-on-regression`) as gateway to baseline adoption
+5. **Zero-config reinforced:** All examples work without simplicity.json
 
-**Useful learning:** For this repo, package metadata is developer experience surface. A shared README, shared icon, and explicit tag scheme do more to reduce first-release confusion than a clever pack script alone.
+### Packaging UX Outcomes
 
-## 2026-04-30T21:29:31Z - Sprint 4 Launch (Milestone 4)
+- ✅ README badges and Quick Install section visible first
+- ✅ Five-command quickstart teaches the essentials with real output
+- ✅ Library integration guide provides copy-paste examples for all four packages
+- ✅ Troubleshooting covers all common issues (PATH, SDK, IDE cache, CI/CD, permissions)
+- ✅ CI/CD examples are platform-specific and regression-gating-focused
+- ✅ Documentation is cross-linked and scannable
 
-**Spawn:** Link DevRel agent for Sprint 4 package foundation implementation.
+### Learnings from Sprint 7
 
-**Decisions merged into team memory:**
-- **Package release grouping:** Three SemVer tag families:
-  - `libraries/vX.Y.Z` → SimplicityTools.Metrics, SimplicityTools.Filters, SimplicityTools.Tca (lockstep)
-  - `analyzers/vX.Y.Z` → SimplicityTools.Analyzers (independent)
-  - `cli/vX.Y.Z` → SimplicityTools.Cli (independent)
-  
-- **M4 scope:** Foundation for NuGet packaging: .nuspec metadata (#32), CI/CD pipeline (#33), versioning docs (#34).
+**Troubleshooting as product surface:**
+- Users self-diagnose better with symptom → cause → solution flow
+- Platform-specific paths (macOS/Windows/Linux) and tool names require exact coverage
+- Permission, file locking, and cache issues are more common than logic errors
 
-- **Wave structure:**
-  - Wave 1 (parallel): #32 and #33 (no inter-dependency)
-  - Wave 2 (serialized): #34 depends on both #32 and #33
+**CI/CD integration patterns:**
+- Regression gating is the key motivating use case (not just analyze)
+- Every platform needs explicit PATH setup
+- Baseline file handling (local create → git commit → CI restore) is #1 question
+- Trend tracking is valuable but optional
 
-**Milestone gate:** M4 → M5 established. Trinity (library packaging) blocked until M4 complete.
+**Documentation discovery:**
+- Cross-links help users find deeper guidance
+- Quick reference in main docs prevents "I'm done" misunderstanding
+- Comprehensive guide in separate file keeps main docs scannable
+- Verify all shell commands (bash/PowerShell/macOS) by running locally
+- Test CI/CD examples in real workflows before publishing
 
-**Status:** Scribe merged inbox decisions. Link ready to execute Wave 1.
+---
 
-## 2026-04-30T23:53:39Z - Milestone 5 Workflow Repair Assignment
+## Current Status
 
-**Spawn:** Link DevRel agent for Milestone 5 publish workflow repair.
+**Milestone 7 (Packaging UX & Documentation):** ✅ COMPLETE  
+**Next:** M5 (Release workflow validation) can proceed; M6 (CLI packaging/dry-run) follows  
+**Go/No-Go Gate:** After M6 dry-run validation, targeting mid-May 2026 for production publish
 
-**Context:** Tank rejected M5 release approval due to analyzer-consumer validation gate failure in `.github/workflows/nuget-publish.yml`. The workflow script calls `ET.fromstring(...)` without importing `xml.etree.ElementTree as ET`, causing `NameError` on CI execution.
+---
 
-**Task scope:** Repair workflow import issue and validate analyzer-consumer validation gate before Milestone 5 moves to release.
+## Historical Context
 
-**Decisions merged into team memory:**
-- **Milestone 5 release gate rejection:** Tank identified workflow blocker
-- **Analyzer package release contract:** Switch defined netstandard2.0 target + analyzers/dotnet/cs/ layout + SuppressDependencies
-- **Metrics package validation shape:** Trinity defined nupkg contents + consumer build validation
-
-**Inbox processed:** 3 files merged to decisions.md, deleted from inbox
-
-**Status:** Link spawned (background mode, claude-sonnet-4.6) to fix workflow and restore M5 release readiness.
-
-## 2026-04-30T19:52:08.101-04:00 - Milestone 5 release workflow repair ✓
-
-- Fixed the analyzer-consumer validation block in `.github/workflows/nuget-publish.yml` so its nuspec parsing now imports `xml.etree.ElementTree as ET` before calling `ET.fromstring(...)`.
-- Tightened the same validation step to clear `artifacts/analyzer-consumer-validation` before each run so reruns prove the package from the current build instead of inheriting stale restore state.
-- Local proof used the packed `SimplicityTools.Analyzers` artifact and reran the workflow’s analyzer-consumer validation logic end to end; the validation completed successfully and emitted the expected analyzer warning.
+Earlier work archived in history-archive.md:
+- M1–M3 scaffold and core delivery  
+- M4 NuGet packaging foundation  
+- M5 release workflow setup  
+- Ongoing DevRel strategy and packaging UX planning

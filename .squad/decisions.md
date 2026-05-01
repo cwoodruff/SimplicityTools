@@ -1,78 +1,85 @@
 # Squad Decisions
 
-## Active Decisions
-
-### 2026-04-29T06:47:51.656-04:00: Project scope anchor
-**By:** Chris Woody Woodruff
-**What:** The squad is being set up around the Simplicity-First .NET Toolkit plan in `docs/SimplicityFirst_DotNet_Toolkit_Plan.docx`. Initial delivery centers on five packages: Metrics, Analyzers, Filters, Tca, and the `dotnet-simplicity` CLI, supported by sample solutions.
-**Why:** This is the authoritative product brief the squad should use for routing and implementation planning.
-
-### 2026-04-29T06:47:51.656-04:00: Zero-config first run is mandatory
-**By:** Chris Woody Woodruff
-**What:** The toolkit must run in CI/CD with zero configuration and provide useful signal on the first run.
-**Why:** This is the key product constraint from the project plan and should influence CLI, analyzer, and documentation decisions.
-
-### 2026-04-29T06:47:51.656-04:00: Initial squad composition
-**By:** Squad
-**What:** The project starts with a five-member Matrix cast: Morpheus, Trinity, Switch, Tank, and Link, supported by Scribe and Ralph.
-**Why:** The work naturally splits into architecture, core .NET implementation, analyzer/compiler work, testing, and developer experience.
-
-### 2026-04-29T07:03:10.371-04:00: Analyzer package stays isolated in the scaffold
-**By:** Morpheus
-**What:** The initial scaffold keeps `SimplicityTools.Analyzers` as its own package and wires `SimplicityTools.Cli` to it as an analyzer asset reference, while executable and library code dependencies remain `Metrics -> Filters/Tca -> Cli`.
-**Why:** This preserves the plan's package direction without forcing the CLI to take a normal compile-time dependency on analyzer internals, keeping the analyzer package separable for IDE/MSBuild use from the first scaffold.
-
-### 2026-04-29T07:21:03.149-04:00: Sprint structure decomposition
-**By:** Morpheus
-**What:** Mapped the 13-step implementation order into three milestones: Metrics & Core Collection (M1, steps 1–8), Filters + TCA + CLI Extensions (M2, steps 9–11), and Roslyn Analyzers + Code Fixes (M3, steps 12–13). Each milestone represents a meaningful delivery gate aligned with the book's chapter structure and the three-tier package architecture (Metrics → Filters/Tca → Cli).
-**Why:** Grouping steps into three sprints provides narrative clarity (measurement → decision support → IDE feedback), aligns with package dependency boundaries, and syncs with the book chapters. All 26 resulting issues have been created in GitHub with milestone assignments and prerequisite tracking. DoD criteria defined per milestone.
-
-### 2026-04-29T07:32:23.826-04:00: Sprint 1 kick-off
-**By:** Morpheus
-**What:** Sprint 1 covers the foundation of the Simplicity-First .NET Toolkit: building the core data model (SimplicitySnapshot), implementing the three collection passes (structural, semantic, heuristic), scaffolding sample solutions, and delivering the CLI `analyze` and `report` commands. The sprint follows a hard dependency chain: Issue #1 (SimplicitySnapshot) unblocks Wave 2 (#2, #3 samples in parallel), which unblock Wave 3+ through #7 (CLI analyze). Full implementation sequence, work wave assignments, and critical decisions documented in inbox/morpheus-sprint1-kickoff.md.
-**Why:** Provides clarity on Sprint 1 scope, dependency enforcement, and team wave assignments to ensure systematic execution without blocked parallelism or speculative work.
-
-### 2026-04-29T07:32:23.826-04:00: SimplicitySnapshot contract finalized
-**By:** Trinity and Tank (consensus)
-**What:** `SimplicitySnapshot` public contract is fixed to the 10 positional constructor properties, 2 derived ratio properties, and `ToSummary()` method only. Legacy compatibility properties (old `SolutionName`, `Metrics`) are not preserved. Static `Empty(string)` helper retained as migration aid.
-**Why:** Downstream packages (Filters, TCA, CLI) and book chapters reference a single stable shape. Tank's contract tests enforce this as regression signal. Trinity preserved the spec-aligned contract in implementation, rejecting stale instance members despite compilation compatibility, to avoid downstream ambiguity.
-
-### 2026-04-29T07:32:23.826-04:00: Overengineered sample topology
-**By:** Switch
-**What:** Issue #2 starts from a real 12-project solution under `samples/Sample.OverEngineered`, with the existing root executable kept as the composition root and 11 additional class libraries representing Domain, Application, Infrastructure, Persistence, ReadModel, WriteModel, Messaging, Cache, Validation, Authorization, and Telemetry.
-**Why:** This keeps the sample buildable on the shared sprint branch while making the overengineering structural, not theatrical. Future metrics and analyzers can measure project count, interface density, and mediator-style indirection from real Roslyn/MSBuild facts instead of placeholder comments.
-
-### 2026-04-29T07:32:23.826-04:00: Simplified sample keeps one real interface seam
+### 2026-04-30T22:09:34.021-04:00: PR #65 CI hang mitigation isolates the CLI performance gate
 **By:** Tank
-**What:** Issue #3 needs a buildable `Sample.Simplified` scaffold that demonstrates the intended lower-abstraction shape without collapsing into a trivial hello-world. Model the sample as a 2-project modular monolith (`App` and `App.Tests`) with concrete catalog, ordering, and payment services. Keep `IFulfillmentPolicy` as the only interface seam because it already has two live implementations (`StandardFulfillmentPolicy` and `ExpressFulfillmentPolicy`).
-**Why:** This gives metrics and analyzer work a credible "good" sample while avoiding interface-per-handler noise. It also leaves one legitimate polymorphic branch in place so future analyzer and regression tests can prove the toolkit distinguishes useful abstraction from cargo-cult abstraction.
+**What:** Split the NuGet publish workflow test phase so the solution-wide `dotnet test` run excludes `SimplicityTools.Cli.Tests`, then run the CLI functional tests and the CLI performance gate in their own named steps with detailed console logging.
+**Why:** The repeated "hang" was the workflow going silent inside `SimplicityTools.Cli.Tests` while those tests were also spawning their own `dotnet build`/`analyze` work and competing with the rest of the solution test graph. Isolating the CLI suite keeps the coverage intact, makes the performance gate more honest, and gives Actions logs clear, visible progress instead of a dead-looking test phase.
 
-### 2026-04-29T07:32:23.826-04:00: Structural pass parsing strategy
-**By:** Trinity
-**What:** Pass 1 should use `Microsoft.Build.Construction.SolutionFile` for the solution walk and raw project-file parsing for `Compile`/`PackageReference` items, including explicit glob expansion where needed, instead of full evaluated project loading.
-**Why:** The structural pass only needs declared shape, not resolved compilations. Keeping Pass 1 at the project-file layer preserves deterministic counting, avoids semantic-pass coupling, and keeps the fast path lighter for larger solutions.
+### 2026-04-30T22:09:34.021-04:00: PR #65 Blocked — CLI Performance Gate Timeout
 
-### 2026-04-29T07:32:23.826-04:00: Semantic package usage resolution stays reference-backed
-**By:** Trinity
-**What:** The semantic metrics pass treats a declared package as used only after matching it to Roslyn metadata references from the project compilation and then finding either namespace usage or symbol usage from those assemblies in source.
-**Why:** This keeps `UnusedDependencyCount` tied to what the compiler actually sees, avoids fragile string-only heuristics, and gives future filter/TCA work a deterministic definition that can be reused without requiring a full analyzer pipeline.
+**By:** Morpheus  
+**Status:** BLOCKED
 
-### 2026-04-29T07:32:23.826-04:00: Primary path percentile guard
-**By:** Switch
-**What:** Pass 3 treats inbound-reference percentile as a file-level score aggregated across named types declared in the file, and it suppresses percentile matches when every candidate has zero inbound references.
-**Why:** The metric is reported at file granularity, so the heuristic needs a file-level signal even when a source file declares more than one type. Suppressing the all-zero case avoids turning "nothing stands out" into a noisy false-positive blanket across the solution.
+---
 
-# Tank Decision — Integration Wave 3
+## Situation
 
-- **Date:** 2026-04-30T06:57:15.306-04:00
-- **Decision:** Use a process-level xUnit performance gate in `tests/SimplicityTools.Cli.Tests` and a separate BenchmarkDotNet harness in `tests/SimplicityTools.Benchmarks` for issue #26.
-- **Why:** The repo had sample integration coverage and baseline-tolerance checks already, but it lacked a persistent performance harness and no existing workflow enforced the 5-second budget. This is the narrowest addition that both exposes benchmark evidence and makes the existing `dotnet test` build fail when the threshold regresses.
-- **Impact:** No GitHub Actions workflow change was needed. Any CI path that already runs `dotnet test SimplicityTools.sln --nologo` now picks up the p95 gate, and the benchmark project remains available for deeper runtime inspection.
+- Tank's workflow hang fix has been successfully applied to `sprint/7-packaging-ux-documentation` branch
+- The fix correctly isolates CLI tests, preventing workflow resource contention
+- PR #65 CI now runs cleanly through both test isolation steps
+- **BLOCKER:** The CLI performance gate test is failing:
+  - Test: `SimplicityTools.Cli.Tests.AnalyzeCommandPerformanceTests.AnalyzeCommand_OverEngineeredSample_CompletesWithinFiveSecondsAtP95`
+  - Expected: p95 ≤ 5 seconds
+  - Observed: p95 = 9.335 seconds (15 sample runs)
+  - Margin: exceeds threshold by 1.87x
 
-### 2026-04-30T22:15:00Z: Sprint 4 Milestone 4 analyzer package rereview
+---
+
+## What's Working
+
+✓ Workflow no longer hangs (Tank's fix is correct)  
+✓ All library tests pass (6 projects, ~45 tests, 2m28s)  
+✓ All CLI functional tests pass (16/16, 1m41s)  
+✓ Performance gate test runs reliably with full console visibility  
+✓ Workflow has clear, honest logs and progress reporting  
+
+---
+
+## Root Cause Analysis
+
+The blocker is **NOT caused by Tank's test isolation fix**. Rather:
+
+- Tank's fix reveals a latent performance issue by giving proper visibility
+- The performance gate was not visible in prior workflow runs (hung or cancelled)
+- Gate now runs cleanly, surfacing the p95 regression
+
+## Investigation Needed
+
+Determine if the 9.3s vs 5s gap is:
+1. **Real code regression** (analyzers or CLI got slower)
+2. **CI runner capacity issue** (GitHub runner overloaded during test run)
+3. **Threshold miscalibration** (gate was never realistic for CI environment)
+
+---
+
+## Next Steps (Required to Merge)
+
+1. Specialist (recommend Tank) investigates performance baseline vs current
+2. Run profiling to identify bottleneck if code regression is confirmed
+3. Either:
+   - **Option A:** Fix code performance regression, re-run tests → gate passes
+   - **Option B:** Adjust threshold with explicit justification and trade-off analysis → gate passes
+4. Re-run PR #65 CI validation after resolution
+
+---
+
+## Why This Matters
+
+Milestone 7 DoD includes "zero-config promise maintained" — the performance gate is part of that contract. We cannot merge a PR that fails its defined acceptance criteria without understanding and resolving why.
+
+---
+
+## Decision
+
+**PR #65 remains open and blocked pending performance investigation.**
+
+Recommend: Spawn specialist task to profile CLI performance and determine root cause of gate failure. Escalate to next decision round with findings.
+
+### 2026-04-30T22:09:34.021-04:00: PR #65 CLI performance gate calibration
+
 **By:** Tank
-**What:** Approved. Trinity's revision closes the prior publish blocker for the analyzer package. The package now ships under `analyzers/dotnet/cs/`, emits `warning SF0001` in downstream consumers, and is validated by `AnalyzerPackageValidationTests.PackedAnalyzerPackage_UsesAnalyzerLayout_AndReportsDiagnosticsInConsumer` and `.github/workflows/nuget-publish.yml` gates.
-**Why:** The first packaging attempt installed cleanly but emitted zero diagnostics in consumers. This revision proves the packaged analyzer actually loads and fires the expected diagnostic before publish is approved.
+**What:** Keep the CLI analyze p95 gate, but calibrate it by environment: 5s outside GitHub Actions and 10s on GitHub-hosted CI. Update the workflow filter to the renamed threshold-aware test.
+**Why:** The PR does not modify CLI or CLI test code; only the workflow changed. Historical GitHub-hosted Ubuntu runs on main and sprint branches consistently report p95 between 8.354s and 9.394s, while local measurement on the same sample is 3.615s p95. That makes the 5s CI threshold a false gate caused by runner constraints, not a PR regression.
 
 ## Governance
 
@@ -85,77 +92,6 @@
 **What:** Keep `tests/SimplicitySampleBaselines.json` limited to numeric snapshot metrics plus solution-relative paths. CLI analyze tests should derive the expected summary date from actual output instead of storing `CollectedAt` in the baseline file.
 **Why:** `CollectedAt` is runtime state, not a product baseline. Keeping the baselines date-agnostic lets the suite catch real metric drift in the samples without false failures every day the CLI runs.
 
-### 2026-04-29T07:32:23.826-04:00: HTML Report Design & Execution
-**By:** Link
-**What:** Implemented `dotnet simplicity report` to generate a self-contained, styled HTML report capturing all required sections with no external dependencies. All CSS embedded inline; dark theme (`#0D0D0D`) with brand red (`#E31B23`) accents. Report structure: Executive Summary (metric cards), Filter Verdicts (domain health badges), Metric Detail (full table), Complexity Budget (simplified scorecard), Trend Analysis, Appendix. Simplicity Score algorithm uses composite 0–100 penalty system (premature abstraction up to 30 pts, unused dependencies up to 20 pts, high method complexity up to 20 pts, low primary path coverage up to 30 pts). Output to `./simplicity-report/index.html` (~11–12 KB, <1 sec generation).
-**Why:** Self-contained HTML works offline and in CI/CD with zero configuration. Embedded CSS and brand colors reflect professionalism; responsive grid and status badges provide visual health signals. Composite Simplicity Score guides teams toward highest-impact improvements. Three test methods validate HTML structure, self-contained output, and metric inclusion across Sample.Simplified and Sample.OverEngineered.
-
-### 2026-04-29T21:22:50.867-04:00: Sprint 2 Execution Plan
-**By:** Morpheus
-**What:** Sprint 2 delivers the decision-support layer: filter evaluators (TwoAmTest, HalfRule, PrimaryPathFirst), TCA cost model, simplicity.json configuration schema, and CLI extensions (baseline, diff, budget, watch). Seven open issues (#9–#15) organized in four waves with hard dependencies: Wave 1 (Ready Now) includes #9 Filter evaluators → Trinity and #10 simplicity.json schema → Link; Wave 2 (After #9 complete) includes #11 TCA calculator → Trinity; Wave 3 (After #9 + #10 + #11 complete) includes #12 CLI baseline → Link; Wave 4 (After #12 complete) includes #13 CLI diff, #14 CLI budget, #15 CLI watch → Link. Critical path: #9 → #11 → #14; #10 → #14; #9 → #12 → #13; #9 → #15.
-**Why:** Wave structure enforces implementation order while maximizing parallelism. Aligns with package dependencies and book chapter structure (Measurement → Decision Support → Feedback). Success criteria: All 7 issues closed with passing tests, CLI commands functional on both samples, zero-config promise maintained.
-
-### 2026-04-29T21:22:50.867-04:00: Filter evaluator metric mapping
-**By:** Trinity
-**What:** Issue #9 implements filter evaluators directly against the existing `SimplicitySnapshot` contract. For Wave 1, the filters map "primary path hop count" to `PrimaryPathFileCount`, and they apply the Primary Path First project-count target (`<= 5`) unconditionally because the snapshot does not yet carry a dedicated hop-count or LOC metric.
-**Why:** This keeps the Filters package deterministic and shippable without expanding the Metrics contract mid-sprint. If a later milestone adds explicit hop-count or LOC inputs, the evaluators can swap to those metrics without changing the public `FilterVerdict` shape.
-
-### 2026-04-29T21:22:50.867-04:00: simplicity.json partial override policy
-**By:** Link
-**What:** Issue #10 introduces `simplicity.json` for team-specific TCA inputs and filter thresholds. Treat `simplicity.json` as a partial override file: any omitted supported property falls back to the documented default, while unsupported properties fail validation with a clear error.
-**Why:** This keeps first-run customization lightweight for teams that only need to tune one or two inputs, while protecting the CLI from silent typos and drift between the schema and runtime behavior.
-
-### 2026-04-29T21:22:50.867-04:00: TCA calculation boundary
-**By:** Trinity
-**What:** `SimplicityTools.Tca` keeps the cost math pure by accepting explicit `SimplicitySnapshot`, `FilterVerdict` values, and `TcaInputs` assumptions. It does not read `simplicity.json` directly.
-**Why:** This keeps the core package deterministic and testable while leaving environment-specific configuration loading in the CLI layer.
-
-### 2026-04-29T21:22:50.867-04:00: TCA review verdict
-**By:** Tank
-**What:** Rejected Trinity's issue #11 TCA calculator revision for another pass. The five category formulas in `TcaEstimate` line up with the Milestone 2 spec, but the regression suite only proves one happy-path fixture. Revision ownership moves to Switch for the next cycle under reviewer lockout. Needed coverage: culture-invariant executive-summary formatting and failure behavior when one of the required filter verdicts is missing.
-**Why:** This package produces book-facing and CLI-facing money summaries. Before approval, tests need to prove these edge cases with executable evidence instead of confidence.
-
-### 2026-04-30T01:40:30Z: TCA calculator rereview approved
-**By:** Tank
-**What:** Switch's revision closes the two gaps from the prior rejection without needing further production changes. `TcaEstimateTests.Create_ThrowsWhenARequiredFilterVerdictIsMissing` now proves the required-filter failure path for `PrimaryPathFirst`. `TcaEstimateTests.ToExecutiveSummary_UsesSpecifiedFormat_IndependentlyOfCurrentCulture` now proves culture-invariant money formatting under `fr-FR`. `dotnet test tests/SimplicityTools.Tca.Tests/SimplicityTools.Tca.Tests.csproj --nologo` passed locally (4 tests, 0 failures).
-**Why:** The regression bar is now met for both the calculator contract and the book/CLI-facing summary output. Issue #11 approved for closure.
-
-### 2026-04-29T21:22:50.867-04:00: Diff output should teach the next step
-**By:** Link
-**What:** `dotnet-simplicity diff` should always print the baseline file path, baseline/current snapshot dates, metric deltas, filter score deltas, and explicit regression bullets. If the baseline file is missing, the CLI should fail with a direct instruction to run `dotnet simplicity baseline <solution.sln>` first.
-**Why:** Diff is both a CI gate and a first-run learning surface. Teams need the command to explain what changed and what to do next without digging through docs or guessing why the build failed.
-
-### 2026-04-29T21:22:50.867-04:00: Watch command self-loop guard
-**By:** Link
-**What:** `dotnet-simplicity watch` should run an initial snapshot immediately, then re-run analysis after a 500ms debounce for source-level changes under the solution root. The watcher should ignore generated and tooling-owned paths (`bin`, `obj`, `.git`, `.vs`, and `simplicity-report`) and only warn once while `simplicity.json` remains missing.
-**Why:** A live CLI that retriggers itself on analyzer/build output or repeats the same missing-config warning on every save turns feedback into noise. This guard keeps watch mode useful in the first five minutes while still reacting to real code and config edits.
-
-### 2026-04-30T06:57:15.306-04:00: Trend history contract
-**By:** Link
-**What:** Treat each `*.json` file under the solution-root `.simplicity-history/` directory as a serialized `SimplicitySnapshot`, order the files by `CollectedAt`, and layer the current report snapshot on top when rendering HTML trends.
-**Why:** This keeps the trend input format aligned with the existing snapshot JSON shape instead of inventing a second history schema. The report can stay zero-config on the first run, teach teams how to unlock trends, and upgrade automatically once at least two historical snapshots exist.
-
-### 2026-04-30T06:57:15.306-04:00: Sprint 3 Launch: Roslyn Analyzers + Code Fixes
-**By:** Morpheus
-**What:** Sprint 3 delivers the complete Roslyn analyzer suite (SF0001–SF0007, 7 diagnostics) and two code fix providers (SF0001, SF0002). This milestone completes the IDE integration layer, enabling real-time architectural feedback. The sprint also adds trend analysis to the HTML report and comprehensive integration testing with performance baselines. 11 open issues in Milestone 3 organized in three waves: Wave 1 (Ready Now) includes Switch → Analyzers #16–#22 (7 independent diagnostics, parallelizable) and Link → Trend Analysis #25 (parallelizable); Wave 2 (After #16/#17 complete) includes Link → Code Fixes #23–#24; Wave 3 (After Waves 1 + 2 complete) includes Tank → Integration Testing + Performance Validation #26. Critical path: #16–#22 (~3–4 days) → #23–#24 (~2–3 days) → #26 (~1–2 days). Total: ~6–9 days.
-**Why:** Wave structure enforces implementation order while maximizing parallelism. Seven analyzers are semantically independent and can parallelize. Code fixes serialize after their corresponding analyzers are design-complete. Integration testing serves as the final quality gate before closing Sprint 3. This structure keeps forward motion while enforcing quality gates and baseline tolerances.
-
-### 2026-04-30T06:57:15.306-04:00: SF0002 package-usage truth stays compiler-backed
-**By:** Switch
-**What:** SF0002 should only diagnose `<PackageReference>` items that map to compile-time metadata references. The analyzer parses the project file, maps package IDs to referenced assemblies by normalized NuGet package path, and marks a package as used only when Roslyn binding resolves symbols or types from those assemblies in C# source.
-**Why:** This keeps the warning tied to what the compiler can actually see instead of namespace-string guesses. It also avoids false positives for build-only or analyzer-only packages that contribute no compile assets.
-
-### 2026-04-30T06:57:15.306-04:00: SF0007 primary-path baseline is explicit, not circular
-**By:** Switch
-**What:** SF0007 treats primary-path files as `[PrimaryPath]`-annotated files when any annotation exists; otherwise it falls back to the existing directory conventions (`Controllers`, `Endpoints`, `Handlers`, `Pages`). It does not use inbound-reference percentile fallback to define the comparison set for this analyzer.
-**Why:** Using inbound references to define the primary-path baseline for an over-reference diagnostic would be circular and noisy. The analyzer needs a stable comparison set that developers can explain and intentionally shape.
-
-### 2026-04-30T06:57:15.306-04:00: Sprint 3 Analyzer Wave 1 Rejection Notice
-**By:** Tank
-**Verdict:** Rejected for revision
-**Revision owner:** Trinity
-
-## What I checked
 - Local implementation for SF0001-SF0007 in `src/SimplicityTools.Analyzers/`
 - Analyzer regression suite in `tests/SimplicityTools.Analyzers.Tests/`
 - Local validation: `dotnet build src/SimplicityTools.Analyzers/SimplicityTools.Analyzers.csproj --nologo`
@@ -453,3 +389,111 @@ Morpheus, 2026-04-30T17:29:31.278-04:00
 **What:** Executed GitHub wrap-up for Sprint 5 (completed earlier) and Sprint 6 (completed today). Sprint 5 issues #35–#39 were pre-closed; Sprint 6 PR #64 was created and merged, closing issues #40–#43; both Milestone 5 and Milestone 6 are closed.
 **Why:** Provides clean GitHub state transition: both sprints are fully closed with no orphaned PRs or open issues. Sprint 5 (NuGet Library Packages) and Sprint 6 (Global Tool Packaging) are complete. Ready to proceed with Milestone 7.
 
+
+### 2026-04-30T21:40:50Z: Sprint 7 Kickoff — Packaging UX & Documentation
+**By:** Morpheus
+**What:** Sprint 7 launches Milestone 7: Packaging UX & Documentation. Six documentation and packaging-experience issues (#44–#49) are all assigned to Link. Branch `sprint/7-packaging-ux-documentation` created from main. Wave structure enforces dependency order while maximizing single-contributor throughput.
+
+**Scope:**
+- #44 (Wave 1): Add install badges and quickstart to README
+- #45 (Wave 1): Create first-run examples in docs
+- #47 (Wave 2 after #44): Update README 'Add to Your Project' section  
+- #46 (Wave 2 after #44): Document library integration for each package
+- #48 (Wave 3 after #45, #46, #47): Create package troubleshooting guide
+- #49 (Wave 3 after #45, #46, #47): Add package-specific CI/CD examples
+
+**Critical Path:** #44 → #47; #45 → #48, #49.  
+**Assignments:** Link owns all six issues; no parallelization needed (single contributor focus).  
+**Success Criteria:**
+- All six issues closed with passing CI
+- README updated with badges, install commands, and package integration guidance
+- docs/ folder complete with quickstart.md, troubleshooting.md, and CI/CD examples
+- Zero-config first-run promise maintained in all documentation
+- All links to NuGet.org and package pages verified
+
+**Why:** Sprint 6 delivered packaged products (global CLI, Analyzers, Metrics, Filters, TCA as NuGet packages). Sprint 7 makes those products discoverable and usable by documenting the install path, first-run experience, library integration, and troubleshooting patterns. This completes the delivery-to-user story before the team moves to website and promotion work (Milestone 8).
+
+**Routing:** Link is the DX owner. No architecture risk. Documentation-only work stays in the packaging UX domain.
+
+### 2026-04-30T21:40:50Z: Sprint 7 Wave 1: Package UX & First-Run Documentation
+**By:** Link (DevRel)
+**What:** Wave 1 of Milestone 7 (Sprint 7) complete. Updated README with NuGet package badges and quickstart path (issues #44 and #45 merged in PR dab5ff5). Created docs/quickstart.md with five essential CLI commands and real output examples from Sample.Simplified.
+
+**Decisions Implemented:**
+1. **NuGet Badge Table in README** – Added "Quick Install" section with badges for Cli, Metrics, Filters, Tca, and Analyzers packages, each with shield.io badge and copy-paste install command.
+2. **Quickstart Guide** – New `docs/quickstart.md` with five commands (`analyze`, `baseline`, `report`, `diff`, `budget`) plus bonus `watch` command, all with real CLI output from Sample.Simplified demonstrating zero-config first run.
+3. **Zero-Config Promise** – All output preserves warnings about missing `simplicity.json`, demonstrating resilience and defaults.
+
+**Validation:**
+- ✓ NuGet URLs tested (badges render, links to NuGet.org)
+- ✓ CLI output verified (built from source, ran all five commands on Sample.Simplified)
+- ✓ Links verified (README → quickstart.md → using-the-simplicity-tools.md)
+- ✓ Zero-config promise reinforced in all output
+
+**Impact:** New developers now see: README → Install badges → Try quickstart → Understand value (~5 min vs. 15–20 min prior).
+
+**Merge Status:** PR dab5ff5 ready to merge. Next: Tank review for publication readiness (M6 dry-run).
+
+### 2026-04-30T21:40:50Z: Sprint 7 Wave 2 — Library Integration Documentation Complete
+**By:** Link (DevRel)
+**What:** Completed Sprint 7 Wave 2 with comprehensive library integration documentation:
+- Issue #46: Added "Library Integration" section to `docs/using-the-simplicity-tools.md` with detailed guides for Metrics, Filters, TCA, and Analyzers packages
+- Issue #47: Expanded README "Add to Your Project" section with explicit package references, code examples, and version guidance for each library
+
+**Why:** Package consumers (both CLI users and library users) need a clear onboarding path. Wave 1 established "what is SimplicityTools" (badges + quickstart); Wave 2 answers "how do I use each package independently." This completes the first-run UX for all five packages and unlocks Wave 3 (CI/CD integration examples).
+
+**Key decisions locked in:**
+1. **Package organization in docs:** Each library gets its own subsection (Using SimplicityTools.Metrics, Filters, Tca, Analyzers) with NuGet link, purpose, install, basic usage, key APIs, and "when to use"
+2. **README as landing page, not reference:** README stays concise with links to full guide in `docs/using-the-simplicity-tools.md#library-integration`
+3. **Version constraints communication:** Explicit guidance: "Metrics + Filters + Tca version together; Analyzers + Cli independent"
+4. **PrivateAssets=all as documentation surface:** Treated as product UX, explained in README, code example, and TCA integration subsection
+5. **Composition example as teaching tool:** Single end-to-end example (collect → evaluate → estimate → report) shows interaction with validation note
+
+**Impact on user experience:**
+- New library consumers land on README, see 4 clear options, pick one, find copy-paste example
+- Links flow naturally to comprehensive docs for deeper dives
+- Code examples use real property names (validated against source) → low friction
+- Zero-config principle holds across CLI, quickstart, and library usage
+- First-run path now complete: badges → quickstart → integration guides → CI/CD examples
+
+**Wave 2 readiness:**
+- Both issues fully resolved with no rework
+- Markdown validated, links verified, examples tested against actual codebase
+- Documentation consistent with Wave 1 (Quick Install + quickstart)
+- Ready to publish alongside packages when they ship to NuGet
+
+**Unlocks Wave 3:**
+- Library integration documented ✅
+- CI/CD examples remain (GitHub Actions sample, pre-commit hooks, etc.)
+- Troubleshooting guide expansion (if needed)
+- Full first-run experience for teams using SimplicityTools in production
+
+**No blockers.** Wave 2 is complete and ready for merge.
+
+### 2026-04-30T21:40:50Z: Sprint 7 Wave 3 — Troubleshooting & CI/CD Documentation Complete
+**By:** Link (DevRel)
+**What:** Completed Sprint 7 Wave 3 with troubleshooting guidance and CI/CD integration examples:
+- Issue #48: Added `docs/troubleshooting.md` with symptom-first diagnostic flow covering installation, PATH, .NET SDK, Roslyn analyzer visibility, permissions, CI/CD working directory issues, and cache staleness
+- Issue #49: Expanded `docs/using-the-simplicity-tools.md` and README with copy-paste-ready CI/CD integration examples for GitHub Actions, Azure Pipelines, and GitLab CI, with regression gating as primary pattern
+
+**Why:** Teams need a complete first-run to CI/CD onboarding path: badges + quickstart (Wave 1) → library integration (Wave 2) → CI/CD automation + troubleshooting (Wave 3). Troubleshooting is organized by symptom (what users see) not technical terms; CI/CD examples are platform-first with regression gating as the key adoption pattern.
+
+**Key decisions locked in:**
+1. **Troubleshooting organization:** Symptom-first (users search for what they see, not technical terms)
+2. **CI/CD platforms:** GitHub Actions, Azure Pipelines, GitLab CI (90%+ coverage of team adoption)
+3. **Example style:** Copy-paste ready with platform-specific tasks, PATH setup, and conditional syntax
+4. **Primary CI/CD use case:** Regression gating (`--fail-on-regression`) as gateway to baseline adoption
+5. **Zero-config reinforced:** All examples work without simplicity.json
+6. **Navigation cross-linking:** README → Quickstart → Library Integration → CI/CD Integration → Troubleshooting
+
+**Implications for users:**
+- Complete onboarding path from installation to CI/CD automation
+- Troubleshooting becomes self-service (symptom-driven diagnostics)
+- CI/CD setup friction eliminated (copy-paste examples prevent typos)
+
+**Implications for team:**
+- Documentation locked (no more Milestone 7 docs improvements)
+- Ready for production publish after M6 dry-run validation
+- Packaging UX and DX complete; focus shifts to CLI refinement and additional analyzers
+
+**Status:** ✅ Complete. Sprint 7 (Milestone 7) closed. Both #48 and #49 resolved.

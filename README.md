@@ -69,6 +69,16 @@ Two of the seven diagnostics come with IDE code fixes:
 
 ## For Developers
 
+### ⚡ Quick Install
+
+| Package | Latest | Install |
+| --- | --- | --- |
+| **Cli** (global tool) | [![NuGet](https://img.shields.io/nuget/v/SimplicityTools.Cli.svg?logo=nuget)](https://www.nuget.org/packages/SimplicityTools.Cli/) | `dotnet tool install --global SimplicityTools.Cli` |
+| **Metrics** (core library) | [![NuGet](https://img.shields.io/nuget/v/SimplicityTools.Metrics.svg?logo=nuget)](https://www.nuget.org/packages/SimplicityTools.Metrics/) | `dotnet add package SimplicityTools.Metrics` |
+| **Filters** (evaluators) | [![NuGet](https://img.shields.io/nuget/v/SimplicityTools.Filters.svg?logo=nuget)](https://www.nuget.org/packages/SimplicityTools.Filters/) | `dotnet add package SimplicityTools.Filters` |
+| **Tca** (cost calculator) | [![NuGet](https://img.shields.io/nuget/v/SimplicityTools.Tca.svg?logo=nuget)](https://www.nuget.org/packages/SimplicityTools.Tca/) | `dotnet add package SimplicityTools.Tca` |
+| **Analyzers** (IDE warnings) | [![NuGet](https://img.shields.io/nuget/v/SimplicityTools.Analyzers.svg?logo=nuget)](https://www.nuget.org/packages/SimplicityTools.Analyzers/) | `dotnet add package SimplicityTools.Analyzers --prerelease` |
+
 ### Get Started
 
 1. **Install the global tool** (when published):
@@ -83,15 +93,23 @@ Two of the seven diagnostics come with IDE code fixes:
    dotnet src/SimplicityTools.Cli/bin/Debug/net10.0/SimplicityTools.Cli.dll analyze samples/Sample.Simplified/Sample.Simplified.sln
    ```
 
-3. **Read the full guide:**  
-    [Using the SimplicityTools Toolset](docs/using-the-simplicity-tools.md) — six commands, configuration reference, filter explanations, and practical workflows.
+3. **First run?** Try the [Quickstart](docs/quickstart.md) — five essential commands with real output from Sample.Simplified.
 
-4. **Need package or release details?**  
-   [Contributing guide](CONTRIBUTING.md) — release tags, package versioning rules, local test-publish flow, and NuGet release steps.
+4. **Read the full guide:**  
+     [Using the SimplicityTools Toolset](docs/using-the-simplicity-tools.md) — six commands, configuration reference, filter explanations, and practical workflows.
+
+5. **Need package or release details?**  
+    [Contributing guide](CONTRIBUTING.md) — release tags, package versioning rules, local test-publish flow, and NuGet release steps.
 
 ### Add to Your Project
 
-Consume the Roslyn analyzers in your `.csproj`:
+Choose one or more based on your needs:
+
+**For comprehensive integration guides, API details, and composition examples, see [Library Integration](docs/using-the-simplicity-tools.md#library-integration) in the full documentation.**
+
+#### 1. **Analyzers only** (IDE diagnostics and code fixes)
+
+Add to your project file:
 
 ```xml
 <ItemGroup>
@@ -99,9 +117,60 @@ Consume the Roslyn analyzers in your `.csproj`:
 </ItemGroup>
 ```
 
-The analyzer package is development-only: it contributes IDE/build diagnostics and code fixes, but it intentionally does not expose a compile-time API surface to your project.
+`PrivateAssets="all"` ensures the analyzer package does not leak into downstream consumers. The package contributes IDE/build diagnostics and code fixes, but no compile-time API surface.
 
-Or use the libraries directly:
+#### 2. **Metrics library** (Core complexity snapshot API)
+
+For custom tooling or integration into your own analysis pipeline:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="SimplicityTools.Metrics" Version="x.y.z" />
+</ItemGroup>
+```
+
+```csharp
+using SimplicityTools.Metrics;
+
+var collector = new SimplicityCollector();
+var snapshot = await collector.CollectAsync("path/to/Solution.sln");
+Console.WriteLine(snapshot.ToSummary());
+```
+
+See [Using SimplicityTools.Metrics](#using-simplicitytoolsmetrics) for API details.
+
+#### 3. **Filters library** (Health verdicts)
+
+Evaluate a snapshot against three Simplicity-First filters:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="SimplicityTools.Filters" Version="x.y.z" />
+</ItemGroup>
+```
+
+`SimplicityTools.Filters` includes `SimplicityTools.Metrics` as a transitive dependency.
+
+```csharp
+using SimplicityTools.Filters;
+
+var verdicts = new[] {
+    TwoAmTestEvaluator.Evaluate(snapshot),
+    HalfRuleEvaluator.Evaluate(snapshot),
+    PrimaryPathFirstEvaluator.Evaluate(snapshot)
+};
+
+foreach (var verdict in verdicts)
+{
+    Console.WriteLine($"{verdict.Filter}: {(verdict.Passes ? "PASS" : "FAIL")} ({verdict.Score:P0})");
+}
+```
+
+See [Using SimplicityTools.Filters](#using-simplicitytoolsfilters) for verdict details.
+
+#### 4. **TCA library** (Cost of complexity estimate)
+
+Convert metrics and filter verdicts into an annual complexity cost:
 
 ```xml
 <ItemGroup>
@@ -109,21 +178,26 @@ Or use the libraries directly:
 </ItemGroup>
 ```
 
-`SimplicityTools.Tca` restores both `SimplicityTools.Filters` and `SimplicityTools.Metrics` transitively. Add direct `SimplicityTools.Filters` or `SimplicityTools.Metrics` package references only when you want to pin those surfaces explicitly in your project file.
+`SimplicityTools.Tca` includes both `SimplicityTools.Filters` and `SimplicityTools.Metrics` transitively.
 
 ```csharp
-using SimplicityTools.Metrics;
 using SimplicityTools.Filters;
+using SimplicityTools.Metrics;
 using SimplicityTools.Tca;
 
-var snapshot = await new SimplicityCollector().CollectAsync("path/to/Solution.sln");
-var verdicts = new[] {
-    TwoAmTestEvaluator.Evaluate(snapshot),
-    HalfRuleEvaluator.Evaluate(snapshot),
-    PrimaryPathFirstEvaluator.Evaluate(snapshot)
-};
 var estimate = TcaEstimate.Create(snapshot, verdicts);
+Console.WriteLine(estimate.ToExecutiveSummary());
 ```
+
+See [Using SimplicityTools.Tca](#using-simplicitytoolstca) for cost model details.
+
+#### Version constraints and breaking changes
+
+- `SimplicityTools.Metrics`, `SimplicityTools.Filters`, and `SimplicityTools.Tca` **version together** — use the same `x.y.z` for all three.
+- `SimplicityTools.Analyzers` and `SimplicityTools.Cli` **release independently** — pin only the versions you need.
+- Patch versions (`x.y.Z`) are additive and safe to upgrade.
+- Minor versions (`x.Y.z`) may include new metrics or filter rules — evaluate impact before upgrading.
+- Major versions (`X.y.z`) indicate breaking API changes — review [release notes](CONTRIBUTING.md#release-tags) before upgrading.
 
 ### Package versioning at a glance
 
