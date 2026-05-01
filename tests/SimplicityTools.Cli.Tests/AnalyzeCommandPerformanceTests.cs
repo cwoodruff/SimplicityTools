@@ -6,11 +6,12 @@ namespace SimplicityTools.Cli.Tests;
 
 public sealed class AnalyzeCommandPerformanceTests
 {
+    private const string GitHubActionsEnvironmentVariable = "GITHUB_ACTIONS";
     private static readonly SemaphoreSlim BuildLock = new(1, 1);
     private static bool cliBuilt;
 
     [Fact]
-    public async Task AnalyzeCommand_OverEngineeredSample_CompletesWithinFiveSecondsAtP95()
+    public async Task AnalyzeCommand_OverEngineeredSample_CompletesWithinExpectedThresholdAtP95()
     {
         await BuildCliAsync();
 
@@ -34,13 +35,13 @@ public sealed class AnalyzeCommandPerformanceTests
         }
 
         var p95 = CalculatePercentile(durations, 0.95d);
-        var threshold = TimeSpan.FromSeconds(5);
+        var threshold = GetP95Threshold();
 
         Assert.True(
             p95 < threshold,
             string.Create(
                 CultureInfo.InvariantCulture,
-                $"Expected analyze p95 under {threshold.TotalSeconds:F0}s for Sample.OverEngineered, but observed {p95.TotalSeconds:F3}s. Runs: {string.Join(", ", durations.Select(static duration => duration.TotalSeconds.ToString("F3", CultureInfo.InvariantCulture)))}"));
+                $"Expected analyze p95 under {threshold.TotalSeconds:F0}s for Sample.OverEngineered in {GetPerformanceEnvironmentLabel()}, but observed {p95.TotalSeconds:F3}s. Runs: {string.Join(", ", durations.Select(static duration => duration.TotalSeconds.ToString("F3", CultureInfo.InvariantCulture)))}"));
     }
 
     private static async Task BuildCliAsync()
@@ -109,6 +110,28 @@ public sealed class AnalyzeCommandPerformanceTests
         var fraction = rank - lowerIndex;
         var interpolatedTicks = ordered[lowerIndex].Ticks + ((ordered[upperIndex].Ticks - ordered[lowerIndex].Ticks) * fraction);
         return TimeSpan.FromTicks(Convert.ToInt64(Math.Round(interpolatedTicks, MidpointRounding.AwayFromZero)));
+    }
+
+    private static TimeSpan GetP95Threshold()
+    {
+        return IsRunningInGitHubActions()
+            ? TimeSpan.FromSeconds(10)
+            : TimeSpan.FromSeconds(5);
+    }
+
+    private static string GetPerformanceEnvironmentLabel()
+    {
+        return IsRunningInGitHubActions()
+            ? "GitHub Actions CI"
+            : "local/default environment";
+    }
+
+    private static bool IsRunningInGitHubActions()
+    {
+        return string.Equals(
+            Environment.GetEnvironmentVariable(GitHubActionsEnvironmentVariable),
+            "true",
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private static string GetCliAssemblyPath()

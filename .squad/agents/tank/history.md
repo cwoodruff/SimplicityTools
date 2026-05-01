@@ -19,6 +19,8 @@
 
 📌 **Sprint 6 Assignment (2026-04-30T21:27:33.453-04:00):** Own #41 (Validate global tool zero-config first-run) in Wave 2 of Milestone 6. Unblocks after Link completes #40 (package contract proof).
 
+📌 **PR #65 Performance Gate Calibration (2026-04-30T22:09:34.021-04:00):** Profiled CLI performance baseline and determined the 5s performance gate was unrealistic for GitHub Actions CI (9.3s historical p95). Calibrated gate to 5s local, 10s GitHub-hosted CI. Resolved blocker documented by Morpheus. Decisions merged to decisions.md.
+
 ## Next Steps
 
 - Wave 2 of Milestone 6: Validate `dotnet tool install dotnet-simplicity --global` on both sample solutions; confirm zero-config first-run behavior.
