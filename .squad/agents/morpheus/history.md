@@ -60,3 +60,15 @@
 - Post-merge: Update `.squad/identity/now.md` and plan Milestone 8.
 - Full orchestration history in `.squad/agents/morpheus/history-archive.md`.
 
+📌 **Sprint 8 Kickoff — Astro Website (2026-05-01T05:50:05.727-04:00):**
+- Branch `sprint/8-astro-website` created from main.
+- Milestone 8: Nine website/documentation issues (#50–#61, excluding #53, #54, #56) all assigned to Link.
+- Wave 1 (Ready Now): #50 Astro setup & GitHub Pages.
+- Wave 2 (After #50): #51 Navigation/layouts, #52 Homepage pages (phase 1).
+- Wave 3 (After #51, #52): #55 Analyzer docs, #58 Homepage finalization, #59 CLI docs.
+- Wave 4 (After Wave 3): #57 SEO/metadata, #60 Styling, #61 Custom domain & deploy workflow.
+- Critical path: #50 → #51/52 → #55/58/59 → #57/60/61.
+- Single-contributor throughput; website-building sequence enforced.
+- DoD: Astro site deployed to tools.simplicity-first.dev with all analyzer/CLI docs, metadata validated, GitHub Pages configured, zero-config promise maintained.
+
+
