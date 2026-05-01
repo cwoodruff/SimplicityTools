@@ -1,5 +1,21 @@
 # Squad Decisions
 
+### 2026-05-01T08:56:52-04:00: Milestone 8 Closure & Operator Handoff
+**By:** Morpheus
+**Status:** ✅ COMPLETE
+
+Repo-side engineering for the Astro site and GitHub Pages deployment is **complete and verified**:
+- Deployment workflow `.github/workflows/deploy-site.yml` exists and is production-ready
+- CNAME file and all SEO artifacts (robots.txt, sitemap.xml, canonical metadata) configured
+- Astro build validated with `npm run build:validate` (links, metadata, deployment artifacts)
+- All documentation content (Analyzer docs, CLI reference, library integration) staged and integrated
+- Operator handoff checklist documented in `docs-site/README.md`
+
+**Boundary:** Repo-complete (code, configuration, CI/CD, validation gates) ✅ vs production-complete (DNS CNAME, GitHub Pages UI, first merge push) 🔄. Issue #61 and Milestone 8 closed on repo-complete grounds. Next: Create PR, merge sprint/8 → main, configure GitHub Pages, set DNS CNAME.
+
+**Issues:** #61  **Milestone:** 8
+
+
 
 ### 2026-05-01T08:00:28.862-04:00: Milestone 8 final deploy closeout boundary
 **By:** Morpheus

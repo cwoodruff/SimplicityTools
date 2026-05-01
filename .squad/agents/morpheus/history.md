@@ -121,3 +121,29 @@ Wave 4 decisions merged. Inbox file `morpheus-custom-domain-canonical-origin.md`
 
 **[Scribe Cross-Agent Update — 2026-05-01T12:40:54Z]**  
 Final session closeout processed. Morpheus's Milestone 8 boundary decision merged from `.squad/decisions/inbox/morpheus-final-deploy-closeout.md` into `.squad/decisions.md`. Orchestration log written. No Wave 5 beyond #61 production handoff confirmed. All README and docs-site README operator checklists in place. Site validation gate confirmed via `npm run build:validate`. Squad files staged for commit. Morpheus Milestone 8 orchestration complete.
+
+## [Morpheus Milestone 8 Closure — 2026-05-01T08:56:52-04:00]
+
+**Action:** Closed issue #61 and Milestone 8 on operator-handoff grounds.
+
+**Audit Conclusion:** Repo-side work is **complete and verified**.
+- Deployment workflow `.github/workflows/deploy-site.yml` ready on main
+- CNAME and SEO artifacts configured and validated via `npm run build:validate`
+- All documentation content built and staged in `sprint/8-astro-website`
+- Historic closure boundary met: code is production-ready, external blockers are DNS and operator GitHub Pages configuration only
+
+**Closure Rationale:**
+- Issue #61 "Custom domain and GitHub Pages deployment workflow" is closed as **repo-complete**
+- Milestone 8 "Astro Website" is closed; all nine issues resolved and integrated
+- Next work: merge `sprint/8-astro-website` to main (separate PR), which triggers deploy workflow
+- Operator then: create gh-pages branch (automatic via workflow), configure Pages settings, point DNS
+
+**What remains external to repo:**
+- DNS CNAME record pointing tools.simplicity-first.dev → cwoodruff.github.io (external registrar)
+- GitHub Pages UI configuration: Settings → Pages → gh-pages / root (external action)
+- First push to main from sprint/8 merge (external event, not repo code)
+
+Explicit boundary: **Repo-complete** ≠ **Production-complete**. Repo part is shipped. Operator handoff documented in `docs-site/README.md` and issue #61 closure comment.
+
+**[Scribe Cross-Agent Final Update — 2026-05-01T12:56:52Z]**
+Morpheus M8 closure decision merged from inbox into decisions.md. Orchestration and session logs written. All squad documentation archived. Ready for operator handoff phase.
