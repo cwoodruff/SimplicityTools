@@ -29,9 +29,25 @@
 - Release proof = local pack + local consumer + CI workflow verification.
 - Sprint structure enforces critical path dependencies; no speculative work.
 
+## Learnings
+
+- **Repository branching model:** SimplicityTools uses sprint-branch-to-main pattern (not dev-based). Sprint branches created from main, worked on in waves, then merged to main via PR. Milestone close precedes PR creation.
+- **Issue closure protocol:** Use `gh issue close {id} --comment "reason"` to close issues. Bulk close doesn't support multiple arguments; loop instead.
+- **Milestone management:** Milestones can be closed via GitHub API even with open issues; closing doesn't auto-close the issues. Must close issues explicitly first.
+- **CI validation gates:** NuGet package validation workflow (nuget-publish.yml) runs full suite: restore, build, test, pack, validate metadata, validate analyzer consumer. Takes 15–30+ minutes depending on test suite depth.
+- **PR creation requirements:** Ensure branch has commits ahead of target branch; branches on same commit produce "No commits between" error.
+
+📌 **Sprint 7 Wrapup: Packaging UX & Documentation (2026-04-30T22:22:13-04:00):**
+- Closed all six Sprint 7 issues (#44–#49) and Milestone 7.
+- PR #65 created with 10 commits (+1934/−847 lines, 16 files changed).
+- Content: NuGet badges, quickstart guide, library integration docs, troubleshooting, CI/CD examples.
+- **Merge Blocker:** GitHub validation gate (NuGet packages workflow, job 73885590519) still running as of 2026-05-01T02:08:28Z, at step 7 of 11.
+- **Architectural Note:** Sprint 7 confirms the sprint-branch-to-main model is working well. Milestone close precedes PR creation; issues close before merge.
+
 ## Next Steps
 
-- Execute Milestone 6 wave assignments on `sprint/6-global-tool-packaging`.
-- Milestone 7 planning (Packaging UX & Documentation).
+- Monitor PR #65 validation completion (workflow in progress as of 2026-05-01T02:08:28Z).
+- Merge PR #65 with squash strategy once validation passes.
+- Post-merge: Update `.squad/identity/now.md` and plan Milestone 8.
 - Full orchestration history in `.squad/agents/morpheus/history-archive.md`.
 
