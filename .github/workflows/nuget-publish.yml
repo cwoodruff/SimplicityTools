@@ -68,7 +68,28 @@ jobs:
         run: dotnet build SimplicityTools.sln --configuration Release --no-restore --verbosity minimal
 
       - name: Test solution
-        run: dotnet test SimplicityTools.sln --configuration Release --no-build --verbosity minimal
+        run: >
+          dotnet test SimplicityTools.sln
+          --configuration Release
+          --no-build
+          --verbosity minimal
+          --filter "FullyQualifiedName!~SimplicityTools.Cli.Tests"
+
+      - name: Validate CLI commands
+        run: >
+          dotnet test tests/SimplicityTools.Cli.Tests/SimplicityTools.Cli.Tests.csproj
+          --configuration Release
+          --no-build
+          --logger "console;verbosity=detailed"
+          --filter "FullyQualifiedName!~SimplicityTools.Cli.Tests.AnalyzeCommandPerformanceTests"
+
+      - name: Validate CLI performance gate
+        run: >
+          dotnet test tests/SimplicityTools.Cli.Tests/SimplicityTools.Cli.Tests.csproj
+          --configuration Release
+          --no-build
+          --logger "console;verbosity=detailed"
+          --filter "FullyQualifiedName=SimplicityTools.Cli.Tests.AnalyzeCommandPerformanceTests.AnalyzeCommand_OverEngineeredSample_CompletesWithinFiveSecondsAtP95"
 
       - name: Dry-run pack
         shell: bash
