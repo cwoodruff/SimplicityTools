@@ -1,0 +1,80 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import DocsPageTemplate from '../../components/templates/DocsPageTemplate.astro';
+import ReferenceCodeBlock from '../../components/reference/ReferenceCodeBlock.astro';
+import { withBase } from '../../data/site';
+---
+
+<BaseLayout title="IDE setup" description="Use SimplicityTools analyzers in Visual Studio, Rider, and VS Code.">
+  <DocsPageTemplate
+    eyebrow="Integration"
+    title="IDE setup"
+    summary="The analyzer package is most useful when it behaves like a normal part of the editor. Install it once, keep the PackageReference clean, and let the diagnostics show up where developers already work."
+    breadcrumbs={[
+      { label: 'Home', href: withBase('/') },
+      { label: 'Integration', href: withBase('/integration/') },
+      { label: 'IDE setup' }
+    ]}
+  >
+    <section class="section">
+      <div class="section-heading">
+        <h2>Baseline PackageReference</h2>
+        <p>Use the analyzer package as an analyzer-only dependency so it does not leak into downstream consumers.</p>
+      </div>
+      <ReferenceCodeBlock
+        lang="xml"
+        code={`<ItemGroup>\n  <PackageReference Include="SimplicityTools.Analyzers" Version="x.y.z" PrivateAssets="all" />\n</ItemGroup>`}
+      />
+      <p class="section-note">PrivateAssets="all" is part of the contract, not decoration. It keeps the analyzer package from becoming part of your public compile-time surface.</p>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Visual Studio</h2>
+        <p>Visual Studio is the richest experience for the current analyzer + code-fix surface.</p>
+      </div>
+      <ol class="step-list">
+        <li>Add the analyzer package and rebuild the project.</li>
+        <li>Enable full solution analysis if diagnostics do not appear immediately.</li>
+        <li>Use the lightbulb for SF0001 and SF0002 when the fix matches the architectural intent.</li>
+      </ol>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Rider</h2>
+        <p>Rider works well as long as inspections are running at the solution level.</p>
+      </div>
+      <ol class="step-list">
+        <li>Add the package, restore, and rebuild once so Rider loads the analyzer assemblies.</li>
+        <li>Confirm solution-wide inspections are enabled.</li>
+        <li>If diagnostics look stale after an upgrade, clean bin/obj and restart Rider to flush analyzer caches.</li>
+      </ol>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>VS Code / C# Dev Kit</h2>
+        <p>The analyzer package still works, but the experience depends on the C# language service being healthy.</p>
+      </div>
+      <ol class="step-list">
+        <li>Install the C# extension or C# Dev Kit and reload the workspace after restoring packages.</li>
+        <li>Run a normal build once if diagnostics do not appear immediately in the editor.</li>
+        <li>Use command-line build output as the tie-breaker when the editor seems out of sync.</li>
+      </ol>
+      <ReferenceCodeBlock lang="bash" code={`dotnet clean\ndotnet build --no-incremental`} label="Good reset command" />
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Related pages</h2>
+        <p>Use the diagnostic pages for rule details and the csproj guide for packaging specifics.</p>
+      </div>
+      <div class="button-row">
+        <a class="button" href={withBase('/analyzers/')}>Analyzer overview</a>
+        <a class="button button--secondary" href={withBase('/integration/csproj-reference/')}>csproj reference</a>
+        <a class="button button--ghost" href={withBase('/docs/filters/')}>Filter reference</a>
+      </div>
+    </section>
+  </DocsPageTemplate>
+</BaseLayout>

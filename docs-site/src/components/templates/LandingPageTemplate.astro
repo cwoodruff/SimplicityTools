@@ -1,0 +1,63 @@
+---
+import Breadcrumbs from '../Breadcrumbs.astro';
+
+interface Action {
+  label: string;
+  href: string;
+  variant?: 'primary' | 'secondary' | 'ghost';
+  external?: boolean;
+}
+
+interface Crumb {
+  label: string;
+  href?: string;
+}
+
+interface Props {
+  eyebrow: string;
+  title: string;
+  summary: string;
+  actions?: Action[];
+  breadcrumbs?: Crumb[];
+}
+
+const { eyebrow, title, summary, actions = [], breadcrumbs = [] } = Astro.props;
+---
+
+<section class="page-hero">
+  {breadcrumbs.length > 0 ? <Breadcrumbs items={breadcrumbs} /> : null}
+  <p class="eyebrow">{eyebrow}</p>
+  <div class="hero-grid">
+    <div>
+      <h1>{title}</h1>
+      <p class="lede">{summary}</p>
+      {
+        actions.length > 0 ? (
+          <div class="button-row">
+            {actions.map((action) => (
+              <a
+                class:list={[
+                  'button',
+                  {
+                    'button--secondary': action.variant === 'secondary',
+                    'button--ghost': action.variant === 'ghost'
+                  }
+                ]}
+                href={action.href}
+                target={action.external ? '_blank' : undefined}
+                rel={action.external ? 'noreferrer' : undefined}
+              >
+                {action.label}
+              </a>
+            ))}
+          </div>
+        ) : null
+      }
+    </div>
+    <slot name="aside" />
+  </div>
+</section>
+
+<div class="section-stack">
+  <slot />
+</div>

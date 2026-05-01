@@ -1,0 +1,77 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import LandingPageTemplate from '../components/templates/LandingPageTemplate.astro';
+import { docsLinks, maintainerUrl, repoUrl, withBase } from '../data/site';
+---
+
+<BaseLayout title="Pricing" description="SimplicityTools is open source. This page explains the free adoption story and where to start if you need hands-on help.">
+  <LandingPageTemplate
+    eyebrow="Pricing"
+    title="Simple pricing: adopt the toolkit first, then decide whether you need extra help."
+    summary="SimplicityTools is open source, so the default answer is still easy: install it, run it, and see whether the output changes team behavior. If you need rollout help, start in the open and escalate only when the work truly needs a different support channel."
+    breadcrumbs={[{ label: 'Home', href: withBase('/') }, { label: 'Pricing' }]}
+    actions={[
+      { label: 'View GitHub', href: repoUrl, external: true },
+      { label: 'Open an issue', href: docsLinks.issues, variant: 'secondary', external: true },
+      { label: 'Talk to the maintainer', href: maintainerUrl, variant: 'ghost', external: true }
+    ]}
+  >
+    <div slot="aside" class="callout-panel">
+      <span class="panel-label">What is free today</span>
+      <ul class="metrics-list">
+        <li>The CLI, analyzers, filters, TCA libraries, and sample solutions.</li>
+        <li>The docs, integration guides, and reference pages in this site.</li>
+        <li>The normal open-source support path through issues and repository discussion.</li>
+      </ul>
+    </div>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>What you get without paying</h2>
+        <p>The open-source path is the primary product path, not a teaser for a hidden tier.</p>
+      </div>
+      <div class="pricing-grid pricing-grid--wide">
+        <div class="pricing-card">
+          <h3>CLI + report</h3>
+          <p>Analyze a solution, generate a report, and protect a baseline in CI with no feature gating.</p>
+        </div>
+        <div class="pricing-card">
+          <h3>Analyzer package</h3>
+          <p>Install the Roslyn package and get SF0001-SF0007 feedback in the IDE and normal builds.</p>
+        </div>
+        <div class="pricing-card">
+          <h3>Reference docs</h3>
+          <p>Use command pages, filter docs, configuration guidance, and library usage examples directly from the site.</p>
+        </div>
+        <div class="pricing-card">
+          <h3>Samples</h3>
+          <p>Use the checked-in sample solutions to teach healthy shape versus accidental complexity.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>If your team needs rollout help</h2>
+        <p>There is no separate productized pricing table in the repo today. The honest next step is still to start in the open unless the work clearly needs a private conversation.</p>
+      </div>
+      <div class="three-up">
+        <a class="link-card" href={docsLinks.issues} target="_blank" rel="noreferrer">
+          <span class="link-card__eyebrow">Public support</span>
+          <h3>Open an issue</h3>
+          <p>Best for bugs, missing docs, and product feedback that should help every team after yours.</p>
+        </a>
+        <a class="link-card" href={maintainerUrl} target="_blank" rel="noreferrer">
+          <span class="link-card__eyebrow">Direct contact</span>
+          <h3>Start with the maintainer</h3>
+          <p>Best for training, adoption coaching, or conversations that need project-specific context.</p>
+        </a>
+        <a class="link-card" href={withBase('/docs/') }>
+          <span class="link-card__eyebrow">Self-service</span>
+          <h3>Use the docs first</h3>
+          <p>Best when your real blocker is not support, but the need for a clearer command, analyzer, or configuration reference.</p>
+        </a>
+      </div>
+    </section>
+  </LandingPageTemplate>
+</BaseLayout>

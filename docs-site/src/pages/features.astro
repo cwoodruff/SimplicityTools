@@ -1,0 +1,115 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import LandingPageTemplate from '../components/templates/LandingPageTemplate.astro';
+import { designTokens, withBase } from '../data/site';
+
+const featureDetails = [
+  {
+    title: 'CLI',
+    body: 'The CLI is the operational contract: analyze, baseline, diff, budget, report, and watch cover first-run learning through CI gating.',
+    href: withBase('/docs/commands/')
+  },
+  {
+    title: 'HTML report',
+    body: 'The report turns the same snapshot into a self-contained artifact that survives email threads, sprint reviews, and CI retention policies.',
+    href: withBase('/docs/commands/report/')
+  },
+  {
+    title: 'Roslyn analyzers',
+    body: 'Seven diagnostics surface simplification opportunities where developers already work, including two code fixes for the most direct wins.',
+    href: withBase('/analyzers/')
+  },
+  {
+    title: 'Filters',
+    body: 'TwoAmTest, HalfRule, and PrimaryPathFirst turn raw numbers into a teaching signal instead of a scoreboard.',
+    href: withBase('/docs/filters/')
+  },
+  {
+    title: 'TCA calculator',
+    body: 'The TCA layer translates complexity into an annual cost signal so refactoring conversations make sense outside engineering too.',
+    href: withBase('/docs/library-usage/')
+  }
+];
+---
+
+<BaseLayout title="Features" description="Explore the five parts of SimplicityTools and how they fit together in local development, code review, and CI.">
+  <LandingPageTemplate
+    eyebrow="Features"
+    title="Five complementary surfaces, one simpler adoption path."
+    summary="SimplicityTools works best when each surface reinforces the next one: CLI for the first read, filters for interpretation, analyzers for daily feedback, reports for communication, and TCA for business context."
+    breadcrumbs={[{ label: 'Home', href: withBase('/') }, { label: 'Features' }]}
+    actions={[
+      { label: 'Docs hub', href: withBase('/docs/') },
+      { label: 'Analyzer docs', href: withBase('/analyzers/'), variant: 'secondary' },
+      { label: 'Library usage', href: withBase('/docs/library-usage/'), variant: 'ghost' }
+    ]}
+  >
+    <div slot="aside" class="callout-panel">
+      <span class="panel-label">Healthy adoption sequence</span>
+      <ul class="metrics-list">
+        <li>Learn the shape with analyze and budget</li>
+        <li>Protect the floor with baseline and diff</li>
+        <li>Share the story with report</li>
+        <li>Keep daily pressure low with analyzers</li>
+        <li>Translate drag into cost with TCA when needed</li>
+      </ul>
+    </div>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>The five tool surfaces</h2>
+        <p>Each surface can stand alone, but the real value shows up when the same contract survives from local runs to CI and architecture conversations.</p>
+      </div>
+      <div class="card-grid">
+        {
+          featureDetails.map((feature) => (
+            <a class="link-card" href={feature.href}>
+              <h3>{feature.title}</h3>
+              <p>{feature.body}</p>
+            </a>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Common team jobs</h2>
+        <p>Use the page that matches the job. That keeps the docs honest and the architecture conversation concrete.</p>
+      </div>
+      <div class="three-up">
+        <div class="card">
+          <h3>Protect pull requests</h3>
+          <p>Use <code>baseline</code> + <code>diff --fail-on-regression</code> once the team agrees on the current floor.</p>
+        </div>
+        <div class="card">
+          <h3>Coach the team in the IDE</h3>
+          <p>Use the analyzer package when feedback needs to arrive before a pull request review does.</p>
+        </div>
+        <div class="card">
+          <h3>Justify simplification work</h3>
+          <p>Use report output and TCA estimates when architecture cleanup needs stakeholder language, not just developer intuition.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Design system</h2>
+        <p>The site stays intentionally narrow: one dark canvas, one brand accent, readable code blocks, and explicit focus states that survive keyboard use on mobile, tablet, and desktop.</p>
+      </div>
+      <div class="swatch-grid">
+        {
+          designTokens.map((token) => (
+            <div class="swatch-card">
+              <div class="swatch-chip" style={`background:${token.value}`}></div>
+              <h3>{token.label}</h3>
+              <p><code>{token.value}</code></p>
+              <p>{token.usage}</p>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+  </LandingPageTemplate>
+</BaseLayout>

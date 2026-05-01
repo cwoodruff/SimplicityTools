@@ -1,0 +1,97 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import LandingPageTemplate from '../components/templates/LandingPageTemplate.astro';
+import { cliPackageUrl, repoUrl, withBase } from '../data/site';
+---
+
+<BaseLayout
+  title="Getting started"
+  description="Install SimplicityTools, run your first analysis, and understand the zero-config path before you wire it into CI."
+>
+  <LandingPageTemplate
+    eyebrow="Getting started"
+    title="Start with the contract, not the ceremony."
+    summary="Run the CLI on a real solution first. Once the output makes sense to the team, capture a baseline, wire diff into CI, and add analyzer feedback where it speeds up normal development."
+    breadcrumbs={[{ label: 'Home', href: withBase('/') }, { label: 'Getting Started' }]}
+    actions={[
+      { label: 'Install from NuGet', href: cliPackageUrl, external: true },
+      { label: 'CLI commands', href: withBase('/docs/commands/'), variant: 'secondary' },
+      { label: 'GitHub repo', href: repoUrl, variant: 'ghost', external: true }
+    ]}
+  >
+    <div slot="aside" class="callout-panel">
+      <span class="panel-label">Recommended first command</span>
+      <pre><code>dotnet simplicity analyze path/to/YourSolution.sln</code></pre>
+      <p>Use <code>analyze</code> first. It teaches without writing files or demanding a policy decision.</p>
+    </div>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Pick the fastest honest install path</h2>
+        <p>The right entry point depends on whether you are evaluating the tool, integrating it, or working inside this repo.</p>
+      </div>
+      <div class="three-up">
+        <div class="card">
+          <h3>Global tool</h3>
+          <p>Best when you want the normal user workflow and CI parity.</p>
+          <pre><code>dotnet tool install --global SimplicityTools.Cli</code></pre>
+        </div>
+        <div class="card">
+          <h3>Run from source</h3>
+          <p>Best when you are validating changes in this repository before packaging.</p>
+          <pre><code>dotnet build src/SimplicityTools.Cli/SimplicityTools.Cli.csproj --nologo --verbosity quiet
+
+dotnet src/SimplicityTools.Cli/bin/Debug/net10.0/SimplicityTools.Cli.dll analyze samples/Sample.Simplified/Sample.Simplified.sln</code></pre>
+        </div>
+        <div class="card">
+          <h3>Analyzer-first adoption</h3>
+          <p>Best when the team wants IDE nudges before it is ready for CI contracts.</p>
+          <pre><code>&lt;PackageReference Include="SimplicityTools.Analyzers" Version="x.y.z" PrivateAssets="all" /&gt;</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Recommended adoption sequence</h2>
+        <p>Move from insight to policy in four deliberate steps instead of trying to skip directly to governance.</p>
+      </div>
+      <ol class="step-list">
+        <li>Run <code>analyze</code> to understand the current shape without producing artifacts.</li>
+        <li>Run <code>budget</code> if the team needs a threshold-based conversation immediately.</li>
+        <li>Run <code>baseline</code> only after the team agrees the current shape is the floor to protect.</li>
+        <li>Run <code>diff --fail-on-regression</code> in CI once that baseline is committed.</li>
+      </ol>
+      <div class="button-row">
+        <a class="button" href={withBase('/docs/commands/analyze/')}>Read analyze</a>
+        <a class="button button--secondary" href={withBase('/docs/commands/diff/')}>Read diff</a>
+        <a class="button button--ghost" href={withBase('/integration/ci-cd/')}>See CI setup</a>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>The zero-config promise</h2>
+        <p>Missing configuration should teach, not block. SimplicityTools warns when simplicity.json is absent and continues with built-in defaults.</p>
+      </div>
+      <div class="two-up">
+        <div class="card">
+          <h3>What you get immediately</h3>
+          <ul class="bullet-list">
+            <li>Structural metrics, code metrics, and primary-path signal.</li>
+            <li>Filter verdicts and next-move guidance in watch/report flows.</li>
+            <li>A path to CI gating without inventing your own schema first.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>When to add configuration</h3>
+          <ul class="bullet-list">
+            <li>You want team-specific budget thresholds.</li>
+            <li>You want TCA inputs to reflect your actual salary and incident assumptions.</li>
+            <li>You are ready to turn the output into a shared policy instead of an exploratory read.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </LandingPageTemplate>
+</BaseLayout>
