@@ -1,6 +1,21 @@
 # Squad Decisions
 
 
+### 2026-05-01T07:37:47.635-04:00: Custom Domain as Canonical Origin & Deploy Gate
+**By:** Morpheus  
+**Status:** ✅ COMPLETE
+
+The docs site now treats `https://tools.simplicity-first.dev` as the canonical production origin, not the repository subpath. Wave 4 moved the site from bootstrap-on-project-pages mode into custom-domain deployment, requiring canonical URLs, Open Graph metadata, sitemap entries, robots directives, and CNAME all tied to one stable origin. Build validation must pass before any deploy workflow publishes `docs-site/dist/` to `gh-pages`.
+
+Implications:
+- Keep site URLs root-relative in the Astro app
+- Treat `npm run build:validate` as the release gate for docs-site changes
+- Do not mark the custom-domain issue done until `gh-pages` exists and external DNS resolves the domain
+
+**Issue:** #61 (partial — external blockers on DNS/Pages)
+
+---
+
 ### 2026-05-01T06:37:49.140-04:00: Site Validation Checklist Pattern Established
 **By:** Tank  
 **Status:** ✅ COMPLETE

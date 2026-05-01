@@ -101,3 +101,15 @@
 - Pre-existing non-doc validation failure noted: TcaPackageValidationTests.PackedTcaPackage_ShipsOnlyLibraryAssets_DeclaresLibraryDependencies_AndBuildsInAConsumer (unrelated to Wave 3 content work).
 - Scribe merged Wave 3 information architecture decision to `.squad/decisions.md`.
 - Orchestration log written: `.squad/orchestration-log/2026-05-01T11-26-01Z-morpheus.md`.
+
+- **2026-05-01T07:37:47.635-04:00 — Wave 4 website contract:** The production Astro origin is now `https://tools.simplicity-first.dev` with root-relative paths, shared metadata in `docs-site/src/layouts/BaseLayout.astro`, and explicit public route inventory in `docs-site/src/data/site.ts` for sitemap generation.
+- **2026-05-01T07:37:47.635-04:00 — Wave 4 validation pattern:** `docs-site/package.json` now treats `npm run build:validate` as the release gate, chaining Astro build with `docs-site/scripts/check-links.mjs` to verify metadata, internal links, `robots.txt`, `sitemap.xml`, `CNAME`, and basic accessibility landmarks.
+- **2026-05-01T07:37:47.635-04:00 — Wave 4 deployment note:** GitHub Pages deployment is defined in `.github/workflows/deploy-site.yml`, but Pages configuration remains blocked until a real `gh-pages` branch exists and `tools.simplicity-first.dev` resolves publicly.
+
+📌 **Sprint 8 Wave 4 Closeout (2026-05-01T07:37:47.635-04:00):**
+- Issue #57 complete: canonical/OG/twitter metadata, sitemap, robots, validation scripts, README workflow updates, and deploy-before-publish validation are all in place.
+- Issue #60 complete: the site styling system now documents the brand palette, sharpens keyboard/focus behavior, and aligns responsive behavior around mobile/tablet/desktop ranges.
+- Issue #61 partially delivered: `CNAME` and deploy workflow are ready, but GitHub Pages cannot be pointed at `gh-pages` until that branch exists, and DNS for `tools.simplicity-first.dev` is not resolving yet.
+
+**[Scribe Orchestration Update — 2026-05-01T07:37:47Z]**  
+Wave 4 decisions merged. Inbox file `morpheus-custom-domain-canonical-origin.md` → `.squad/decisions.md` entry "Custom Domain as Canonical Origin & Deploy Gate". Orchestration log written to `.squad/orchestration-log/2026-05-01T07:37:47Z-morpheus.md`. Wave 4 mostly shipped; #57 and #60 closed; #61 open pending external DNS/Pages availability.
