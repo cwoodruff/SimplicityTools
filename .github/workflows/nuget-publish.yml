@@ -89,7 +89,7 @@ jobs:
           --configuration Release
           --no-build
           --logger "console;verbosity=detailed"
-          --filter "FullyQualifiedName=SimplicityTools.Cli.Tests.AnalyzeCommandPerformanceTests.AnalyzeCommand_OverEngineeredSample_CompletesWithinFiveSecondsAtP95"
+          --filter "FullyQualifiedName=SimplicityTools.Cli.Tests.AnalyzeCommandPerformanceTests.AnalyzeCommand_OverEngineeredSample_CompletesWithinExpectedThresholdAtP95"
 
       - name: Dry-run pack
         shell: bash

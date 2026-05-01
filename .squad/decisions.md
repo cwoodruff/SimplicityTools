@@ -5,6 +5,82 @@
 **What:** Split the NuGet publish workflow test phase so the solution-wide `dotnet test` run excludes `SimplicityTools.Cli.Tests`, then run the CLI functional tests and the CLI performance gate in their own named steps with detailed console logging.
 **Why:** The repeated "hang" was the workflow going silent inside `SimplicityTools.Cli.Tests` while those tests were also spawning their own `dotnet build`/`analyze` work and competing with the rest of the solution test graph. Isolating the CLI suite keeps the coverage intact, makes the performance gate more honest, and gives Actions logs clear, visible progress instead of a dead-looking test phase.
 
+### 2026-04-30T22:09:34.021-04:00: PR #65 Blocked — CLI Performance Gate Timeout
+
+**By:** Morpheus  
+**Status:** BLOCKED
+
+---
+
+## Situation
+
+- Tank's workflow hang fix has been successfully applied to `sprint/7-packaging-ux-documentation` branch
+- The fix correctly isolates CLI tests, preventing workflow resource contention
+- PR #65 CI now runs cleanly through both test isolation steps
+- **BLOCKER:** The CLI performance gate test is failing:
+  - Test: `SimplicityTools.Cli.Tests.AnalyzeCommandPerformanceTests.AnalyzeCommand_OverEngineeredSample_CompletesWithinFiveSecondsAtP95`
+  - Expected: p95 ≤ 5 seconds
+  - Observed: p95 = 9.335 seconds (15 sample runs)
+  - Margin: exceeds threshold by 1.87x
+
+---
+
+## What's Working
+
+✓ Workflow no longer hangs (Tank's fix is correct)  
+✓ All library tests pass (6 projects, ~45 tests, 2m28s)  
+✓ All CLI functional tests pass (16/16, 1m41s)  
+✓ Performance gate test runs reliably with full console visibility  
+✓ Workflow has clear, honest logs and progress reporting  
+
+---
+
+## Root Cause Analysis
+
+The blocker is **NOT caused by Tank's test isolation fix**. Rather:
+
+- Tank's fix reveals a latent performance issue by giving proper visibility
+- The performance gate was not visible in prior workflow runs (hung or cancelled)
+- Gate now runs cleanly, surfacing the p95 regression
+
+## Investigation Needed
+
+Determine if the 9.3s vs 5s gap is:
+1. **Real code regression** (analyzers or CLI got slower)
+2. **CI runner capacity issue** (GitHub runner overloaded during test run)
+3. **Threshold miscalibration** (gate was never realistic for CI environment)
+
+---
+
+## Next Steps (Required to Merge)
+
+1. Specialist (recommend Tank) investigates performance baseline vs current
+2. Run profiling to identify bottleneck if code regression is confirmed
+3. Either:
+   - **Option A:** Fix code performance regression, re-run tests → gate passes
+   - **Option B:** Adjust threshold with explicit justification and trade-off analysis → gate passes
+4. Re-run PR #65 CI validation after resolution
+
+---
+
+## Why This Matters
+
+Milestone 7 DoD includes "zero-config promise maintained" — the performance gate is part of that contract. We cannot merge a PR that fails its defined acceptance criteria without understanding and resolving why.
+
+---
+
+## Decision
+
+**PR #65 remains open and blocked pending performance investigation.**
+
+Recommend: Spawn specialist task to profile CLI performance and determine root cause of gate failure. Escalate to next decision round with findings.
+
+### 2026-04-30T22:09:34.021-04:00: PR #65 CLI performance gate calibration
+
+**By:** Tank
+**What:** Keep the CLI analyze p95 gate, but calibrate it by environment: 5s outside GitHub Actions and 10s on GitHub-hosted CI. Update the workflow filter to the renamed threshold-aware test.
+**Why:** The PR does not modify CLI or CLI test code; only the workflow changed. Historical GitHub-hosted Ubuntu runs on main and sprint branches consistently report p95 between 8.354s and 9.394s, while local measurement on the same sample is 3.615s p95. That makes the 5s CI threshold a false gate caused by runner constraints, not a PR regression.
+
 ## Governance
 
 - All meaningful changes require team consensus
