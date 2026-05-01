@@ -118,3 +118,11 @@
 - **Switch Parallel:** #38 (Package Analyzers) runs in parallel with #35. Uses `analyzers/dotnet/cs/` layout from Sprint 4 lessons. Includes all 7 SF00X analyzers and code fix DLLs.
 - **Tank Integration Gate:** #39 (Validate all packages) runs Wave 4 after all libraries complete. Publishes to local test feed, validates restore in both samples, confirms zero metadata conflicts.
 - 2026-04-30T19:09:43.583-04:00: For the Tca library package, consumer validation should restore only `SimplicityTools.Tca` from a folder feed and then prove `Filters` plus `Metrics` arrive transitively in `project.assets.json`; that catches missing nuspec dependencies even when the local project graph still builds.
+
+## Sprint 8: Astro Website (Milestone 8) — Wave 3 Analyzer Documentation Complete
+**Timestamp:** 2026-05-01T07:09:22.214Z
+
+- Wave 3 included full documentation for all seven analyzers (SF0001–SF0007) integrated into Astro docs-site.
+- Analyzer pages deployed under `/analyzers/` route as part of information architecture for Wave 3.
+- Deep reference material organized into task-shaped sections alongside CLI, filter, config, and library usage guides.
+- Documentation complete and build passing; ready for production deployment.

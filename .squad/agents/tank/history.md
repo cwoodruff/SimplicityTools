@@ -100,3 +100,11 @@ Warnings: 0               ✅ clean
 ## Sprint 8: Astro Website (Milestone 8) — Wave 2 Validation Complete
 **Timestamp:** 2026-05-01T10:37:49.140Z  
 **Validation Pattern Established:** Wrote standardized 3-phase site validation checklist for docs-site PRs: (1) Build Validation (npm run build, 0 errors/warnings, <500ms), (2) Structure Validation (spot-check template rendering), (3) Responsive Validation (hamburger/breakpoints/viewport). All Wave 2 acceptance criteria verified and locked. Pattern applies to Wave 3 page additions and future template changes. Decision merged to squad/decisions.md.
+
+## Sprint 8: Astro Website (Milestone 8) — Wave 3 Site Validation Complete
+**Timestamp:** 2026-05-01T07:09:22.214Z
+
+- Wave 3 docs-site content delivery validated using established 3-phase checklist pattern.
+- All Analyzer docs (SF0001–SF0007), CLI/filter/config/library pages, integration guides passed Build, Structure, and Responsive validation phases.
+- Docs-site build passing; zero errors/warnings.
+- Pre-existing non-doc validation failure noted in root solution tests (TcaPackageValidationTests.PackedTcaPackage_ShipsOnlyLibraryAssets_DeclaresLibraryDependencies_AndBuildsInAConsumer). Unrelated to Wave 3 content work; investigation deferred to post-Wave-3.

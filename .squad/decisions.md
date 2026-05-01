@@ -550,3 +550,19 @@ Morpheus, 2026-04-30T17:29:31.278-04:00
 **What:** Completed issue `#50` on branch `sprint/8-astro-website` by bootstrapping `docs-site/` with a GitHub Pages-ready Astro setup: `astro.config.mjs`, build/dev/preview scripts, starter layouts/pages/components/assets structure, `public/.nojekyll`, and a small local README. Validation covered `npm run build`, `npm run dev`, `npm run preview`, plus the repository `.NET` build/tests.
 
 **Why:** Keeping Astro aligned to the repository Pages path (`/SimplicityTools/`) from day one avoids later routing rework and preserves a clean first-run experience for contributors. This foundation unblocks Wave 2 navigation, layouts, and landing pages without reopening project setup decisions.
+
+### 2026-05-01T07:09:22.214-04:00: Wave 3 Information Architecture Established
+**By:** Morpheus  
+**Status:** ✅ COMPLETE
+
+Established information architecture for Wave 3 docs-site delivery. Top-level landing pages (`/`, `/getting-started/`, `/features/`, `/pricing/`, `/docs/`, `/reference/`) focus on routing and adoption context. Deep reference material organized into stable, task-shaped sections:
+- `/docs/commands/` for CLI command contracts
+- `/docs/filters/` for filter interpretation
+- `/docs/configuration/` for `simplicity.json`
+- `/docs/library-usage/` for programmatic package composition
+- `/analyzers/` for SF0001-SF0007
+- `/integration/` for IDE, CI/CD, and csproj guidance
+
+**Rationale:** Keeps homepage and hubs readable while making deep docs easy to style, link, and extend in later waves. Matches existing package and command boundaries instead of inventing a second documentation taxonomy.
+
+**Issues:** #55, #58, #59

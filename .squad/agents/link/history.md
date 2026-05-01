@@ -133,3 +133,11 @@ Earlier work archived in history-archive.md:
 ## Sprint 8: Astro Website (Milestone 8) — Wave 2 Complete
 **Timestamp:** 2026-05-01T10:37:49.140Z  
 **Agent Sync Note (Scribe):** Orchestration completed for Wave 2 handoff. Tank has established standardized 3-phase site validation checklist (Build, Structure, Responsive validation) to ensure consistent quality on future Wave 3 additions. Pattern documented in decisions.md. Issues #51 and #52 confirmed satisfied and ready for closure.
+
+## Sprint 8: Astro Website (Milestone 8) — Wave 3 Complete
+**Timestamp:** 2026-05-01T07:09:22.214Z
+
+- Wave 3 content delivery complete: Analyzer docs (SF0001–SF0007), CLI/filter/config/library guides, integration pages, homepage finalization all merged into Astro site.
+- Information architecture established: deep reference material organized into `/analyzers/`, `/docs/commands/`, `/docs/filters/`, `/docs/configuration/`, `/docs/library-usage/`, `/integration/` task-shaped sections.
+- Docs-site build passing. GitHub issues #55, #58, #59 closed with summary comments.
+- Cross-agent context propagated to team histories. Scribe decision decision merged to `.squad/decisions.md`.

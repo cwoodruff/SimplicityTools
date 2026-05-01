@@ -53,6 +53,10 @@
 - **Merge Blocker:** GitHub validation gate (NuGet packages workflow, job 73885590519) still running as of 2026-05-01T02:08:28Z, at step 7 of 11.
 - **Architectural Note:** Sprint 7 confirms the sprint-branch-to-main model is working well. Milestone close precedes PR creation; issues close before merge.
 
+- **2026-05-01T07:09:22.214-04:00 — Wave 3 docs IA:** Deep reference content now lives in `docs-site/src/pages/docs/commands/`, `docs-site/src/pages/docs/filters/`, `docs-site/src/pages/docs/configuration.astro`, `docs-site/src/pages/docs/library-usage.astro`, `docs-site/src/pages/analyzers/`, and `docs-site/src/pages/integration/`, while top-level landing pages stay task-oriented and route inward.
+- **2026-05-01T07:09:22.214-04:00 — Wave 3 content pattern:** Shared reference data lives in `docs-site/src/data/reference-content.ts`, rendered through thin Astro wrappers and reusable reference components under `docs-site/src/components/reference/` so the URLs stay explicit without duplicating long-form content.
+- **2026-05-01T07:09:22.214-04:00 — Validation note:** `cd docs-site && npm run build` is the reliable site check for Wave 3 content work; root `dotnet test SimplicityTools.sln` still had a pre-existing failure in `SimplicityTools.Tca.Tests.TcaPackageValidationTests.PackedTcaPackage_ShipsOnlyLibraryAssets_DeclaresLibraryDependencies_AndBuildsInAConsumer` during baseline validation.
+
 ## Next Steps
 
 - Monitor PR #65 validation completion (workflow in progress as of 2026-05-01T02:08:28Z).
@@ -72,3 +76,28 @@
 - DoD: Astro site deployed to tools.simplicity-first.dev with all analyzer/CLI docs, metadata validated, GitHub Pages configured, zero-config promise maintained.
 
 
+
+📌 **Sprint 8 Wave 1 Closeout (2026-05-01T06:12:43.398-04:00):**
+- Issue #50 (Astro project setup and GitHub Pages configuration): ✅ COMPLETE and CLOSED.
+- Delivery: docs-site/ fully bootstrapped with Astro 5.18.1. All build scripts verified: dev, build, preview.
+- GitHub Pages configured: astro.config.mjs points to cwoodruff.github.io/SimplicityTools, base-path set, trailing slashes enforced.
+- Directory structure: src/layouts, src/pages, src/components, src/assets initialized. Initial homepage renders with marketing copy.
+- .nojekyll file tracked for GitHub Pages compatibility.
+- Branch `sprint/8-astro-website` now ready for Wave 2 (navigation/layouts and landing page content work).
+
+📌 **Sprint 8 Wave 2 Closeout (2026-05-01T06:12:43.398-04:00):**
+- Issues #51 (Navigation, layouts, site structure) and #52 (Homepage and landing pages) complete.
+- Link delivered reusable base layout with responsive nav/footer, breadcrumbs, seven top-level pages (home, getting-started, features, pricing, docs hub, reference hub, samples hub).
+- Content adapted from existing README/docs. Hub-first architecture bridges to repository markdown; Wave 3 will migrate deeper content.
+- Build passed and validated. Wave 3 now unblocked for content migration work (#55 Analyzer docs, #58 Homepage finalization, #59 CLI docs).
+
+
+📌 **Sprint 8 Wave 3 Closeout (2026-05-01T07:09:22.214-04:00):**
+- Issues #55 (Analyzer docs SF0001–SF0007), #58 (Homepage finalization), #59 (CLI/filter/config/library docs) complete.
+- Information architecture established: `/analyzers/`, `/docs/commands/`, `/docs/filters/`, `/docs/configuration/`, `/docs/library-usage/`, `/integration/`.
+- Deep reference material organized into task-shaped sections; landing pages focus on routing and adoption context.
+- All Wave 3 content pages generated and integrated into Astro site.
+- Docs-site build passing. GitHub issues #55, #58, #59 closed with summary comments.
+- Pre-existing non-doc validation failure noted: TcaPackageValidationTests.PackedTcaPackage_ShipsOnlyLibraryAssets_DeclaresLibraryDependencies_AndBuildsInAConsumer (unrelated to Wave 3 content work).
+- Scribe merged Wave 3 information architecture decision to `.squad/decisions.md`.
+- Orchestration log written: `.squad/orchestration-log/2026-05-01T11-26-01Z-morpheus.md`.
