@@ -1,6 +1,13 @@
 # Squad Decisions
 
 
+### 2026-05-01T08:00:28.862-04:00: Milestone 8 final deploy closeout boundary
+**By:** Morpheus
+**What:** Treat issue #61 as the only remaining Milestone 8 item and keep it open until a push to `main` creates `gh-pages` and DNS for `tools.simplicity-first.dev` resolves. There is no separate Wave 5 beyond this production handoff.
+**Why:** The repo-side contract is already defined by the custom-domain files, validation gate, and deploy workflow, but GitHub Pages publication and DNS resolution are external production events. Closing early would confuse "merge-ready" with "live and verified."
+
+---
+
 ### 2026-05-01T07:37:47.635-04:00: Custom Domain as Canonical Origin & Deploy Gate
 **By:** Morpheus  
 **Status:** ✅ COMPLETE

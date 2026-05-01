@@ -113,3 +113,11 @@
 
 **[Scribe Orchestration Update — 2026-05-01T07:37:47Z]**  
 Wave 4 decisions merged. Inbox file `morpheus-custom-domain-canonical-origin.md` → `.squad/decisions.md` entry "Custom Domain as Canonical Origin & Deploy Gate". Orchestration log written to `.squad/orchestration-log/2026-05-01T07:37:47Z-morpheus.md`. Wave 4 mostly shipped; #57 and #60 closed; #61 open pending external DNS/Pages availability.
+
+- **2026-05-01T08:00:28.862-04:00 — Final milestone closeout:** There is no separate Wave 5 beyond issue #61; Milestone 8 is functionally complete on the repo side once the custom-domain deploy contract is merged.
+- **2026-05-01T08:00:28.862-04:00 — Deploy contract paths:** The website release path now centers on `docs-site/public/CNAME`, `docs-site/src/data/site.ts`, `docs-site/src/pages/robots.txt.ts`, `docs-site/src/pages/sitemap.xml.ts`, `docs-site/scripts/check-links.mjs`, `.github/workflows/deploy-site.yml`, and the operator handoff notes in `README.md` and `docs-site/README.md`.
+- **2026-05-01T08:00:28.862-04:00 — Closure boundary:** Keep #61 open until a real push to `main` creates `gh-pages` and DNS for `tools.simplicity-first.dev` resolves publicly; branch-local code alone is not proof of Pages publication.
+- **2026-05-01T08:00:28.862-04:00 — Validation note:** `cd docs-site && npm run build:validate` is the trustworthy repo-side gate for the site. Full `dotnet test SimplicityTools.sln --nologo --verbosity minimal` is still noisy outside this scope, with prior observed failures in package-validation/performance coverage unrelated to docs deployment.
+
+**[Scribe Cross-Agent Update — 2026-05-01T12:40:54Z]**  
+Final session closeout processed. Morpheus's Milestone 8 boundary decision merged from `.squad/decisions/inbox/morpheus-final-deploy-closeout.md` into `.squad/decisions.md`. Orchestration log written. No Wave 5 beyond #61 production handoff confirmed. All README and docs-site README operator checklists in place. Site validation gate confirmed via `npm run build:validate`. Squad files staged for commit. Morpheus Milestone 8 orchestration complete.
