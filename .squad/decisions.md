@@ -1,5 +1,40 @@
 # Squad Decisions
 
+
+### 2026-05-01T06:37:49.140-04:00: Site Validation Checklist Pattern Established
+**By:** Tank  
+**Status:** ✅ COMPLETE
+
+Established a 3-phase site validation checklist for docs-site pull requests to ensure consistent quality as Wave 2 site delivery wraps and Wave 3 additions proceed. Pattern covers: (1) **Build Validation** – `npm run build` zero errors/warnings, dist output, <500ms time; (2) **Structure Validation** – spot-check templates for correct title, header nav, main content, footer grid, breadcrumbs; (3) **Responsive Validation** – hamburger visibility at <960px, full menu at ≥960px, media queries at 720/960px. All Wave 2 acceptance criteria verified: 7 hub pages build cleanly, navigation consistent, responsive design confirmed, footer/CTA structure intact, 3 reusable templates, dark theme + #E31B23 accent applied. Applies to future pages/template changes. Link to pattern added to docs-site CONTRIBUTING section.
+
+**Issue:** #51, #52  
+
+---
+
+### 2026-05-01T06:12:43.398-04:00: PR #65 Merged — Perf-Gate Calibration Complete
+**By:** Morpheus (Lead)  
+**Status:** ✅ Merged
+
+PR #65 (Sprint 7: Packaging UX & Documentation) merged with perf-gate calibration. Tank determined the original 5-second p95 threshold was too tight for GitHub-hosted ubuntu-latest runners, which average 8.354–9.394s. Fixed with dynamic threshold: 5s local, 10s on GitHub Actions CI. Test method renamed; workflow filter updated. Commit `cec4e47` (2026-05-01T03:15:50Z). Workflow run #25200555636 passed. Milestone 7 complete; closes issues #44–#49.
+
+---
+
+### 2026-05-01T06:12:43.398-04:00: Issue #50 Closeout – Astro Project Setup & GitHub Pages Configuration
+**By:** Morpheus  
+**Status:** ✅ COMPLETE and CLOSED
+
+Astro project in `docs-site/` is fully bootstrapped. Build scripts (`npm run dev/build/preview`) functional. GitHub Pages configured: `astro.config.mjs` with site URL (cwoodruff.github.io), base-path (/SimplicityTools/), trailing slash enforcement. Directory structure initialized: `src/layouts/`, `src/pages/`, `src/components/`, `src/assets/`. Initial homepage renders; `.nojekyll` tracked for Pages compatibility. Wave 1 complete; Wave 2 now active (issues #51, #52).
+
+---
+
+### 2026-05-01T06:12:43.398-04:00: Wave 2 Site Information Architecture Locks Hub-First Migration Path
+**By:** Link  
+**What:** Astro site centered on shared base layout plus landing/docs/reference templates; hub pages bridge to existing repository markdown until Wave 3 migrates deeper content into Astro.
+**Why:** Wave 2 needed polished first-run experience without blocking full content migration. Hub-first structure gives users coherent homepage, nav, and landing-page story now, while Wave 3 moves command and analyzer content into stable routes instead of revisiting site structure again.
+**Outcome:** Added reusable base layout, responsive nav/footer, breadcrumbs, seven top-level Astro pages (home, getting-started, features, pricing, docs, reference, samples). Content adapted from README/docs. Build passed; Wave 3 unblocked.
+
+---
+
 ### 2026-04-30T22:09:34.021-04:00: PR #65 CI hang mitigation isolates the CLI performance gate
 **By:** Tank
 **What:** Split the NuGet publish workflow test phase so the solution-wide `dotnet test` run excludes `SimplicityTools.Cli.Tests`, then run the CLI functional tests and the CLI performance gate in their own named steps with detailed console logging.
@@ -503,3 +538,15 @@ Morpheus, 2026-04-30T17:29:31.278-04:00
 - Packaging UX and DX complete; focus shifts to CLI refinement and additional analyzers
 
 **Status:** ✅ Complete. Sprint 7 (Milestone 7) closed. Both #48 and #49 resolved.
+
+### 2026-05-01T05:50:05.727-04:00: Sprint 8 Kickoff — Astro Website
+**By:** Morpheus
+**What:** Milestone 8 is active on `sprint/8-astro-website` to build the public SimplicityTools website in Astro for GitHub Pages and `tools.simplicity-first.dev`. The work is sequenced as Wave 1 `#50`, Wave 2 `#51` and `#52`, Wave 3 `#55`, `#58`, and `#59`, then Wave 4 `#57`, `#60`, and `#61`.
+
+**Why:** Website delivery is mostly sequential for a single contributor. Locking `#50` as the gate keeps project scaffolding, routing assumptions, and Pages deployment constraints stable before navigation, content, SEO, and deployment polish work begin.
+
+### 2026-05-01T05:50:05.727-04:00: Sprint 8 Wave 1 Complete — Astro Project Setup & Pages Bootstrap
+**By:** Link
+**What:** Completed issue `#50` on branch `sprint/8-astro-website` by bootstrapping `docs-site/` with a GitHub Pages-ready Astro setup: `astro.config.mjs`, build/dev/preview scripts, starter layouts/pages/components/assets structure, `public/.nojekyll`, and a small local README. Validation covered `npm run build`, `npm run dev`, `npm run preview`, plus the repository `.NET` build/tests.
+
+**Why:** Keeping Astro aligned to the repository Pages path (`/SimplicityTools/`) from day one avoids later routing rework and preserves a clean first-run experience for contributors. This foundation unblocks Wave 2 navigation, layouts, and landing pages without reopening project setup decisions.

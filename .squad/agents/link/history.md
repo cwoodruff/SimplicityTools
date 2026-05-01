@@ -57,11 +57,42 @@ _Primary agent for packaging UX, documentation, and developer experience. Leadin
 
 ---
 
+## Sprint 8: Astro Website 🚀 WAVES 1-2 COMPLETE, WAVE 3 ACTIVE
+
+**Timespan:** 2026-05-01 to present  
+**Status:** Waves 1–2 complete; Wave 3 ready  
+**Impact:** Astro foundation locked with hub-first site IA; content migration now unblocked
+
+### Sprint 8 Wave Summary
+
+| Wave | Issues | Deliverables | Outcome |
+|------|--------|--------------|---------|
+| 1 | #50 | Astro bootstrap, GitHub Pages config, `.nojekyll`, starter structure, local README | Foundation complete; Wave 2 unlocked ✅ |
+| 2 | #51, #52 | Base layout with nav/footer, breadcrumbs, seven top-level pages, hub templates | Site shell complete; Wave 3 unlocked ✅ |
+
+### Key Decisions Locked
+
+1. **Hub-first migration:** Keep site centered on shared layout + landing/docs/reference templates until Wave 3 migrates deeper content.
+2. **Repository Pages path:** Astro config mirrors `/SimplicityTools/` base path in local dev/build/preview.
+3. **Content reuse:** Homepage, getting-started, features, pricing, docs/reference hubs reuse existing README/docs language for first-run coherence.
+
+### Astro Website Outcomes
+
+- ✅ `docs-site/` bootstrapped with starter layouts, pages, components, and assets structure
+- ✅ GitHub Pages-ready Astro config and npm scripts verified
+- ✅ Responsive base layout with navigation, breadcrumbs, footer
+- ✅ Seven top-level pages (home, getting-started, features, pricing, docs, reference, samples)
+- ✅ Three reusable page templates (landing, docs hub, reference hub)
+- ✅ Build passed and validated
+- ✅ Wave 3 issues (#55, #58, #59) ready to start
+
+---
+
 ## Current Status
 
-**Milestone 7 (Packaging UX & Documentation):** ✅ COMPLETE  
-**Next:** M5 (Release workflow validation) can proceed; M6 (CLI packaging/dry-run) follows  
-**Go/No-Go Gate:** After M6 dry-run validation, targeting mid-May 2026 for production publish
+**Milestone 8 (Astro Website):** 🚀 WAVES 1-2 COMPLETE, WAVE 3 ACTIVE  
+**Latest:** Waves 1–2 (`#50`, `#51`, `#52`) complete on `sprint/8-astro-website`  
+**Next:** Wave 3 — `#55` Analyzer docs, `#58` Homepage finalization, `#59` CLI docs
 
 ---
 
@@ -72,3 +103,33 @@ Earlier work archived in history-archive.md:
 - M4 NuGet packaging foundation  
 - M5 release workflow setup  
 - Ongoing DevRel strategy and packaging UX planning
+
+---
+
+## Learnings
+
+### 2026-05-01T05:50:05.727-04:00
+
+- Sprint 8 Wave 1 bootstraps the Astro website in `docs-site/` so later waves can focus on navigation, landing pages, and deployment polish instead of setup.
+- The GitHub Pages bootstrap uses `docs-site/astro.config.mjs` with `site: https://cwoodruff.github.io` and `base: /SimplicityTools/` so local dev, build, and preview mirror the repository Pages path.
+- `.nojekyll` should live at `docs-site/public/.nojekyll`; Astro copies it to `dist/` automatically and keeps underscore-prefixed assets safe on Pages.
+- First-run guidance belongs in `docs-site/README.md`, with the exact local URL (`/SimplicityTools/`) called out so the next contributor knows what to open immediately.
+
+### 2026-05-01T06:12:43.398-04:00
+
+- Sprint 8 Wave 2 turned the Astro bootstrap into a usable docs shell with a shared base layout, responsive navigation, breadcrumbs, footer, and three reusable page-template patterns (landing, docs hub, reference hub).
+- The homepage, getting-started, features, pricing, docs hub, reference hub, and samples hub now reuse existing README/docs language so first-run questions are answered in-site while deeper markdown content waits for Wave 3 migration.
+- Wave 3 is now cleanly unblocked because the site IA, top-level pages, and GitHub Pages-aware internal routing are stable enough for content migration work instead of more structural rework.
+
+
+### 2026-05-01T06:37:49.140-04:00
+
+- Auditing Wave 2 confirmed issues #51 and #52 are already satisfied by the shared Astro shell in `docs-site/src/layouts/BaseLayout.astro`, `docs-site/src/components/`, and the seven top-level pages under `docs-site/src/pages/`.
+- `docs-site/src/data/site.ts` is the routing/source-of-truth layer for internal and external links, while `docs-site/src/styles/site.css` carries the shared dark theme, spacing tokens, and responsive breakpoints that keep the landing pages visually cohesive.
+- The current validation proof for the site shell is `cd docs-site && npm run build`, which successfully generated all seven static routes for the homepage, docs hub, reference hub, samples hub, getting started, features, and pricing pages.
+
+---
+
+## Sprint 8: Astro Website (Milestone 8) — Wave 2 Complete
+**Timestamp:** 2026-05-01T10:37:49.140Z  
+**Agent Sync Note (Scribe):** Orchestration completed for Wave 2 handoff. Tank has established standardized 3-phase site validation checklist (Build, Structure, Responsive validation) to ensure consistent quality on future Wave 3 additions. Pattern documented in decisions.md. Issues #51 and #52 confirmed satisfied and ready for closure.
