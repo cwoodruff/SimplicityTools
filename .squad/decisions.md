@@ -533,3 +533,31 @@ Morpheus, 2026-04-30T17:29:31.278-04:00
 - Full first-run experience for teams using SimplicityTools in production
 
 **No blockers.** Wave 2 is complete and ready for merge.
+
+### 2026-04-30T21:40:50Z: Sprint 7 Wave 3 — Troubleshooting & CI/CD Documentation Complete
+**By:** Link (DevRel)
+**What:** Completed Sprint 7 Wave 3 with troubleshooting guidance and CI/CD integration examples:
+- Issue #48: Added `docs/troubleshooting.md` with symptom-first diagnostic flow covering installation, PATH, .NET SDK, Roslyn analyzer visibility, permissions, CI/CD working directory issues, and cache staleness
+- Issue #49: Expanded `docs/using-the-simplicity-tools.md` and README with copy-paste-ready CI/CD integration examples for GitHub Actions, Azure Pipelines, and GitLab CI, with regression gating as primary pattern
+
+**Why:** Teams need a complete first-run to CI/CD onboarding path: badges + quickstart (Wave 1) → library integration (Wave 2) → CI/CD automation + troubleshooting (Wave 3). Troubleshooting is organized by symptom (what users see) not technical terms; CI/CD examples are platform-first with regression gating as the key adoption pattern.
+
+**Key decisions locked in:**
+1. **Troubleshooting organization:** Symptom-first (users search for what they see, not technical terms)
+2. **CI/CD platforms:** GitHub Actions, Azure Pipelines, GitLab CI (90%+ coverage of team adoption)
+3. **Example style:** Copy-paste ready with platform-specific tasks, PATH setup, and conditional syntax
+4. **Primary CI/CD use case:** Regression gating (`--fail-on-regression`) as gateway to baseline adoption
+5. **Zero-config reinforced:** All examples work without simplicity.json
+6. **Navigation cross-linking:** README → Quickstart → Library Integration → CI/CD Integration → Troubleshooting
+
+**Implications for users:**
+- Complete onboarding path from installation to CI/CD automation
+- Troubleshooting becomes self-service (symptom-driven diagnostics)
+- CI/CD setup friction eliminated (copy-paste examples prevent typos)
+
+**Implications for team:**
+- Documentation locked (no more Milestone 7 docs improvements)
+- Ready for production publish after M6 dry-run validation
+- Packaging UX and DX complete; focus shifts to CLI refinement and additional analyzers
+
+**Status:** ✅ Complete. Sprint 7 (Milestone 7) closed. Both #48 and #49 resolved.
