@@ -52,6 +52,7 @@
 - **Next:** Await Trinity revision. Decision recorded in `.squad/decisions.md`.
 - **Status:** Tank available for #26 and other Sprint 3 tasks post-review.
 
+📌 M5 work assigned on 2026-04-30T21:04:20Z: Package SimplicityTools.Metrics/Filters/Tca libraries (#30–#32) with proper metadata and dependency validation. Coordinate with Tank (#34) on integration testing. Libraries must version together under SemVer from Git tags.
 ---
 
 ## 2026-04-30T21:29:31Z — Sprint 4 Foundation Review Rejection & New Revision

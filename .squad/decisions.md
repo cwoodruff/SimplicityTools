@@ -285,6 +285,21 @@ The new README:
 ## When to Merge
 
 After next review cycle or immediately if no additional context changes README positioning.
+
+### 2026-04-30T14:13:05.628-04:00: Packaging & DX Assessment — NuGet + Global Tool
+**By:** Link
+**What:** Recommendation to publish SimplicityTools on two channels: (1) SimplicityTools.Cli as a .NET global tool via `dotnet tool install --global`, (2) SimplicityTools.Analyzers, Metrics, Filters, Tca as NuGet packages. No architectural changes needed; gaps are documentation (install badges, PrivateAssets callout in examples).
+**Why:** CLI already configured with `PackAsTool=true`; this is the ecosystem's standard distribution for both tools and libraries. Global tool delivers zero-config first-run. Analyzer auto-load pattern is low-friction for IDE integration. Library distribution enables custom tooling.
+
+### 2026-04-30T14:13:05.628-04:00: Packaging Strategy — Three Independent NuGet Distributions
+**By:** Morpheus
+**What:** Ship three decoupled NuGet packages: (1) SimplicityTools.Cli as global tool, (2) SimplicityTools.Analyzers as standalone analyzer, (3) SimplicityTools.Metrics/Filters/Tca as cohesive library stack. Library packages keep versions in sync; CLI and Analyzer version independently.
+**Why:** Flexible adoption path: CI/CD uses tool, IDE uses analyzer, custom tooling uses libraries. Decoupled versioning allows faster iteration on analyzer rules without blocking tool releases. Multiple audiences already documented in README and implied by five-package plan.
+
+### 2026-04-30T16:59:28.031-04:00: Packaging Rollout — Four Milestones
+**By:** Morpheus
+**What:** Execute packaging in four sequential milestones: M4 (metadata, CI/CD, versioning; issues #27–#29), M5 (NuGet libraries Metrics/Filters/Tca/Analyzers; #30–#34), M6 (CLI global tool, validation, dry-run; #35–#38), M7 (packaging UX and docs; #39–#44). Five packages total: four core libraries versioned together, CLI versioned independently. All libraries use SemVer tagged on main; CI/CD reads tags and builds .nupkg. Analyzer package uses PrivateAssets=all to avoid transitive runtime dependency.
+**Why:** Strict milestone sequencing prevents blocked parallelism and speculative work. M4 gates all packaging; M5 gates CLI; M6 gates documentation. Metadata-first approach ensures proper .nuspec, license, icon, docs URLs from day one. PrivateAssets=all keeps consumer library graphs clean. Decoupled CLI versioning allows independent release cadence. Zero-config promise validated in M6 before any production publish. M7 can run parallel to M6; go/no-go gate after M6 dry-run.
 # 2026-04-30T17:29:31.278-04:00: Sprint 4 package release grouping
 
 **By:** Link
