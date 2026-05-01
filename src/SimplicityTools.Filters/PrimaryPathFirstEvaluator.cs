@@ -2,10 +2,18 @@ using SimplicityTools.Metrics;
 
 namespace SimplicityTools.Filters;
 
+/// <summary>
+/// Evaluates whether the primary business path remains concentrated and easy to follow.
+/// </summary>
 public static class PrimaryPathFirstEvaluator
 {
     private const double MaxLayersPerPrimaryPathFile = 1.0 / 3.0;
 
+    /// <summary>
+    /// Evaluates the Primary Path First filter against a collected snapshot.
+    /// </summary>
+    /// <param name="snapshot">The snapshot to score.</param>
+    /// <returns>The filter verdict for the snapshot.</returns>
     public static FilterVerdict Evaluate(SimplicitySnapshot snapshot)
     {
         var subScores = new[]

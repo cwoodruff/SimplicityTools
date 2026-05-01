@@ -371,7 +371,7 @@ internal static class PackageReferenceAnalysis
             return false;
         }
 
-        packageId = normalized[packageStart..packageEnd];
+        packageId = normalized.Substring(packageStart, packageEnd - packageStart);
         return !string.IsNullOrWhiteSpace(packageId);
     }
 

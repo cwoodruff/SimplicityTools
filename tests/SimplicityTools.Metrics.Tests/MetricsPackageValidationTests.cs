@@ -1,43 +1,36 @@
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Text.Json;
-using System.Xml.Linq;
 using Xunit;
 
-namespace SimplicityTools.Analyzers.Tests;
+namespace SimplicityTools.Metrics.Tests;
 
-public sealed class AnalyzerPackageValidationTests
+public sealed class MetricsPackageValidationTests
 {
     [Fact]
-    public async Task PackedAnalyzerPackage_UsesAnalyzerLayout_AndReportsDiagnosticsInConsumer()
+    public async Task PackedMetricsPackage_ShipsOnlyLibraryAssets_WithXmlDocs_AndBuildsInAConsumer()
     {
-        var validation = await PackAnalyzerPackageAsync();
-        Assert.DoesNotContain("NU5128", validation.PackOutput, StringComparison.Ordinal);
+        var validation = await PackMetricsPackageAsync();
 
         using (var archive = ZipFile.OpenRead(validation.PackagePath))
         {
             var entries = archive.Entries.Select(static entry => entry.FullName).ToArray();
 
-            Assert.Contains("analyzers/dotnet/cs/SimplicityTools.Analyzers.dll", entries);
-            Assert.DoesNotContain(entries, static entry => entry.StartsWith("lib/", StringComparison.Ordinal));
+            Assert.Contains("README.md", entries);
+            Assert.Contains("simplicitytools-icon.png", entries);
+            Assert.Contains("lib/net10.0/SimplicityTools.Metrics.dll", entries);
+            Assert.Contains("lib/net10.0/SimplicityTools.Metrics.xml", entries);
 
-            var nuspecEntry = archive.GetEntry("SimplicityTools.Analyzers.nuspec");
-            Assert.NotNull(nuspecEntry);
+            var libraryAssets = entries
+                .Where(static entry => entry.StartsWith("lib/net10.0/", StringComparison.Ordinal))
+                .OrderBy(static entry => entry, StringComparer.Ordinal)
+                .ToArray();
 
-            using var nuspecStream = nuspecEntry!.Open();
-            var nuspec = XDocument.Load(nuspecStream);
-            var ns = nuspec.Root!.Name.Namespace;
-            var metadata = nuspec.Root.Element(ns + "metadata");
-
-            Assert.NotNull(metadata);
-            Assert.Equal("true", metadata!.Element(ns + "developmentDependency")?.Value);
-            Assert.Null(metadata.Element(ns + "dependencies"));
             Assert.Equal(
-                "Analyzer",
-                metadata.Element(ns + "packageTypes")?
-                    .Element(ns + "packageType")?
-                    .Attribute("name")?
-                    .Value);
+                [
+                    "lib/net10.0/SimplicityTools.Metrics.dll",
+                    "lib/net10.0/SimplicityTools.Metrics.xml"
+                ],
+                libraryAssets);
         }
 
         var consumerDirectory = Path.Combine(validation.WorkingDirectory, "consumer");
@@ -48,29 +41,41 @@ public sealed class AnalyzerPackageValidationTests
             $$"""
             <Project Sdk="Microsoft.NET.Sdk">
               <PropertyGroup>
+                <OutputType>Exe</OutputType>
                 <TargetFramework>net10.0</TargetFramework>
                 <ImplicitUsings>enable</ImplicitUsings>
                 <Nullable>enable</Nullable>
               </PropertyGroup>
               <ItemGroup>
-                <PackageReference Include="SimplicityTools.Analyzers" Version="{{validation.Version}}" />
+                <PackageReference Include="SimplicityTools.Metrics" Version="{{validation.Version}}" />
               </ItemGroup>
             </Project>
             """);
 
         await File.WriteAllTextAsync(
-            Path.Combine(consumerDirectory, "Feature.cs"),
+            Path.Combine(consumerDirectory, "Program.cs"),
             """
+            using SimplicityTools.Metrics;
+
             namespace Consumer;
 
-            public interface IPricer
+            [PrimaryPath]
+            public sealed class CheckoutFlow
             {
-                decimal Price();
             }
 
-            public sealed class DefaultPricer : IPricer
+            public static class Program
             {
-                public decimal Price() => 12m;
+                public static async Task Main()
+                {
+                    ISimplicityCollector collector = new SimplicityCollector();
+                    var snapshot = SimplicitySnapshot.Empty("Consumer");
+
+                    _ = snapshot.PrimaryPathRatio;
+                    _ = snapshot.PrematureAbstractionRatio;
+                    _ = snapshot.ToSummary();
+                    _ = await collector.CollectAsync("consumer.sln");
+                }
             }
             """);
 
@@ -88,24 +93,12 @@ public sealed class AnalyzerPackageValidationTests
         Assert.True(
             build.ExitCode == 0,
             $"Downstream consumer build failed.{Environment.NewLine}{build.StandardOutput}{Environment.NewLine}{build.StandardError}");
-        Assert.Contains("warning SF0001", $"{build.StandardOutput}{Environment.NewLine}{build.StandardError}", StringComparison.Ordinal);
-
-        using var assets = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(consumerDirectory, "obj", "project.assets.json")));
-        var targetPackage = assets.RootElement
-            .GetProperty("targets")
-            .EnumerateObject()
-            .SelectMany(static target => target.Value.EnumerateObject())
-            .Single(static library => library.Name.StartsWith("SimplicityTools.Analyzers/", StringComparison.Ordinal));
-
-        Assert.False(targetPackage.Value.TryGetProperty("compile", out _));
-        Assert.False(targetPackage.Value.TryGetProperty("runtime", out _));
-        Assert.False(targetPackage.Value.TryGetProperty("dependencies", out _));
     }
 
-    private static async Task<PackageValidationResult> PackAnalyzerPackageAsync()
+    private static async Task<PackageValidationResult> PackMetricsPackageAsync()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var workingDirectory = Path.Combine(repositoryRoot, "artifacts", "analyzer-package-validation-tests");
+        var workingDirectory = Path.Combine(repositoryRoot, "artifacts", "metrics-package-validation-tests");
         var packageSourceDirectory = Path.Combine(workingDirectory, "packages");
         var globalPackagesDirectory = Path.Combine(workingDirectory, "global-packages");
         var version = $"0.4.0-packagevalidation.{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
@@ -123,7 +116,7 @@ public sealed class AnalyzerPackageValidationTests
             globalPackagesDirectory,
             [
                 "pack",
-                Path.Combine("src", "SimplicityTools.Analyzers", "SimplicityTools.Analyzers.csproj"),
+                Path.Combine("src", "SimplicityTools.Metrics", "SimplicityTools.Metrics.csproj"),
                 "--configuration",
                 "Release",
                 "--output",
@@ -136,17 +129,11 @@ public sealed class AnalyzerPackageValidationTests
         if (pack.ExitCode != 0)
         {
             throw new Xunit.Sdk.XunitException(
-                $"Analyzer pack failed.{Environment.NewLine}{pack.StandardOutput}{Environment.NewLine}{pack.StandardError}");
+                $"Metrics pack failed.{Environment.NewLine}{pack.StandardOutput}{Environment.NewLine}{pack.StandardError}");
         }
 
-        var packagePath = Directory.GetFiles(packageSourceDirectory, $"SimplicityTools.Analyzers.{version}.nupkg", SearchOption.TopDirectoryOnly).Single();
-        return new PackageValidationResult(
-            version,
-            workingDirectory,
-            packageSourceDirectory,
-            globalPackagesDirectory,
-            packagePath,
-            $"{pack.StandardOutput}{Environment.NewLine}{pack.StandardError}");
+        var packagePath = Directory.GetFiles(packageSourceDirectory, $"SimplicityTools.Metrics.{version}.nupkg", SearchOption.TopDirectoryOnly).Single();
+        return new PackageValidationResult(version, workingDirectory, packageSourceDirectory, globalPackagesDirectory, packagePath);
     }
 
     private static async Task<ProcessResult> RunDotNetAsync(string workingDirectory, string globalPackagesDirectory, IReadOnlyList<string> arguments)
@@ -194,8 +181,7 @@ public sealed class AnalyzerPackageValidationTests
         string WorkingDirectory,
         string PackageSourceDirectory,
         string GlobalPackagesDirectory,
-        string PackagePath,
-        string PackOutput);
+        string PackagePath);
 
     private sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError);
 }

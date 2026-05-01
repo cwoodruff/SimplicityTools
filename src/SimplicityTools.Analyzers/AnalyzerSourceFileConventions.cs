@@ -10,16 +10,17 @@ internal static class AnalyzerSourceFileConventions
             return false;
         }
 
-        return !path.EndsWith(".Designer.cs", StringComparison.OrdinalIgnoreCase) &&
-               !path.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase) &&
-               !ContainsDirectorySegment(path, "bin") &&
-               !ContainsDirectorySegment(path, "obj");
+        var normalizedPath = path!;
+        return !normalizedPath.EndsWith(".Designer.cs", StringComparison.OrdinalIgnoreCase) &&
+               !normalizedPath.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase) &&
+               !ContainsDirectorySegment(normalizedPath, "bin") &&
+               !ContainsDirectorySegment(normalizedPath, "obj");
     }
 
     public static bool ContainsDirectorySegment(string path, string segment)
     {
         var normalizedPath = path.Replace('\\', '/');
-        return normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries)
+        return normalizedPath.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries)
             .Any(part => string.Equals(part, segment, StringComparison.OrdinalIgnoreCase));
     }
 }

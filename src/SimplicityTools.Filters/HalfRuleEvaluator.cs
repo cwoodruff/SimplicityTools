@@ -2,8 +2,16 @@ using SimplicityTools.Metrics;
 
 namespace SimplicityTools.Filters;
 
+/// <summary>
+/// Evaluates whether abstraction and dependency growth remain proportionate to project value.
+/// </summary>
 public static class HalfRuleEvaluator
 {
+    /// <summary>
+    /// Evaluates the Half-Rule against a collected snapshot.
+    /// </summary>
+    /// <param name="snapshot">The snapshot to score.</param>
+    /// <returns>The filter verdict for the snapshot.</returns>
     public static FilterVerdict Evaluate(SimplicitySnapshot snapshot)
     {
         var subScores = new[]

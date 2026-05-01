@@ -4,6 +4,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>SimplicityTools.Filters</PackageId>
     <Description>Three-filter evaluation engine for the Simplicity-First .NET Toolkit.</Description>
   </PropertyGroup>

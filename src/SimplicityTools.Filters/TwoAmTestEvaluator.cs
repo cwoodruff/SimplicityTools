@@ -2,8 +2,16 @@ using SimplicityTools.Metrics;
 
 namespace SimplicityTools.Filters;
 
+/// <summary>
+/// Evaluates whether the codebase stays understandable, diagnosable, and fixable under pressure.
+/// </summary>
 public static class TwoAmTestEvaluator
 {
+    /// <summary>
+    /// Evaluates the 2 AM Test against a collected snapshot.
+    /// </summary>
+    /// <param name="snapshot">The snapshot to score.</param>
+    /// <returns>The filter verdict for the snapshot.</returns>
     public static FilterVerdict Evaluate(SimplicitySnapshot snapshot)
     {
         var subScores = new[]

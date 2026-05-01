@@ -490,6 +490,8 @@ For another solution, the normal consumer shape is a package reference such as:
 </ItemGroup>
 ```
 
+That package is intentionally analyzer-only: it lights up Roslyn diagnostics and code fixes in the IDE/build, but it does not add compile-time library references to the consuming project.
+
 If you also want explicit primary-path annotations in application code, reference `SimplicityTools.Metrics` and use `[PrimaryPath]` on a class or method:
 
 ```csharp
@@ -529,6 +531,16 @@ Console.WriteLine(snapshot.ToSummary());
 
 ### `SimplicityTools.Filters`
 
+Install the package directly when you want the filter evaluators without taking a project reference to this repo:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="SimplicityTools.Filters" Version="x.y.z" />
+</ItemGroup>
+```
+
+`SimplicityTools.Filters` brings in `SimplicityTools.Metrics` transitively, so a separate metrics package reference is only needed when you also want `SimplicityCollector` or other metrics-first APIs directly.
+
 ```csharp
 using SimplicityTools.Filters;
 
@@ -544,7 +556,19 @@ Each verdict includes `Passes`, `Score`, `Summary`, `Violations`, and `Recommend
 
 ### `SimplicityTools.Tca`
 
+Install the package directly when you want the annual cost model without a project reference to this repo:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="SimplicityTools.Tca" Version="x.y.z" />
+</ItemGroup>
+```
+
+`SimplicityTools.Tca` brings in both `SimplicityTools.Filters` and `SimplicityTools.Metrics` transitively, so a separate package reference is only needed when you want to pin one of those library surfaces explicitly.
+
 ```csharp
+using SimplicityTools.Filters;
+using SimplicityTools.Metrics;
 using SimplicityTools.Tca;
 
 var estimate = TcaEstimate.Create(snapshot, verdicts);

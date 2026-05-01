@@ -82,6 +82,8 @@ Then validate the install flow you changed:
 - Analyzer package: reference it with `PrivateAssets="all"`.
 - CLI tool: install from the local folder source.
 
+The analyzer package should stay analyzer-only when consumed: diagnostics must load, but the package must not add `lib/` compile assets or NuGet dependencies to the consumer graph.
+
 Example CLI install:
 
 ```bash

@@ -174,11 +174,14 @@ jobs:
         run: |
           python - <<'PY'
           import glob
+          import json
           import os
           import pathlib
+          import shutil
           import subprocess
           import sys
           import textwrap
+          import xml.etree.ElementTree as ET
           import zipfile
 
           packages = sorted(glob.glob("artifacts/packages/SimplicityTools.Analyzers.*.nupkg"))
@@ -196,11 +199,37 @@ jobs:
               if missing:
                   print(f"{package.name} is missing analyzer assets: {', '.join(missing)}", file=sys.stderr)
                   sys.exit(1)
-              if "lib/net10.0/SimplicityTools.Analyzers.dll" in names:
-                  print(f"{package.name} incorrectly ships under lib/net10.0/", file=sys.stderr)
+              if any(name.startswith("lib/") for name in names):
+                  print(f"{package.name} incorrectly ships compiler assets under lib/", file=sys.stderr)
+                  sys.exit(1)
+
+              nuspec_name = next((name for name in names if name.endswith(".nuspec")), None)
+              if nuspec_name is None:
+                  print(f"{package.name} is missing a nuspec file", file=sys.stderr)
+                  sys.exit(1)
+
+              root = ET.fromstring(archive.read(nuspec_name))
+
+              def local_name(tag):
+                  return tag.split("}", 1)[-1]
+
+              metadata = next((child for child in root if local_name(child.tag) == "metadata"), None)
+              if metadata is None:
+                  print(f"{package.name} is missing nuspec metadata", file=sys.stderr)
+                  sys.exit(1)
+
+              development_dependency = next((child.text for child in metadata if local_name(child.tag) == "developmentDependency"), None)
+              if development_dependency != "true":
+                  print(f"{package.name} must set developmentDependency=true for IDE-only consumption.", file=sys.stderr)
+                  sys.exit(1)
+
+              if any(local_name(child.tag) == "dependencies" for child in metadata):
+                  print(f"{package.name} must not expose NuGet dependencies from the analyzer package.", file=sys.stderr)
                   sys.exit(1)
 
           validation_root = pathlib.Path("artifacts/analyzer-consumer-validation")
+          if validation_root.exists():
+              shutil.rmtree(validation_root)
           package_source = validation_root / "packages"
           global_packages = validation_root / "global-packages"
           consumer_root = validation_root / "consumer"
@@ -263,6 +292,25 @@ jobs:
               print(output, file=sys.stderr)
               print("Analyzer consumer build did not emit SF0001.", file=sys.stderr)
               sys.exit(1)
+
+          assets = json.loads((consumer_root / "obj" / "project.assets.json").read_text(encoding="utf-8"))
+          target_package = None
+          for target in assets["targets"].values():
+              for name, data in target.items():
+                  if name.startswith("SimplicityTools.Analyzers/"):
+                      target_package = data
+                      break
+              if target_package is not None:
+                  break
+
+          if target_package is None:
+              print("Analyzer package was not restored into the consumer assets graph.", file=sys.stderr)
+              sys.exit(1)
+
+          for forbidden in ("compile", "runtime", "dependencies"):
+              if forbidden in target_package:
+                  print(f"Analyzer package should not expose '{forbidden}' assets to the consumer compile graph.", file=sys.stderr)
+                  sys.exit(1)
           PY
 
       - name: Upload package artifacts

@@ -4,6 +4,14 @@ using SimplicityTools.Metrics;
 
 namespace SimplicityTools.Tca;
 
+/// <summary>
+/// Represents the annual Total Cost of Architecture estimate broken down by major cost category.
+/// </summary>
+/// <param name="InfrastructureCostPerYear">The estimated annual infrastructure cost range caused by excess complexity.</param>
+/// <param name="OperationalCostPerYear">The estimated annual operational cost range caused by excess complexity.</param>
+/// <param name="CoordinationCostPerYear">The estimated annual coordination cost range caused by excess complexity.</param>
+/// <param name="CognitiveCostPerYear">The estimated annual cognitive load cost range caused by excess complexity.</param>
+/// <param name="OpportunityCostPerYear">The estimated annual opportunity cost range caused by excess complexity.</param>
 public sealed record TcaEstimate(
     MoneyRange InfrastructureCostPerYear,
     MoneyRange OperationalCostPerYear,
@@ -11,11 +19,18 @@ public sealed record TcaEstimate(
     MoneyRange CognitiveCostPerYear,
     MoneyRange OpportunityCostPerYear)
 {
+    /// <summary>
+    /// Gets the combined annual range across all TCA categories.
+    /// </summary>
     public MoneyRange TotalPerYear =>
         InfrastructureCostPerYear + OperationalCostPerYear +
         CoordinationCostPerYear + CognitiveCostPerYear +
         OpportunityCostPerYear;
 
+    /// <summary>
+    /// Formats the estimate as the multi-line executive summary used by the CLI and documentation samples.
+    /// </summary>
+    /// <returns>A multi-line summary of the annual estimate.</returns>
     public string ToExecutiveSummary() =>
         string.Join(
             Environment.NewLine,
@@ -31,11 +46,26 @@ public sealed record TcaEstimate(
                 $"TOTAL:            {TotalPerYear} per year"
             ]);
 
+    /// <summary>
+    /// Creates a TCA estimate with the default calculation inputs.
+    /// </summary>
+    /// <param name="snapshot">The measured solution snapshot.</param>
+    /// <param name="filterVerdicts">The Simplicity-First filter verdicts that feed the opportunity-cost model.</param>
+    /// <returns>The calculated annual estimate.</returns>
     public static TcaEstimate Create(
         SimplicitySnapshot snapshot,
         IEnumerable<FilterVerdict> filterVerdicts) =>
         Create(snapshot, filterVerdicts, TcaInputs.Defaults);
 
+    /// <summary>
+    /// Creates a TCA estimate with explicit calculation inputs.
+    /// </summary>
+    /// <param name="snapshot">The measured solution snapshot.</param>
+    /// <param name="filterVerdicts">The Simplicity-First filter verdicts that feed the opportunity-cost model.</param>
+    /// <param name="inputs">The business assumptions used by the annualized formulas.</param>
+    /// <returns>The calculated annual estimate.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when any required input is <see langword="null" />.</exception>
+    /// <exception cref="ArgumentException">Thrown when a required filter verdict is missing.</exception>
     public static TcaEstimate Create(
         SimplicitySnapshot snapshot,
         IEnumerable<FilterVerdict> filterVerdicts,
@@ -108,6 +138,14 @@ public sealed record TcaEstimate(
         => new(annualCost * lowMultiplier, annualCost * highMultiplier);
 }
 
+/// <summary>
+/// Provides the configurable business inputs used to turn simplicity signals into annualized cost estimates.
+/// </summary>
+/// <param name="TeamSize">The number of engineers affected by the solution.</param>
+/// <param name="AverageEngineerMonthlySalaryUsd">The average monthly engineer salary in USD used for annualized cost formulas.</param>
+/// <param name="EstimatedMonthlyIncidentCount">The average incident count per month used for operational cost formulas.</param>
+/// <param name="OnCallHourlyRateUsd">The hourly on-call rate in USD used for operational cost formulas.</param>
+/// <param name="AttritionCoefficientPercent">The attrition pressure coefficient expressed as a percentage.</param>
 public sealed record TcaInputs(
     int TeamSize,
     decimal AverageEngineerMonthlySalaryUsd,
@@ -115,6 +153,9 @@ public sealed record TcaInputs(
     decimal OnCallHourlyRateUsd,
     decimal AttritionCoefficientPercent)
 {
+    /// <summary>
+    /// Gets the built-in default assumptions used when callers do not provide explicit inputs.
+    /// </summary>
     public static TcaInputs Defaults { get; } = new(
         TeamSize: 8,
         AverageEngineerMonthlySalaryUsd: 15000m,
@@ -123,11 +164,26 @@ public sealed record TcaInputs(
         AttritionCoefficientPercent: 15m);
 }
 
+/// <summary>
+/// Represents a low/high annualized money range in USD.
+/// </summary>
+/// <param name="Low">The low-end estimate.</param>
+/// <param name="High">The high-end estimate.</param>
 public readonly record struct MoneyRange(decimal Low, decimal High)
 {
+    /// <summary>
+    /// Adds two money ranges component-wise.
+    /// </summary>
+    /// <param name="a">The first range.</param>
+    /// <param name="b">The second range.</param>
+    /// <returns>The summed range.</returns>
     public static MoneyRange operator +(MoneyRange a, MoneyRange b) =>
         new(a.Low + b.Low, a.High + b.High);
 
+    /// <summary>
+    /// Formats the range as invariant-culture USD text.
+    /// </summary>
+    /// <returns>The formatted money range.</returns>
     public override string ToString() =>
         string.Create(
             CultureInfo.InvariantCulture,

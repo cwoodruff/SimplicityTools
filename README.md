@@ -99,7 +99,17 @@ Consume the Roslyn analyzers in your `.csproj`:
 </ItemGroup>
 ```
 
+The analyzer package is development-only: it contributes IDE/build diagnostics and code fixes, but it intentionally does not expose a compile-time API surface to your project.
+
 Or use the libraries directly:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="SimplicityTools.Tca" Version="x.y.z" />
+</ItemGroup>
+```
+
+`SimplicityTools.Tca` restores both `SimplicityTools.Filters` and `SimplicityTools.Metrics` transitively. Add direct `SimplicityTools.Filters` or `SimplicityTools.Metrics` package references only when you want to pin those surfaces explicitly in your project file.
 
 ```csharp
 using SimplicityTools.Metrics;

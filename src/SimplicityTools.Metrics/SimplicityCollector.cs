@@ -1,11 +1,18 @@
 namespace SimplicityTools.Metrics;
 
+/// <summary>
+/// Default implementation of <see cref="ISimplicityCollector" /> that combines the structural,
+/// semantic, and heuristic collection passes.
+/// </summary>
 public sealed class SimplicityCollector : ISimplicityCollector
 {
     private readonly StructuralCollectionPass structuralCollectionPass;
     private readonly SemanticCollectionPass semanticCollectionPass;
     private readonly HeuristicCollectionPass heuristicCollectionPass;
 
+    /// <summary>
+    /// Creates a collector with the built-in collection passes.
+    /// </summary>
     public SimplicityCollector()
         : this(new StructuralCollectionPass(), new SemanticCollectionPass(), new HeuristicCollectionPass())
     {
@@ -24,6 +31,7 @@ public sealed class SimplicityCollector : ISimplicityCollector
         this.heuristicCollectionPass = heuristicCollectionPass;
     }
 
+    /// <inheritdoc />
     public async Task<SimplicitySnapshot> CollectAsync(string solutionPath, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(solutionPath);

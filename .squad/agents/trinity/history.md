@@ -98,6 +98,9 @@
 - **Verdict:** ✅ **APPROVED** — Publish blocker closed for Sprint 4 Milestone 4.
 - **Status:** Analyzer package release-ready. No further revisions needed.
 
+- 2026-04-30T19:09:43.583-04:00: For library NuGet packages, package validation should inspect the real `.nupkg` payload and then compile a fresh consumer from a repo-local folder feed; that catches missing XML docs and accidental extra `lib/` assets that a normal pack/build run will not surface.
+- 2026-04-30T19:09:43.583-04:00: For dependent library packages like Filters, the validation feed must contain both the package under test and its upstream library packages, and the test should assert the downstream assets graph resolves the declared dependency instead of relying on a project reference.
+
 ## Sprint 5 Launch — Release Packaging (Milestone 5)
 
 **2026-04-30T19:09:43.583-04:00: Morpheus Lead Spawned, Wave 1 Routed**
@@ -113,3 +116,4 @@
 - **#37 DoD (Wave 3):** Same packaging properties. PackageDependencies declares both `SimplicityTools.Metrics` and `SimplicityTools.Filters`. Dependency graph resolves: Tca → Filters → Metrics. XML docs complete. No internals leaked. Unit tests pass.
 - **Switch Parallel:** #38 (Package Analyzers) runs in parallel with #35. Uses `analyzers/dotnet/cs/` layout from Sprint 4 lessons. Includes all 7 SF00X analyzers and code fix DLLs.
 - **Tank Integration Gate:** #39 (Validate all packages) runs Wave 4 after all libraries complete. Publishes to local test feed, validates restore in both samples, confirms zero metadata conflicts.
+- 2026-04-30T19:09:43.583-04:00: For the Tca library package, consumer validation should restore only `SimplicityTools.Tca` from a folder feed and then prove `Filters` plus `Metrics` arrive transitively in `project.assets.json`; that catches missing nuspec dependencies even when the local project graph still builds.
