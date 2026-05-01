@@ -641,3 +641,31 @@ Established information architecture for Wave 3 docs-site delivery. Top-level la
 - Astro local builds and GitHub Pages deploys both emit the same CNAME value
 - Contributors only update one root CNAME artifact for future domain changes
 - The workflow fails fast if configuration drifts from the canonical domain
+
+### 2026-05-01T19:30:22.856-04:00: Release-ready NuGet artifacts without weakening publish gates
+**By:** Morpheus
+
+**What:** Updated the NuGet workflow to support **manual workflow_dispatch** runs that build upload-ready artifacts without requiring an automated publish to NuGet.org. Operators can now supply explicit `release_group` (`libraries`, `analyzers`, or `cli`) and SemVer `version` to generate release-ready packages.
+
+**Why:** The repository needed a credible release path for operators to inspect and manually validate artifacts before tagging, without treating every manual workflow run as an automatic publish. This removes the misleading "dry-run" framing while keeping tag pushes as the only automated publish gate.
+
+**Consequences:**
+- Tag pushes remain the only automated publish gate to NuGet.org
+- Manual workflow_dispatch requires both `release_group` and `version` parameters
+- Invalid manual runs (missing version or mismatched group) fail explicitly
+- Release artifacts are validated to include matching `.snupkg` files before any push
+
+---
+
+### 2026-05-01T19:30:22.856-04:00: NuGet release workflow publish safety validation
+**By:** Tank
+
+**What:** Added explicit artifact validation to the publish job: every downloaded `.nupkg` must match the tagged version, package IDs must match the selected release group exactly, and CI/local placeholder versions are rejected before any push to NuGet.org.
+
+**Why:** The old workflow did not gate publish on artifact identity. Adding publishable-artifact checks turns the workflow into a real release path while keeping NuGet.org safe from accidental CI-version or wrong-group uploads.
+
+**Notes:**
+- Push only `.nupkg` files; matching `.snupkg` files are expected alongside them but are not pushed as primary packages
+- Validation runs stay allowed on branch pushes via CI-only versions, but release tags are the only publish gate
+
+---

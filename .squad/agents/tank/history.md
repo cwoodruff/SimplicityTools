@@ -114,6 +114,7 @@ Warnings: 0               ✅ clean
 - **2026-05-01T12:58:06.465-04:00:** Sample.Simplified startup on macOS is sensitive to the executable assembly name. `samples/Sample.Simplified/App/App.csproj` now uses `Sample.Simplified.Demo` while keeping `RootNamespace` stable, and launch coverage lives in `samples/Sample.Simplified/App.Tests/EndToEnd/StartupSmokeTests.cs` plus `tests/SimplicityTools.Cli.Tests/AnalyzeCommandTests.cs`.
 - **2026-05-01T13:31:28.564-04:00:** Sample.Simplified project rename keeps the app project at `samples/Sample.Simplified/Sample.Simplified.App/Sample.Simplified.App.csproj` and the test project at `samples/Sample.Simplified/Sample.Simplified.Tests/Sample.Simplified.Tests.csproj`, while preserving `AssemblyName=Sample.Simplified.Demo` so renamed project identity does not reintroduce the macOS apphost startup failure. Coverage now expects `Sample.Simplified.Tests` namespaces and the CLI regression path resolves the renamed app project.
 - **2026-05-01T13:51:44.498-04:00:** Docs-site custom-domain proof now lives in `docs-site/scripts/check-links.mjs` and `.github/workflows/deploy-site.yml`: canonical URLs, `og:url`, `robots.txt`, `sitemap.xml`, and `CNAME` must all resolve to `https://simplicitytools.dev`, the deploy workflow syncs `docs-site/public/CNAME` from the repo-root `CNAME`, and any lingering `tools.simplicity-first.dev` reference is a validation failure.
+- **2026-05-01T19:30:22.856-04:00:** NuGet release safety now lives in `.github/workflows/nuget-publish.yml`: validation packs CI-version artifacts, the publish job revalidates package IDs and exact tag version before `dotnet nuget push`, and it pushes only `.nupkg` files so matching `.snupkg` symbols ride with the primary package. Supporting release guidance remains in `CONTRIBUTING.md`.
 
 ## Sample.Simplified Startup Fix — Regression Validation & Approval
 **Timestamp:** 2026-05-01T16:58:06.465Z
@@ -150,3 +151,18 @@ Warnings: 0               ✅ clean
 **Decision merged:** "Docs-site custom domain source of truth and validation gate" — Validation gates ensure GitHub Pages publishes only sites that consistently advertise the correct origin.
 
 **Key validation pattern:** Check canonical metadata, robots.txt, sitemap.xml, built HTML, and CNAME artifact for consistency on domain cutover.
+
+## 2026-05-01T23:30:22Z: NuGet Release Workflow Validation
+
+**Session:** nuget-release-workflow  
+**Co-agent:** Morpheus
+
+Validated the release workflow safety gates: confirmed release-group pack paths are correct, artifact validation excludes snupkg files from primary publish set, and version/group mismatches are rejected before publish. All test suites passing; workflow is release-ready.
+
+**Key Validations:**
+- Release-group packaging paths verified for libraries/analyzers/cli
+- Package identity validation prevents wrong-version and wrong-group uploads
+- Publish loop correctly handles snupkg exclusion
+- No regressions detected
+
+**Result:** Approved for production use.

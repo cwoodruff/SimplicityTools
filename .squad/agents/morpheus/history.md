@@ -26,6 +26,12 @@
 - **CI validation gates:** NuGet package validation workflow (nuget-publish.yml) runs full suite: restore, build, test, pack, validate metadata, validate analyzer consumer. Takes 15–30+ minutes depending on test suite depth.
 - **PR creation requirements:** Ensure branch has commits ahead of target branch; branches on same commit produce "No commits between" error.
 
+## Learnings
+
+- **2026-05-01T19:30:22.856-04:00 — NuGet release workflow:** `.github/workflows/nuget-publish.yml` now separates validation-only CI packaging from upload-ready manual dispatch builds by requiring an explicit SemVer for `libraries`, `analyzers`, or `cli` on workflow dispatch, while keeping tag pushes as the only automated publish gate.
+- **2026-05-01T19:30:22.856-04:00 — Release safety pattern:** The publish path validates the exact artifact set and version before pushing, and release artifacts must include both `.nupkg` and matching `.snupkg` files. Keep release proof centered on the workflow plus `CONTRIBUTING.md` guidance rather than ad hoc scripts.
+- **2026-05-01T19:30:22.856-04:00 — Key paths:** Release orchestration lives in `.github/workflows/nuget-publish.yml`; operator guidance lives in `CONTRIBUTING.md`.
+
 ## Active Status (Milestone 8 Closed, Sample.Simplified Startup Addressed)
 
 **2026-05-01T12:58:06.465-04:00 — Milestone 8 Closure Complete:**
@@ -43,3 +49,17 @@
 ## Archived History
 
 - Full orchestration history in `.squad/agents/morpheus/history-archive.md`.
+
+## 2026-05-01T23:30:22Z: NuGet Release Workflow Updates
+
+**Session:** nuget-release-workflow  
+**Co-agent:** Tank
+
+Updated the NuGet workflow to support manual `workflow_dispatch` runs with explicit `release_group` and `version` parameters, enabling operators to build release-ready artifacts without automatic NuGet.org publishing. Tag pushes remain the only automated publish gate. Decisions recorded in `.squad/decisions.md`.
+
+**Key Changes:**
+- Workflow now accepts `release_group` and `version` inputs for manual release artifact builds
+- Validation confirms exact package/version match before any publish attempt
+- `.snupkg` files no longer treated as primary packages in publish set
+
+**Next:** Tag-based automation ready for production use.
