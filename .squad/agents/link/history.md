@@ -108,6 +108,12 @@ Earlier work archived in history-archive.md:
 
 ## Learnings
 
+### 2026-05-01T13:51:44.498-04:00
+
+- The Astro production origin now lives at `https://simplicitytools.dev` in both `docs-site/astro.config.mjs` and `docs-site/src/data/site.ts`, so SEO metadata, robots.txt, and sitemap generation stay on the apex domain.
+- Treat the repository-root `CNAME` as the custom-domain source of truth and sync it into `docs-site/public/CNAME` from `.github/workflows/deploy-site.yml` before validation/deploy to prevent Pages drift.
+- Domain-change touchpoints for this site are `README.md`, `docs-site/README.md`, `docs-site/scripts/check-links.mjs`, and `docs-site/public/CNAME`; update all four when GitHub Pages moves again.
+
 ### 2026-05-01T05:50:05.727-04:00
 
 - Sprint 8 Wave 1 bootstraps the Astro website in `docs-site/` so later waves can focus on navigation, landing pages, and deployment polish instead of setup.
@@ -141,3 +147,16 @@ Earlier work archived in history-archive.md:
 - Information architecture established: deep reference material organized into `/analyzers/`, `/docs/commands/`, `/docs/filters/`, `/docs/configuration/`, `/docs/library-usage/`, `/integration/` task-shaped sections.
 - Docs-site build passing. GitHub issues #55, #58, #59 closed with summary comments.
 - Cross-agent context propagated to team histories. Scribe decision decision merged to `.squad/decisions.md`.
+
+## Sprint 8: Astro Website (Milestone 8) — Custom Domain Configuration
+**Timestamp:** 2026-05-01T17:51:44Z  
+**Session:** docs-site-domain
+
+- Updated `docs-site/astro.config.mjs` production URL to `https://simplicitytools.dev`
+- Synced repo-root `CNAME` file into `.github/workflows/deploy-site.yml` as single source of truth
+- Validated docs-site build passes with new domain configuration
+- Cross-agent sync with Tank: Established validation gates for domain consistency
+
+**Decision merged:** "Docs-site custom domain source of truth and validation gate" — Repository-root `CNAME` is the canonical custom-domain artifact; workflow syncs to `docs-site/public/CNAME` before validation/deploy to prevent Pages drift.
+
+**Key artifact:** `docs-site/` Astro config, `.github/workflows/deploy-site.yml`, and repo-root `CNAME` now unified on `simplicitytools.dev`.

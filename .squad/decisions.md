@@ -632,3 +632,12 @@ Established information architecture for Wave 3 docs-site delivery. Top-level la
 
 ---
 
+
+### 2026-05-01T13:51:44.498-04:00: Docs-site custom domain source of truth and validation gate
+**By:** Link & Tank
+**What:** Use the repository-root `CNAME` file as the authoritative custom-domain artifact; sync it into `docs-site/public/CNAME` during the deploy workflow; fail docs-site validation if canonical metadata, robots.txt, sitemap.xml, or built HTML still mention the legacy domain `tools.simplicity-first.dev`.
+**Why:** The domain cutover to `simplicitytools.dev` is user-facing. Without a single source of truth, deployed artifacts can drift from workflow config and local builds. Validation must catch stale domain references so GitHub Pages publishes only sites that consistently advertise the correct origin.
+**Consequences:**
+- Astro local builds and GitHub Pages deploys both emit the same CNAME value
+- Contributors only update one root CNAME artifact for future domain changes
+- The workflow fails fast if configuration drifts from the canonical domain
