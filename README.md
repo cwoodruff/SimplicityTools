@@ -69,6 +69,16 @@ Two of the seven diagnostics come with IDE code fixes:
 
 ## For Developers
 
+### ⚡ Quick Install
+
+| Package | Latest | Install |
+| --- | --- | --- |
+| **Cli** (global tool) | [![NuGet](https://img.shields.io/nuget/v/SimplicityTools.Cli.svg?logo=nuget)](https://www.nuget.org/packages/SimplicityTools.Cli/) | `dotnet tool install --global SimplicityTools.Cli` |
+| **Metrics** (core library) | [![NuGet](https://img.shields.io/nuget/v/SimplicityTools.Metrics.svg?logo=nuget)](https://www.nuget.org/packages/SimplicityTools.Metrics/) | `dotnet add package SimplicityTools.Metrics` |
+| **Filters** (evaluators) | [![NuGet](https://img.shields.io/nuget/v/SimplicityTools.Filters.svg?logo=nuget)](https://www.nuget.org/packages/SimplicityTools.Filters/) | `dotnet add package SimplicityTools.Filters` |
+| **Tca** (cost calculator) | [![NuGet](https://img.shields.io/nuget/v/SimplicityTools.Tca.svg?logo=nuget)](https://www.nuget.org/packages/SimplicityTools.Tca/) | `dotnet add package SimplicityTools.Tca` |
+| **Analyzers** (IDE warnings) | [![NuGet](https://img.shields.io/nuget/v/SimplicityTools.Analyzers.svg?logo=nuget)](https://www.nuget.org/packages/SimplicityTools.Analyzers/) | `dotnet add package SimplicityTools.Analyzers --prerelease` |
+
 ### Get Started
 
 1. **Install the global tool** (when published):
@@ -83,11 +93,13 @@ Two of the seven diagnostics come with IDE code fixes:
    dotnet src/SimplicityTools.Cli/bin/Debug/net10.0/SimplicityTools.Cli.dll analyze samples/Sample.Simplified/Sample.Simplified.sln
    ```
 
-3. **Read the full guide:**  
-    [Using the SimplicityTools Toolset](docs/using-the-simplicity-tools.md) — six commands, configuration reference, filter explanations, and practical workflows.
+3. **First run?** Try the [Quickstart](docs/quickstart.md) — five essential commands with real output from Sample.Simplified.
 
-4. **Need package or release details?**  
-   [Contributing guide](CONTRIBUTING.md) — release tags, package versioning rules, local test-publish flow, and NuGet release steps.
+4. **Read the full guide:**  
+     [Using the SimplicityTools Toolset](docs/using-the-simplicity-tools.md) — six commands, configuration reference, filter explanations, and practical workflows.
+
+5. **Need package or release details?**  
+    [Contributing guide](CONTRIBUTING.md) — release tags, package versioning rules, local test-publish flow, and NuGet release steps.
 
 ### Add to Your Project
 
