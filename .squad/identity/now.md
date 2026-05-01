@@ -1,19 +1,19 @@
 ---
-updated_at: 2026-04-30T06:57:15.306-04:00
-focus_area: Sprint 3 execution - Roslyn Analyzers, Code Fixes, Integration Testing
-active_issues: [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
+updated_at: 2026-04-30T20:49:19.234-04:00
+focus_area: Sprint 6 kickoff - Global Tool Packaging
+active_issues: [40, 41, 42, 43]
 ---
 
 # What We're Focused On
 
-Sprint 3: Roslyn Analyzers + Code Fixes. Milestones 1 and 2 completed. Team is now executing Milestone 3 on `sprint/3-analyzers-code-fixes` branch.
+Sprint 6: Global Tool Packaging. Milestones 1–5 are complete. Team is now executing Milestone 6 on `sprint/6-global-tool-packaging` branch.
 
 **Wave 1 (Ready Now):**
-- Switch: Implement all 7 SF00X analyzers (#16–#22) in parallel
-- Link: Trend analysis for HTML reports (#25)
+- Link: #40 Package `SimplicityTools.Cli` as a global tool
+- Link: #42 Document install, upgrade, rollback, and troubleshooting flows
 
-**Wave 2 (After #16/#17 complete):**
-- Link: Code fix providers for SF0001 (#23) and SF0002 (#24)
+**Wave 2 (After #40 proves local tool install):**
+- Tank: #41 Validate zero-config first run on both sample solutions
 
-**Wave 3 (After all analyzers and code fixes complete):**
-- Tank: Integration testing + performance validation (#26)
+**Wave 3 (After #40, #41, and #42 complete):**
+- Link: #43 Dry-run publish validation and release notes

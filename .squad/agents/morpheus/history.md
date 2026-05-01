@@ -241,3 +241,36 @@ All 7 issues in Milestone 2 (#9–#15) closed. PR #28 (`sprint/2-filters-tca-ext
 - Branch `sprint/5-release-packaging` merged and closed
 
 **Next Milestone:** Documentation and publishing (Milestones 6+)
+
+## Sprint 6 Kickoff
+
+📌 **Completed:** 2026-04-30T20:49:19.234-04:00
+
+**Branch Created:** `sprint/6-global-tool-packaging` — Pushed to origin.
+
+**4 Open Issues in Milestone 6:** Global Tool Packaging
+
+**Wave Structure & Assignment:**
+- **Wave 1 (Ready Now):** Link → #40 (package CLI global tool), Link → #42 (install/upgrade docs). Parallel.
+- **Wave 2 (After #40):** Tank → #41 (zero-config first-run validation on both samples).
+- **Wave 3 (After #40 + #41 + #42):** Link → #43 (dry-run publish validation + release notes).
+
+**Critical Path:** #40 → #41 → #43. Parallel: #42 with #40.
+
+**Key Decisions:**
+- The sprint branch follows the existing repository convention: `sprint/{milestone}-{slug}` from `main`, because this repo is executing milestone integration directly on sprint branches.
+- Issue #40 is the contract-defining task. Until the tool package is proven installable from a local feed, zero-config validation (#41) is premature and install docs (#42) should avoid overcommitting to unproven steps.
+- Issue #42 can draft in parallel because the command surface and release group already exist, but it needs a final pass after #40 confirms the install/upgrade flow.
+- Issue #43 is the release gate, not a discovery task. It stays blocked until the tool package, first-run validation, and operator docs all converge.
+
+**Kickoff Actions:**
+- Created and pushed branch `sprint/6-global-tool-packaging`
+- Marked #40 and #42 as ready now
+- Posted kickoff routing comments on #40–#43 with owners, blockers, and first-inspection paths
+
+## Learnings
+
+- 2026-04-30T20:49:19.234-04:00: Sprint 6 is a packaging-and-DX milestone with one real contract task (#40), one parallel documentation task (#42), one downstream validation task (#41), and one final release gate (#43). The dependency shape is narrower than Sprint 5 and should stay that way.
+- 2026-04-30T20:49:19.234-04:00: The global tool package shape already exists in `src/SimplicityTools.Cli/SimplicityTools.Cli.csproj` (`PackAsTool=true`, `ToolCommandName=dotnet-simplicity`), so Sprint 6 is focused on proving installability, not inventing a new CLI surface.
+- 2026-04-30T20:49:19.234-04:00: Release plumbing for CLI dry runs already lives in `.github/workflows/nuget-publish.yml`, with shared package metadata in `Directory.Build.props` and operator guidance in `CONTRIBUTING.md`. Those three files are the architectural control points for packaging work.
+- 2026-04-30T20:49:19.234-04:00: Zero-config first-run validation belongs after packaging proof and must execute against `samples/Sample.Simplified/` and `samples/Sample.OverEngineered/`; this keeps the product promise attached to a real installation path instead of source-only execution.
