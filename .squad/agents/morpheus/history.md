@@ -274,3 +274,23 @@ All 7 issues in Milestone 2 (#9–#15) closed. PR #28 (`sprint/2-filters-tca-ext
 - 2026-04-30T20:49:19.234-04:00: The global tool package shape already exists in `src/SimplicityTools.Cli/SimplicityTools.Cli.csproj` (`PackAsTool=true`, `ToolCommandName=dotnet-simplicity`), so Sprint 6 is focused on proving installability, not inventing a new CLI surface.
 - 2026-04-30T20:49:19.234-04:00: Release plumbing for CLI dry runs already lives in `.github/workflows/nuget-publish.yml`, with shared package metadata in `Directory.Build.props` and operator guidance in `CONTRIBUTING.md`. Those three files are the architectural control points for packaging work.
 - 2026-04-30T20:49:19.234-04:00: Zero-config first-run validation belongs after packaging proof and must execute against `samples/Sample.Simplified/` and `samples/Sample.OverEngineered/`; this keeps the product promise attached to a real installation path instead of source-only execution.
+
+## GitHub Wrap-Up: Sprint 5 & 6 Complete
+
+📌 **Completed:** 2026-04-30T21:27:33.453-04:00
+
+**Summary:** Executed end-to-end wrap-up for both sprints. Reconciled ambiguous request (mixed sprint/issue numbers) and performed safe closure sequence: Sprint 5 already wrapped, Sprint 6 PR created and merged, all issues closed, milestones closed.
+
+**Actions:**
+1. Created PR #64: `sprint/6-global-tool-packaging` → `main` with all 4 issues (#40–#43) referenced
+2. Merged PR #64 successfully
+3. Manually closed issues #41–#43 (issue #40 auto-closed on merge)
+4. Closed Milestone 6 (API #7): 4 issues, 0 open
+5. Left Sprint 5 PR #63 closed (stale, not merged; work reflected in closed issues)
+
+**Key Decision:** Do not force-merge stale PRs. Sprint 5 work is already wrapped; PR #63 is a historical artifact. Closing milestones (not PRs) is the final gate.
+
+**Learnings:**
+- 2026-04-30T21:27:33.453-04:00: GitHub automation (issue auto-close on PR merge) is partial; not all referenced issues close. Manual closure needed for #41–#43.
+- 2026-04-30T21:27:33.453-04:00: Sprint PRs can go stale if main advances faster. This repo should prefer direct commits to main or guard sprint branch merges with explicit review gates.
+- 2026-04-30T21:27:33.453-04:00: Milestone closure is now the wrap-up gate, not PR merge. Issues can close without a PR; this decouples lifecycle management from release plumbing.
