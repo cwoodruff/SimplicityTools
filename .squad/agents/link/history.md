@@ -73,3 +73,50 @@
 - Fixed the analyzer-consumer validation block in `.github/workflows/nuget-publish.yml` so its nuspec parsing now imports `xml.etree.ElementTree as ET` before calling `ET.fromstring(...)`.
 - Tightened the same validation step to clear `artifacts/analyzer-consumer-validation` before each run so reruns prove the package from the current build instead of inheriting stale restore state.
 - Local proof used the packed `SimplicityTools.Analyzers` artifact and reran the workflow’s analyzer-consumer validation logic end to end; the validation completed successfully and emitted the expected analyzer warning.
+
+## 2026-04-30T21:40:50Z - Sprint 7 Wave 1: Package UX & First-Run Documentation ✓
+
+**Spawn:** Link DevRel agent for Sprint 7 Wave 1 (Milestone 7 packaging UX & documentation).
+
+**Issues completed:**
+- #44: Add NuGet badges and quickstart path to README
+- #45: Create docs/quickstart.md with five CLI commands and output samples
+
+**Deliverables:**
+
+1. **README.md enhancements:**
+   - Added "Quick Install" section with NuGet badge table for all five packages (Cli, Metrics, Filters, Tca, Analyzers)
+   - Badges link directly to NuGet.org package pages
+   - Added "First run? Try the Quickstart" link in Get Started section for first-time discoverability
+
+2. **docs/quickstart.md (new file):**
+   - Five essential commands with real CLI output from Sample.Simplified
+   - `analyze`: First look at solution structure and complexity
+   - `baseline`: Capture a point in time for regression detection
+   - `report`: Generate shareable HTML dashboard
+   - `diff`: Compare against baseline (regression gate)
+   - `budget`: Complexity budget status and actionable guidance
+   - `watch`: Live feedback during development (bonus command)
+   - Each command includes output explanation and actionable next steps
+   - Maintains zero-config first-run promise throughout
+   - Links to simplicity-schema.json and using-the-simplicity-tools.md for deeper dives
+
+**Design decisions:**
+- Put Quick Install badges immediately below section heading (high discoverability)
+- Show install commands alongside badges (copy-paste friendly)
+- Quickstart uses Sample.Simplified for consistency with docs (real, reproducible examples)
+- Output examples based on actual CLI runs (0.4.0-local version, Sample.Simplified metrics)
+- Each command includes "What this means" guidance so users understand the metrics, not just the numbers
+- Emphasize zero-config and teaching-first in quickstart conclusion
+
+**Validation:**
+- Built CLI from source and ran all five commands against Sample.Simplified
+- Captured actual output (timestamps, metrics, filter verdicts)
+- Verified links work (README → quickstart, quickstart → using-the-simplicity-tools.md, quickstart → simplicity-schema.json)
+- Confirmed package URLs point to NuGet.org (ready for when packages are published)
+
+**Impact:** First-run UX now teaches via badges + quickstart. New users see "install here" + "try these five commands" + "understand what you're looking at" in sequence. Zero-config promise reinforced throughout.
+
+**Commit:** dab5ff5 (Sprint 7 Wave 1: Add NuGet badges, quickstart guide, and CLI examples)
+
+**Next step:** Wave 2 likely covers integration guides and CI/CD examples (not in scope for Wave 1, which cleanly unlocks documentation polish phase).

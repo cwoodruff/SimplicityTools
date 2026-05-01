@@ -510,28 +510,69 @@ If you do not annotate anything, the tooling falls back to path conventions:
 - `Handlers`
 - `Pages`
 
-## Library usage
+## Library integration
 
-If you want to build your own tooling around the repo packages instead of the CLI, these are the main entry points.
+If you want to build your own tooling around the SimplicityTools packages instead of using the CLI, these sections describe each library and its integration point.
 
-### `SimplicityTools.Metrics`
+### Using SimplicityTools.Metrics
+
+**Package:** `SimplicityTools.Metrics` on [NuGet.org](https://www.nuget.org/packages/SimplicityTools.Metrics/)
+
+**Purpose:** Snapshot a solution's structural and code complexity metrics. This is the foundation for all other analyses.
+
+**Install:**
+
+```xml
+<ItemGroup>
+  <PackageReference Include="SimplicityTools.Metrics" Version="x.y.z" />
+</ItemGroup>
+```
+
+**Basic usage:**
 
 ```csharp
 using SimplicityTools.Metrics;
 
 var collector = new SimplicityCollector();
 var snapshot = await collector.CollectAsync("path/to/YourSolution.sln");
-Console.WriteLine(snapshot.ToSummary());
+
+Console.WriteLine($"Projects: {snapshot.ProjectCount}");
+Console.WriteLine($"Files: {snapshot.TotalFileCount}");
+Console.WriteLine($"Abstraction layers: {snapshot.AbstractionLayerCount}");
+Console.WriteLine($"Avg complexity: {snapshot.AverageMethodComplexity:F2}");
+Console.WriteLine($"Primary path ratio: {snapshot.PrimaryPathRatio:P0}");
 ```
 
-`SimplicitySnapshot` exposes the raw measures plus computed ratios like:
+**What you get:**
 
-- `PrimaryPathRatio`
-- `PrematureAbstractionRatio`
+`SimplicitySnapshot` exposes these core measurements:
 
-### `SimplicityTools.Filters`
+- `ProjectCount` — Total C# projects in the solution
+- `TotalFileCount` — Total source files analyzed
+- `PrimaryPathFileCount` — Files on the primary business path
+- `AbstractionLayerCount` — Depth of indirection layers
+- `SingleImplementationInterfaceCount` — Dead abstractions (interface with one impl)
+- `ExternalDependencyCount` — Package references
+- `UnusedDependencyCount` — Packages not used in code
+- `AverageMethodComplexity` — Average cyclomatic complexity
+- `EstimatedOnboardingHours` — Cost estimate for team onboarding
 
-Install the package directly when you want the filter evaluators without taking a project reference to this repo:
+Plus computed ratios:
+
+- `PrimaryPathRatio` — Percentage of code on the main business flow
+- `PrematureAbstractionRatio` — Ratio of single-impl interfaces to total interfaces
+
+**When to use:** Build custom analysis dashboards, embed metrics in your build pipeline, or feed metrics into decision support systems.
+
+---
+
+### Using SimplicityTools.Filters
+
+**Package:** `SimplicityTools.Filters` on [NuGet.org](https://www.nuget.org/packages/SimplicityTools.Filters/)
+
+**Purpose:** Evaluate a snapshot against three Simplicity-First health filters that turn raw metrics into pass/fail verdicts.
+
+**Install:**
 
 ```xml
 <ItemGroup>
@@ -539,7 +580,9 @@ Install the package directly when you want the filter evaluators without taking 
 </ItemGroup>
 ```
 
-`SimplicityTools.Filters` brings in `SimplicityTools.Metrics` transitively, so a separate metrics package reference is only needed when you also want `SimplicityCollector` or other metrics-first APIs directly.
+Note: `SimplicityTools.Filters` includes `SimplicityTools.Metrics` transitively, so you do not need a separate Metrics reference unless you want to call `SimplicityCollector` directly.
+
+**Basic usage:**
 
 ```csharp
 using SimplicityTools.Filters;
@@ -550,13 +593,61 @@ var verdicts = new[]
     HalfRuleEvaluator.Evaluate(snapshot),
     PrimaryPathFirstEvaluator.Evaluate(snapshot)
 };
+
+foreach (var verdict in verdicts)
+{
+    Console.WriteLine($"{verdict.Filter}:");
+    Console.WriteLine($"  Status: {(verdict.Passes ? "PASS" : "FAIL")}");
+    Console.WriteLine($"  Score: {verdict.Score:P0}");
+    Console.WriteLine($"  Summary: {verdict.Summary}");
+    
+    if (!verdict.Passes)
+    {
+        Console.WriteLine($"  Violations:");
+        foreach (var violation in verdict.Violations)
+        {
+            Console.WriteLine($"    - {violation}");
+        }
+    }
+    
+    if (verdict.Recommendations.Length > 0)
+    {
+        Console.WriteLine($"  Next step: {verdict.Recommendations[0]}");
+    }
+}
 ```
 
-Each verdict includes `Passes`, `Score`, `Summary`, `Violations`, and `Recommendations`.
+**The three filters:**
 
-### `SimplicityTools.Tca`
+1. **TwoAmTest** — Can the team understand and fix this code under pressure? Checks primary-path clarity, method complexity, abstraction depth, and onboarding time.
 
-Install the package directly when you want the annual cost model without a project reference to this repo:
+2. **HalfRule** — Is the codebase accumulating indirection faster than value? Checks premature abstraction, unused dependencies, and dependency concentration per project.
+
+3. **PrimaryPathFirst** — Is the main business flow still obvious? Checks primary-path concentration, abstraction around the core flow, and project count.
+
+**Verdict structure:**
+
+Each verdict includes:
+
+- `Filter` — Filter name enum (TwoAmTest, HalfRule, or PrimaryPathFirst)
+- `Passes` — Boolean pass/fail
+- `Score` — Numeric score (0.0 to 1.0)
+- `Summary` — One-line interpretation
+- `SubScores` — Named sub-scores that contributed to the composite score
+- `Violations` — Array of failed checks with explanations
+- `Recommendations` — Array of actionable suggestions to improve the score (typically one primary recommendation)
+
+**When to use:** Gate code reviews, build dashboards that surface health verdicts, or create pass/fail checks for CI/CD pipelines.
+
+---
+
+### Using SimplicityTools.Tca
+
+**Package:** `SimplicityTools.Tca` on [NuGet.org](https://www.nuget.org/packages/SimplicityTools.Tca/)
+
+**Purpose:** Estimate the annual business cost of complexity in your solution. Quantifies impact on team velocity, incidents, and retention.
+
+**Install:**
 
 ```xml
 <ItemGroup>
@@ -564,7 +655,9 @@ Install the package directly when you want the annual cost model without a proje
 </ItemGroup>
 ```
 
-`SimplicityTools.Tca` brings in both `SimplicityTools.Filters` and `SimplicityTools.Metrics` transitively, so a separate package reference is only needed when you want to pin one of those library surfaces explicitly.
+Note: `SimplicityTools.Tca` includes both `SimplicityTools.Filters` and `SimplicityTools.Metrics` transitively.
+
+**Basic usage:**
 
 ```csharp
 using SimplicityTools.Filters;
@@ -572,23 +665,154 @@ using SimplicityTools.Metrics;
 using SimplicityTools.Tca;
 
 var estimate = TcaEstimate.Create(snapshot, verdicts);
+
 Console.WriteLine(estimate.ToExecutiveSummary());
 ```
 
-Important current behavior: the CLI validates and loads the `tca` section in `simplicity.json`, but there is not yet a dedicated CLI command that prints the TCA estimate. Today, the TCA package is primarily useful when you are calling the libraries directly.
+This outputs:
 
-You can also provide explicit inputs instead of defaults:
+```text
+Total Cost of Architecture (Annual Estimate)
+============================================
+Infrastructure:   $10,000 to $15,000
+Operational:      $20,000 to $35,000
+Coordination:     $15,000 to $20,000
+Cognitive:        $8,000 to $12,000
+Opportunity:      $5,000 to $10,000
+--------------------------------------------
+TOTAL:            $58,000 to $92,000 per year
+```
+
+**Cost model:**
+
+The TCA (Total Cost of Architecture) breaks down complexity cost into five dimensions:
+
+1. **Infrastructure cost** — Accumulated overhead in build time, CI/CD complexity, and platform management
+2. **Operational cost** — Incident response time and on-call burden due to code complexity
+3. **Coordination cost** — Cross-team communication overhead scaling with project count
+4. **Cognitive cost** — Onboarding time and retention risk from excessive complexity
+5. **Opportunity cost** — Engineering effort diverted from feature delivery due to low code health
+
+**Using custom inputs:**
+
+By default, `TcaEstimate` uses sensible built-in inputs. Override them if needed:
 
 ```csharp
-var estimate = TcaEstimate.Create(
-    snapshot,
-    verdicts,
-    new TcaInputs(
-        TeamSize: 12,
-        AverageEngineerMonthlySalaryUsd: 18000m,
-        EstimatedMonthlyIncidentCount: 3,
-        OnCallHourlyRateUsd: 175m,
-        AttritionCoefficientPercent: 12m));
+var customInputs = new TcaInputs(
+    TeamSize: 12,
+    AverageEngineerMonthlySalaryUsd: 18000m,
+    EstimatedMonthlyIncidentCount: 3,
+    OnCallHourlyRateUsd: 175m,
+    AttritionCoefficientPercent: 12m
+);
+
+var estimate = TcaEstimate.Create(snapshot, verdicts, customInputs);
+```
+
+**Configuration via simplicity.json:**
+
+The CLI validates and uses `tca` settings from `simplicity.json`. Library consumers typically pass inputs directly to `TcaEstimate.Create()`.
+
+**When to use:** Justify refactoring investment to leadership, quantify the business case for code simplification, or track cost trends over time.
+
+---
+
+### Using SimplicityTools.Analyzers
+
+**Package:** `SimplicityTools.Analyzers` on [NuGet.org](https://www.nuget.org/packages/SimplicityTools.Analyzers/)
+
+**Purpose:** Seven Roslyn diagnostics that surface simplification opportunities inline in the IDE and during normal builds.
+
+**Install:**
+
+```xml
+<ItemGroup>
+  <PackageReference Include="SimplicityTools.Analyzers" Version="x.y.z" PrivateAssets="all" />
+</ItemGroup>
+```
+
+**Important:** Always use `PrivateAssets="all"` for the analyzer package. This prevents the package from leaking into downstream consumers and ensures your project only exposes its own public API.
+
+**Diagnostics:**
+
+| ID | Rule | Category | Code Fix | Threshold |
+| --- | --- | --- | --- | --- |
+| `SF0001` | Interface has single implementation | HalfRule | ✅ Yes | N/A |
+| `SF0002` | Package reference has no symbol usage | HalfRule | ✅ Yes | N/A |
+| `SF0003` | Method is too complex for fast understanding | TwoAmTest | ❌ No | CC > 10 |
+| `SF0004` | Method call chain is too deep | PrimaryPathFirst | ❌ No | Depth > 8 |
+| `SF0005` | Constructor takes too many parameters | TwoAmTest | ❌ No | Params > 7 |
+| `SF0006` | Generic parameter has only one specialization | HalfRule | ❌ No | N/A |
+| `SF0007` | Supporting file is referenced more than primary path | PrimaryPathFirst | ❌ No | N/A |
+
+**IDE experience:**
+
+- Diagnostics appear as warnings in your editor
+- Hover over the warning to see the rule and recommendation
+- Click the lightbulb to apply code fixes (for SF0001 and SF0002)
+
+**Customizing detection:**
+
+Mark the primary business path explicitly with `[PrimaryPath]` attributes:
+
+```csharp
+using SimplicityTools.Metrics;
+
+[PrimaryPath]
+public sealed class CheckoutHandler
+{
+    // Diagnostics prioritize this class as part of the main flow
+}
+```
+
+If no explicit annotations exist, the analyzer falls back to convention-based detection:
+
+- Folders named `Controllers`, `Endpoints`, `Handlers`, or `Pages`
+- Reference-based heuristics (classes that are heavily referenced)
+
+**When to use:** Enable in all projects to surface simplification opportunities during normal development. Combine with the CLI for team-wide dashboards.
+
+---
+
+### Composing the packages
+
+All packages are designed to work together. A typical workflow:
+
+```csharp
+using SimplicityTools.Metrics;
+using SimplicityTools.Filters;
+using SimplicityTools.Tca;
+
+// 1. Collect metrics
+var collector = new SimplicityCollector();
+var snapshot = await collector.CollectAsync("path/to/Solution.sln");
+
+// 2. Evaluate health
+var verdicts = new[]
+{
+    TwoAmTestEvaluator.Evaluate(snapshot),
+    HalfRuleEvaluator.Evaluate(snapshot),
+    PrimaryPathFirstEvaluator.Evaluate(snapshot)
+};
+
+// 3. Estimate cost
+var estimate = TcaEstimate.Create(snapshot, verdicts);
+
+// 4. Report results
+Console.WriteLine(snapshot.ToSummary());
+Console.WriteLine();
+foreach (var verdict in verdicts)
+    Console.WriteLine($"{verdict.Filter}: {(verdict.Passes ? "✅ PASS" : "❌ FAIL")} ({verdict.Score:P0})");
+Console.WriteLine();
+Console.WriteLine(estimate.ToExecutiveSummary());
+```
+
+Or use the CLI instead to skip the plumbing:
+
+```bash
+dotnet simplicity analyze path/to/Solution.sln
+dotnet simplicity budget path/to/Solution.sln
+dotnet simplicity report path/to/Solution.sln
 ```
 
 ## Practical workflows
