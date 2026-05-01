@@ -2,15 +2,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const distDir = path.resolve('dist');
-const siteUrl = 'https://tools.simplicity-first.dev';
+const siteUrl = 'https://simplicitytools.dev';
+const siteDomain = 'simplicitytools.dev';
+const legacySiteUrl = 'https://tools.simplicity-first.dev';
+const legacySiteDomain = 'tools.simplicity-first.dev';
 const requiredRootFiles = ['CNAME', 'robots.txt', 'sitemap.xml'];
 const requiredMetaChecks = [
-  { label: 'canonical link', pattern: /<link[^>]+rel=["']canonical["'][^>]+href=["'][^"']+["']/i },
   { label: 'meta description', pattern: /<meta[^>]+name=["']description["'][^>]+content=["'][^"']+["']/i },
   { label: 'viewport meta', pattern: /<meta[^>]+name=["']viewport["'][^>]+content=["'][^"']+["']/i },
   { label: 'Open Graph title', pattern: /<meta[^>]+property=["']og:title["'][^>]+content=["'][^"']+["']/i },
   { label: 'Open Graph description', pattern: /<meta[^>]+property=["']og:description["'][^>]+content=["'][^"']+["']/i },
-  { label: 'Open Graph url', pattern: /<meta[^>]+property=["']og:url["'][^>]+content=["'][^"']+["']/i },
   { label: 'twitter card', pattern: /<meta[^>]+name=["']twitter:card["'][^>]+content=["'][^"']+["']/i }
 ];
 const requiredAccessibilityChecks = [
@@ -32,18 +33,31 @@ for (const file of requiredRootFiles) {
 }
 
 const cname = fs.readFileSync(path.join(distDir, 'CNAME'), 'utf8').trim();
-if (cname !== 'tools.simplicity-first.dev') {
-  throw new Error(`CNAME mismatch. Expected tools.simplicity-first.dev but found ${cname || '<empty>'}`);
+if (cname !== siteDomain) {
+  throw new Error(`CNAME mismatch. Expected ${siteDomain} but found ${cname || '<empty>'}`);
+}
+if (cname.includes(legacySiteDomain)) {
+  throw new Error(`CNAME still references the legacy domain: ${legacySiteDomain}`);
 }
 
 const robots = fs.readFileSync(path.join(distDir, 'robots.txt'), 'utf8');
 if (!robots.includes(`${siteUrl}/sitemap.xml`)) {
   throw new Error('robots.txt is missing the sitemap URL.');
 }
+if (robots.includes(legacySiteDomain)) {
+  throw new Error(`robots.txt still references the legacy domain: ${legacySiteDomain}`);
+}
 
 const sitemap = fs.readFileSync(path.join(distDir, 'sitemap.xml'), 'utf8');
 if (!sitemap.includes(siteUrl)) {
   throw new Error('sitemap.xml does not reference the production site URL.');
+}
+if (sitemap.includes(legacySiteDomain)) {
+  throw new Error(`sitemap.xml still references the legacy domain: ${legacySiteDomain}`);
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function walk(dir) {
@@ -96,11 +110,32 @@ const hrefRegex = /(?:href|src)=["']([^"']+)["']/gi;
 for (const filePath of htmlFiles) {
   const html = fs.readFileSync(filePath, 'utf8');
   const route = toRoute(filePath);
+  const expectedPageUrl = new URL(route, siteUrl).toString();
+  const canonicalPattern = new RegExp(
+    `<link[^>]+rel=["']canonical["'][^>]+href=["']${escapeRegExp(expectedPageUrl)}["']`,
+    'i'
+  );
+  const ogUrlPattern = new RegExp(
+    `<meta[^>]+property=["']og:url["'][^>]+content=["']${escapeRegExp(expectedPageUrl)}["']`,
+    'i'
+  );
 
   for (const check of requiredMetaChecks) {
     if (!check.pattern.test(html)) {
       metadataIssues.push(`${route} missing ${check.label}`);
     }
+  }
+
+  if (!canonicalPattern.test(html)) {
+    metadataIssues.push(`${route} canonical link must be ${expectedPageUrl}`);
+  }
+
+  if (!ogUrlPattern.test(html)) {
+    metadataIssues.push(`${route} Open Graph url must be ${expectedPageUrl}`);
+  }
+
+  if (html.includes(legacySiteUrl) || html.includes(legacySiteDomain)) {
+    metadataIssues.push(`${route} still references the legacy domain ${legacySiteDomain}`);
   }
 
   for (const check of requiredAccessibilityChecks) {

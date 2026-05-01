@@ -4,7 +4,7 @@
 
 SimplicityTools makes it obvious when a codebase becomes harder to understand, change, and operate. It runs on your first build with zero config, surfaces Roslyn diagnostics inline in your editor, and produces a shareable HTML report for teams and stakeholders.
 
-**Website:** https://tools.simplicity-first.dev
+**Website:** https://simplicitytools.dev
 
 ## The Problem
 
@@ -244,7 +244,7 @@ SimplicityTools/
 ├── docs/
 │   ├── using-the-simplicity-tools.md   # Complete command reference and workflows
 │   └── simplicity-schema.json           # Configuration schema reference
-├── docs-site/                          # Astro site for https://tools.simplicity-first.dev
+├── docs-site/                          # Astro site for https://simplicitytools.dev
 └── tests/
     ├── SimplicityTools.Metrics.Tests/
     ├── SimplicityTools.Filters.Tests/
@@ -262,7 +262,7 @@ SimplicityTools/
 
 ## Website Development
 
-- Live site: https://tools.simplicity-first.dev
+- Live site: https://simplicitytools.dev
 - Local docs workflow:
   ```bash
   cd docs-site
@@ -278,9 +278,9 @@ SimplicityTools/
 - Operator checklist after merge to `main`:
   1. Let the first successful `Deploy docs site` workflow create the `gh-pages` branch.
   2. In GitHub repository settings, set Pages to deploy from `gh-pages` / root.
-  3. Set the custom domain to `tools.simplicity-first.dev` and confirm `gh-pages/CNAME` still contains that value.
-  4. Create or verify the DNS `CNAME` record: `tools.simplicity-first.dev` → `cwoodruff.github.io`.
-  5. Wait for DNS/Pages propagation, then verify `https://tools.simplicity-first.dev`, `/robots.txt`, and `/sitemap.xml`.
+  3. Set the custom domain to `simplicitytools.dev` and confirm `gh-pages/CNAME` still contains that value.
+  4. Create or verify the apex-domain DNS records required by GitHub Pages for `simplicitytools.dev`.
+  5. Wait for DNS/Pages propagation, then verify `https://simplicitytools.dev`, `/robots.txt`, and `/sitemap.xml`.
 
 ## Next Steps
 

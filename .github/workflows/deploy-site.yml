@@ -13,6 +13,9 @@ concurrency:
   group: deploy-docs-site
   cancel-in-progress: true
 
+env:
+  CUSTOM_DOMAIN: simplicitytools.dev
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -33,6 +36,15 @@ jobs:
       - name: Install docs-site dependencies
         run: npm ci
 
+      - name: Sync custom domain artifact
+        run: |
+          repo_domain="$(tr -d '\r\n' < ../CNAME)"
+          if [ "$repo_domain" != "$CUSTOM_DOMAIN" ]; then
+            echo "Root CNAME mismatch: expected $CUSTOM_DOMAIN but found ${repo_domain:-<empty>}" >&2
+            exit 1
+          fi
+          printf '%s\n' "$repo_domain" > public/CNAME
+
       - name: Validate production build
         run: npm run build:validate
 
@@ -42,4 +54,5 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: docs-site/dist
+          cname: ${{ env.CUSTOM_DOMAIN }}
           force_orphan: true

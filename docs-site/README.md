@@ -1,6 +1,6 @@
 # docs-site
 
-Astro site for the public SimplicityTools website at https://tools.simplicity-first.dev.
+Astro site for the public SimplicityTools website at https://simplicitytools.dev.
 
 ## First run
 
@@ -37,5 +37,5 @@ Preview serves the built site at `http://localhost:4321/`.
 After merge, operators still need to:
 1. Let the first successful deploy create `gh-pages`.
 2. Set GitHub Pages to `gh-pages` / root.
-3. Confirm the custom domain is `tools.simplicity-first.dev`.
-4. Point DNS `CNAME` `tools.simplicity-first.dev` at `cwoodruff.github.io`.
+3. Confirm the custom domain is `simplicitytools.dev`.
+4. Create or verify the apex-domain DNS records required by GitHub Pages for `simplicitytools.dev`.

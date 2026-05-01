@@ -12,8 +12,8 @@ export type DesignToken = {
 export const siteTitle = 'SimplicityTools';
 export const siteDescription =
   'Measure solution complexity, teach healthier architecture, and give teams a clearer path from first run to CI gating.';
-export const siteUrl = 'https://tools.simplicity-first.dev';
-export const siteDomain = 'tools.simplicity-first.dev';
+export const siteUrl = 'https://simplicitytools.dev';
+export const siteDomain = 'simplicitytools.dev';
 export const socialImagePath = '/social-card.svg';
 export const socialImageAlt =
   'SimplicityTools social card with the headline Measure complexity before it measures your team.';
