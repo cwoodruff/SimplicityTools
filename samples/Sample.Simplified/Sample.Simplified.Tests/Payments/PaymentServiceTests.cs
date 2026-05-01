@@ -1,7 +1,7 @@
 using Sample.Simplified.App.Payments;
 using Xunit;
 
-namespace Sample.Simplified.App.Tests.Payments;
+namespace Sample.Simplified.Tests.Payments;
 
 public sealed class PaymentServiceTests
 {

@@ -5,8 +5,8 @@
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
     <IsPackable>false</IsPackable>
-    <AssemblyName>Sample.Simplified.App.Tests</AssemblyName>
-    <RootNamespace>Sample.Simplified.App.Tests</RootNamespace>
+    <AssemblyName>Sample.Simplified.Tests</AssemblyName>
+    <RootNamespace>Sample.Simplified.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\App\App.csproj" />
+    <ProjectReference Include="..\Sample.Simplified.App\Sample.Simplified.App.csproj" />
   </ItemGroup>
 </Project>

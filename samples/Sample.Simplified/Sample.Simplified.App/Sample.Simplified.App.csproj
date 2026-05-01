@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
-    <AssemblyName>Sample.Simplified.App</AssemblyName>
+    <AssemblyName>Sample.Simplified.Demo</AssemblyName>
     <RootNamespace>Sample.Simplified.App</RootNamespace>
   </PropertyGroup>
 </Project>

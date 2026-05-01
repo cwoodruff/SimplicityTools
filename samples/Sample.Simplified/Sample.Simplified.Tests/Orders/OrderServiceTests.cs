@@ -4,7 +4,7 @@ using Sample.Simplified.App.Orders;
 using Sample.Simplified.App.Payments;
 using Xunit;
 
-namespace Sample.Simplified.App.Tests.Orders;
+namespace Sample.Simplified.Tests.Orders;
 
 public sealed class OrderServiceTests
 {

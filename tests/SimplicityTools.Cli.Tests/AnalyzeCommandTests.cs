@@ -60,6 +60,60 @@ public sealed class AnalyzeCommandTests
     }
 
     [Fact]
+    public async Task SampleSimplified_AppStartsViaAppHostAndDotnetRun()
+    {
+        var workspace = CreateSampleWorkspace("Sample.Simplified");
+
+        try
+        {
+            var projectPath = Path.Combine(workspace, "Sample.Simplified.App", "Sample.Simplified.App.csproj");
+            var outputDirectory = Path.Combine(workspace, "Sample.Simplified.App", "bin", "Debug", "net10.0");
+
+            var buildResult = await RunProcessAsync(
+                "dotnet",
+                ["build", projectPath, "--nologo", "--verbosity", "quiet"],
+                workspace);
+
+            Assert.Equal(0, buildResult.ExitCode);
+            Assert.DoesNotContain("error", buildResult.StandardError, StringComparison.OrdinalIgnoreCase);
+
+            var runtimeConfigPath = Directory.GetFiles(outputDirectory, "*.runtimeconfig.json", SearchOption.TopDirectoryOnly).Single();
+            var executableName = Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(runtimeConfigPath));
+            var nativeHostPath = Path.Combine(
+                outputDirectory,
+                OperatingSystem.IsWindows() ? $"{executableName}.exe" : executableName);
+
+            Assert.True(File.Exists(nativeHostPath), $"Expected a runnable app host at '{nativeHostPath}'.");
+
+            var nativeHostResult = await RunProcessAsync(
+                nativeHostPath,
+                [],
+                workspace);
+
+            Assert.Equal(0, nativeHostResult.ExitCode);
+            Assert.True(string.IsNullOrWhiteSpace(nativeHostResult.StandardError), nativeHostResult.StandardError);
+            Assert.Equal(
+                "Contoso Coffee placed 2 line(s) totaling 45.75. Ship via Air in 1 day(s). Approval CARD-0046.",
+                NormalizeLineEndings(nativeHostResult.StandardOutput).Trim());
+
+            var runResult = await RunProcessAsync(
+                "dotnet",
+                ["run", "--project", projectPath, "--no-launch-profile", "--no-build"],
+                workspace);
+
+            Assert.Equal(0, runResult.ExitCode);
+            Assert.True(string.IsNullOrWhiteSpace(runResult.StandardError), runResult.StandardError);
+            Assert.Equal(
+                "Contoso Coffee placed 2 line(s) totaling 45.75. Ship via Air in 1 day(s). Approval CARD-0046.",
+                NormalizeLineEndings(runResult.StandardOutput).Trim());
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(workspace);
+        }
+    }
+
+    [Fact]
     public async Task BaselineCommand_WritesSnapshotNextToSolutionAndPrintsConfirmation()
     {
         await BuildCliAsync();

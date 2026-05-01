@@ -2,7 +2,7 @@ using Sample.Simplified.App.Fulfillment;
 using Sample.Simplified.App.Orders;
 using Xunit;
 
-namespace Sample.Simplified.App.Tests.Fulfillment;
+namespace Sample.Simplified.Tests.Fulfillment;
 
 public sealed class FulfillmentServiceTests
 {

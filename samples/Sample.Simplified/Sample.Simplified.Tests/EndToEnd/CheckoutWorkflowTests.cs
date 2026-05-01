@@ -2,7 +2,7 @@ using Sample.Simplified.App.Composition;
 using Sample.Simplified.App.Demo;
 using Xunit;
 
-namespace Sample.Simplified.App.Tests.EndToEnd;
+namespace Sample.Simplified.Tests.EndToEnd;
 
 public sealed class CheckoutWorkflowTests
 {
