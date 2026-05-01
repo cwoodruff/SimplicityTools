@@ -18,6 +18,7 @@
 
 ## Learnings
 
+- 2026-05-01T13:31:28.564-04:00: For Sample.Simplified project renames, keep the runnable app project at `samples/Sample.Simplified/Sample.Simplified.App/Sample.Simplified.App.csproj` and the test project at `samples/Sample.Simplified/Sample.Simplified.Tests/Sample.Simplified.Tests.csproj`, but preserve `AssemblyName=Sample.Simplified.Demo` so naming cleanup does not regress the macOS startup fix. Test namespaces should follow `Sample.Simplified.Tests.*` even though app namespaces stay `Sample.Simplified.App.*`.
 - My initial focus is the core measurement and cost-translation packages.
  - 2026-04-29T07:32:23.826-04:00: For contract-first sprint work, the exact public surface must win over scaffold compatibility, because downstream callers are cheaper to migrate than a public record shape that drifts from spec.
  - 2026-04-29T11:44:51.000Z: Wave 2 (sample scaffolds #2, #3) and Wave 3+ (structural, semantic, heuristic passes) now unblocked after issue #1 completion.
@@ -139,3 +140,13 @@
 - Solution: Use non-`.App` assembly name to keep sample runnable with regression coverage.
 - Added regression proof through real process launch test in `samples/Sample.Simplified/App.Tests/EndToEnd/StartupSmokeTests.cs`.
 - Coordinated with Morpheus (root-cause) and Tank (validation).
+
+## 2026-05-01T17:31:28Z — Orchestration: Sample.Simplified Rename Sprint
+**Session:** sample-simplified-rename  
+**Cross-agent sync:** Tank + Trinity coordinated rename validation workflow.
+**Decision merged:** "Preserve Sample.Simplified demo assembly name during project rename"
+**Outcomes:**
+- Projects renamed to `Sample.Simplified.App` and `Sample.Simplified.Tests` ✅
+- Solution wiring and namespaces updated ✅
+- Assembly name preserved as `Sample.Simplified.Demo` (macOS startup fix maintained) ✅
+- Validation passed: builds, tests, CLI startup regression coverage ✅

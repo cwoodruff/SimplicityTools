@@ -112,6 +112,7 @@ Warnings: 0               ✅ clean
 ## Learnings
 
 - **2026-05-01T12:58:06.465-04:00:** Sample.Simplified startup on macOS is sensitive to the executable assembly name. `samples/Sample.Simplified/App/App.csproj` now uses `Sample.Simplified.Demo` while keeping `RootNamespace` stable, and launch coverage lives in `samples/Sample.Simplified/App.Tests/EndToEnd/StartupSmokeTests.cs` plus `tests/SimplicityTools.Cli.Tests/AnalyzeCommandTests.cs`.
+- **2026-05-01T13:31:28.564-04:00:** Sample.Simplified project rename keeps the app project at `samples/Sample.Simplified/Sample.Simplified.App/Sample.Simplified.App.csproj` and the test project at `samples/Sample.Simplified/Sample.Simplified.Tests/Sample.Simplified.Tests.csproj`, while preserving `AssemblyName=Sample.Simplified.Demo` so renamed project identity does not reintroduce the macOS apphost startup failure. Coverage now expects `Sample.Simplified.Tests` namespaces and the CLI regression path resolves the renamed app project.
 
 ## Sample.Simplified Startup Fix — Regression Validation & Approval
 **Timestamp:** 2026-05-01T16:58:06.465Z
@@ -125,3 +126,13 @@ Warnings: 0               ✅ clean
 - Added regression proof and validation notes for Trinity's implementation.
 - Approved implementation for merge.
 - Coordinated with Morpheus (analysis) and Trinity (implementation).
+
+## 2026-05-01T17:31:28Z — Orchestration: Sample.Simplified Rename Sprint  
+**Session:** sample-simplified-rename
+**Cross-agent sync:** Trinity + Tank coordinated rename validation workflow.
+**Decision merged:** "Preserve Sample.Simplified demo assembly name during project rename"
+**Validation completed:**
+- Project rename coherent with namespace and solution wiring ✅
+- Sample solution builds and tests cleanly ✅
+- App runs from renamed project ✅
+- CLI startup regression coverage maintained ✅

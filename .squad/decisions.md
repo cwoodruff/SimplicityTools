@@ -625,3 +625,10 @@ Established information architecture for Wave 3 docs-site delivery. Top-level la
 **Rationale:** Keeps homepage and hubs readable while making deep docs easy to style, link, and extend in later waves. Matches existing package and command boundaries instead of inventing a second documentation taxonomy.
 
 **Issues:** #55, #58, #59
+### 2026-05-01T13:31:28.564-04:00: Preserve Sample.Simplified demo assembly name during project rename
+**By:** Tank (Trinity cross-validated)
+**What:** Renamed the Sample.Simplified solution projects to `Sample.Simplified.App` and `Sample.Simplified.Tests`, but kept the runnable app assembly name as `Sample.Simplified.Demo` while updating project/file names, namespaces, solution wiring, and launch tests to the new paths.
+**Why:** The sample's developer-facing identity should match the solution naming convention, but the macOS startup regression is tied to executable assembly names ending in `.App`. Keeping the namespace/project rename separate from the output assembly name preserves the user-visible rename without reintroducing a launch failure.
+
+---
+
