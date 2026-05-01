@@ -120,3 +120,83 @@
 **Commit:** dab5ff5 (Sprint 7 Wave 1: Add NuGet badges, quickstart guide, and CLI examples)
 
 **Next step:** Wave 2 likely covers integration guides and CI/CD examples (not in scope for Wave 1, which cleanly unlocks documentation polish phase).
+
+## 2026-04-30T21:40:50Z - Sprint 7 Wave 2: Library Integration Documentation ✓
+
+**Spawn:** Link DevRel agent for Sprint 7 Wave 2 (library integration guides and expanded package documentation).
+
+**Issues completed:**
+- #46: Document library integration for Metrics, Filters, Tca, and Analyzers
+- #47: Expand README "Add to Your Project" section with package references
+
+**Deliverables:**
+
+1. **`docs/using-the-simplicity-tools.md` — "Library Integration" section (new):**
+   - Four dedicated subsections: Using SimplicityTools.Metrics, Filters, Tca, Analyzers
+   - Each includes: NuGet.org link, purpose statement, install instructions, basic usage code, key properties/methods
+   - Real property names (FilterVerdict.Filter, MoneyRange.TotalPerYear, etc.)
+   - Verdict structure breakdown with all properties documented
+   - TCA cost model explained (five dimensions: infrastructure, operational, coordination, cognitive, opportunity)
+   - Analyzer diagnostics table with SF0001–SF0007, categories, code-fix availability, thresholds
+   - Explicit `[PrimaryPath]` annotation guidance and convention-based fallback
+   - "Composing the packages" workflow showing all four libraries working together
+   - "When to use" guidance for each library
+
+2. **README.md — "Add to Your Project" section (expanded):**
+   - Organized into four clear options with headers and descriptions:
+     - 1. Analyzers only (IDE diagnostics)
+     - 2. Metrics library (core API)
+     - 3. Filters library (health verdicts)
+     - 4. TCA library (cost estimates)
+   - Each option includes: package XML, usage code example, cross-reference to full guide
+   - Explicit documentation of `PrivateAssets="all"` requirement and why it matters
+   - Clarified transitive dependency chain (Tca → Filters → Metrics)
+   - Version constraints explanation: libraries version together, analyzers and CLI independent
+   - Breaking-change guidance for major/minor/patch upgrades
+   - Direct link to comprehensive "Library Integration" guide in using-the-simplicity-tools.md
+
+**Design decisions:**
+- Kept documentation teaching-first: "what you get" before "how to use"
+- Used real property names and methods (validated against source code)
+- Added NuGet.org links for each package (ready for publication)
+- Structured integration guides as reference material (not tutorial flow)
+- Maintained zero-config promise: all examples work without simplicity.json
+- Cross-referenced README ↔ quickstart ↔ integration guides for natural navigation flow
+- Separated "quick start" (README) from "deep reference" (docs/using-the-simplicity-tools.md)
+
+**Validation:**
+- Built CLI from source to verify code examples compile
+- Checked actual FilterVerdict, TcaEstimate, and SimplicitySnapshot APIs against documentation
+- Verified package names and structure match .csproj files
+- Confirmed transitive dependencies match NuGet pack graph
+- Validated markdown anchors work
+- Ensured code examples use correct property names
+
+**Impact:** Package consumers now have:
+- Quick reference in README for "which package do I need?"
+- Copy-paste package reference examples for all four packages
+- Comprehensive API reference in docs with real property/method names
+- Clear guidance on composition (how packages depend on each other)
+- Explicit PrivateAssets documentation
+
+**Commit:** 4175a86 (Sprint 7 Wave 2: Comprehensive library integration documentation)
+
+**Wave 2 Status:** ✅ Complete — Both #46 and #47 resolved. Unlocks Wave 3 (CI/CD examples, troubleshooting).
+
+### Learnings from Wave 2
+
+**Documentation as product surface:**
+- Accurate property names matter more than eloquent descriptions. Consumers copy examples.
+- Transitive dependency relationships need explicit explanation to prevent confusion.
+
+**API versioning communication:**
+- Version constraints section prevents major upgrade surprises.
+
+**Composition patterns:**
+- Full end-to-end examples teach composition better than separate library docs.
+- Acknowledging CLI as alternative validates that not everyone needs libraries.
+
+**Key learnings for future work:**
+- Testing examples against actual source code prevents shipping wrong API references
+- Zero-config principle extends naturally to library usage
+- Teaching-first approach works across CLI, tutorials, and reference docs
