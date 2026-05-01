@@ -497,3 +497,39 @@ Morpheus, 2026-04-30T17:29:31.278-04:00
 **Impact:** New developers now see: README → Install badges → Try quickstart → Understand value (~5 min vs. 15–20 min prior).
 
 **Merge Status:** PR dab5ff5 ready to merge. Next: Tank review for publication readiness (M6 dry-run).
+
+### 2026-04-30T21:40:50Z: Sprint 7 Wave 2 — Library Integration Documentation Complete
+**By:** Link (DevRel)
+**What:** Completed Sprint 7 Wave 2 with comprehensive library integration documentation:
+- Issue #46: Added "Library Integration" section to `docs/using-the-simplicity-tools.md` with detailed guides for Metrics, Filters, TCA, and Analyzers packages
+- Issue #47: Expanded README "Add to Your Project" section with explicit package references, code examples, and version guidance for each library
+
+**Why:** Package consumers (both CLI users and library users) need a clear onboarding path. Wave 1 established "what is SimplicityTools" (badges + quickstart); Wave 2 answers "how do I use each package independently." This completes the first-run UX for all five packages and unlocks Wave 3 (CI/CD integration examples).
+
+**Key decisions locked in:**
+1. **Package organization in docs:** Each library gets its own subsection (Using SimplicityTools.Metrics, Filters, Tca, Analyzers) with NuGet link, purpose, install, basic usage, key APIs, and "when to use"
+2. **README as landing page, not reference:** README stays concise with links to full guide in `docs/using-the-simplicity-tools.md#library-integration`
+3. **Version constraints communication:** Explicit guidance: "Metrics + Filters + Tca version together; Analyzers + Cli independent"
+4. **PrivateAssets=all as documentation surface:** Treated as product UX, explained in README, code example, and TCA integration subsection
+5. **Composition example as teaching tool:** Single end-to-end example (collect → evaluate → estimate → report) shows interaction with validation note
+
+**Impact on user experience:**
+- New library consumers land on README, see 4 clear options, pick one, find copy-paste example
+- Links flow naturally to comprehensive docs for deeper dives
+- Code examples use real property names (validated against source) → low friction
+- Zero-config principle holds across CLI, quickstart, and library usage
+- First-run path now complete: badges → quickstart → integration guides → CI/CD examples
+
+**Wave 2 readiness:**
+- Both issues fully resolved with no rework
+- Markdown validated, links verified, examples tested against actual codebase
+- Documentation consistent with Wave 1 (Quick Install + quickstart)
+- Ready to publish alongside packages when they ship to NuGet
+
+**Unlocks Wave 3:**
+- Library integration documented ✅
+- CI/CD examples remain (GitHub Actions sample, pre-commit hooks, etc.)
+- Troubleshooting guide expansion (if needed)
+- Full first-run experience for teams using SimplicityTools in production
+
+**No blockers.** Wave 2 is complete and ready for merge.

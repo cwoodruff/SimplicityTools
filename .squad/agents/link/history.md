@@ -200,3 +200,20 @@
 - Testing examples against actual source code prevents shipping wrong API references
 - Zero-config principle extends naturally to library usage
 - Teaching-first approach works across CLI, tutorials, and reference docs
+
+## 2026-05-01T01:52:40Z: Sprint 7 Wave 2 — Library Integration Documentation Complete
+
+**Completed work:**
+- Issue #46: Library Integration section in docs/using-the-simplicity-tools.md with subsections for Metrics, Filters, TCA, and Analyzers packages
+- Issue #47: Expanded README "Add to Your Project" section with package references, code examples, and version guidance
+
+**Key decisions implemented:**
+1. Package organization: Each library gets dedicated subsection (purpose, NuGet link, install, usage, APIs, when to use)
+2. README strategy: Landing page with concise guidance + links to comprehensive docs
+3. Version constraints: Explicit guidance on version compatibility (Metrics/Filters/Tca together, Analyzers/Cli independent)
+4. PrivateAssets=all: Documented as product UX feature, not afterthought
+5. Composition example: End-to-end usage demonstration (collect → evaluate → estimate → report)
+
+**Impact:** First-run UX now complete for all five packages. Library consumers have clear copy-paste onboarding path matching zero-config promise.
+
+**Wave 2 status:** ✅ Complete. Ready for merge. No blockers. Unlocks Wave 3 (CI/CD integration examples).
