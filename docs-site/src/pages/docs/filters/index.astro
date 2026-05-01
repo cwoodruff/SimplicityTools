@@ -1,0 +1,37 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import DocsPageTemplate from '../../../components/templates/DocsPageTemplate.astro';
+import { withBase } from '../../../data/site';
+import { filterCards } from '../../../data/reference-content';
+---
+
+<BaseLayout title="Filters" description="Reference pages for the SimplicityTools teaching filters.">
+  <DocsPageTemplate
+    eyebrow="Filters"
+    title="Filter reference"
+    summary="The filters translate raw metrics into a teaching signal. They exist to answer what the team should do next, not just whether a number moved."
+    breadcrumbs={[
+      { label: 'Home', href: withBase('/') },
+      { label: 'Docs', href: withBase('/docs/') },
+      { label: 'Filters' }
+    ]}
+  >
+    <section class="section">
+      <div class="section-heading">
+        <h2>Three filters, three different questions</h2>
+        <p>Use the filter pages to understand what each verdict is optimizing for before you turn the score into a team decision.</p>
+      </div>
+      <div class="three-up">
+        {
+          filterCards.map((card) => (
+            <a class="link-card" href={withBase(card.href)}>
+              <span class="link-card__eyebrow">{card.eyebrow}</span>
+              <h3>{card.label}</h3>
+              <p>{card.description}</p>
+            </a>
+          ))
+        }
+      </div>
+    </section>
+  </DocsPageTemplate>
+</BaseLayout>

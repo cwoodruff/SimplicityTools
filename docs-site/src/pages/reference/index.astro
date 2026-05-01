@@ -1,0 +1,67 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ReferencePageTemplate from '../../components/templates/ReferencePageTemplate.astro';
+import { withBase } from '../../data/site';
+---
+
+<BaseLayout title="Reference hub" description="Find command, analyzer, configuration, package, and integration reference material for SimplicityTools.">
+  <ReferencePageTemplate
+    title="Reference hub"
+    summary="Use this hub when you already know you need details, not a tour. It connects the command surface, filter pages, analyzer diagnostics, and integration guides without forcing a trip back through the whole repo."
+    breadcrumbs={[{ label: 'Home', href: withBase('/') }, { label: 'Reference' }]}
+  >
+    <section class="section">
+      <div class="section-heading">
+        <h2>Most-used references</h2>
+        <p>These are the pages teams usually need once SimplicityTools is part of the normal workflow.</p>
+      </div>
+      <div class="card-grid">
+        <a class="link-card" href={withBase('/docs/commands/diff/')}>
+          <span class="link-card__eyebrow">Regression gate</span>
+          <h3>diff</h3>
+          <p>Understand the exact regression rules and when <code>--fail-on-regression</code> flips the exit code.</p>
+        </a>
+        <a class="link-card" href={withBase('/docs/configuration/')}>
+          <span class="link-card__eyebrow">Thresholds</span>
+          <h3>simplicity.json</h3>
+          <p>See the keys that control budgets, filter thresholds, and TCA inputs.</p>
+        </a>
+        <a class="link-card" href={withBase('/analyzers/')}>
+          <span class="link-card__eyebrow">Diagnostics</span>
+          <h3>SF0001-SF0007</h3>
+          <p>Browse each analyzer by ID, category, examples, code-fix support, and source link.</p>
+        </a>
+        <a class="link-card" href={withBase('/docs/filters/')}>
+          <span class="link-card__eyebrow">Interpretation</span>
+          <h3>Filter reference</h3>
+          <p>Understand what the verdicts are trying to teach before you change thresholds or argue about scores.</p>
+        </a>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Quick answers</h2>
+        <p>The questions below map directly to the pages that answer them fastest.</p>
+      </div>
+      <div class="table-list">
+        <div>
+          <strong>How do I fail CI on complexity regression?</strong>
+          <p>Start at <a href={withBase('/docs/commands/diff/')}>diff</a> and then use the <a href={withBase('/integration/ci-cd/')}>CI/CD guide</a>.</p>
+        </div>
+        <div>
+          <strong>What if I only want IDE diagnostics?</strong>
+          <p>Use the <a href={withBase('/integration/csproj-reference/')}>csproj reference</a> and <a href={withBase('/integration/ide-setup/')}>IDE setup</a> guides.</p>
+        </div>
+        <div>
+          <strong>How do I interpret a filter score drop?</strong>
+          <p>Open the <a href={withBase('/docs/filters/')}>filter reference</a> page that matches the verdict.</p>
+        </div>
+        <div>
+          <strong>How do I compose the packages directly?</strong>
+          <p>Use the <a href={withBase('/docs/library-usage/')}>library usage</a> page to keep dependency direction clean.</p>
+        </div>
+      </div>
+    </section>
+  </ReferencePageTemplate>
+</BaseLayout>

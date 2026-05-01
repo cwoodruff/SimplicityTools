@@ -1,0 +1,86 @@
+---
+import { withBase } from '../../data/site';
+import type { FilterDetail } from '../../data/reference-content';
+
+interface Props {
+  detail: FilterDetail;
+}
+
+const { detail } = Astro.props;
+---
+
+<section class="section">
+  <div class="section-heading">
+    <h2>The question this filter asks</h2>
+    <p>{detail.question}</p>
+  </div>
+  <div class="reference-facts">
+    <div>
+      <span class="muted-label">Shows up in</span>
+      <p>{detail.showsUpIn}</p>
+    </div>
+    <div>
+      <span class="muted-label">Pass threshold</span>
+      <p>{detail.passThreshold}</p>
+    </div>
+    <div>
+      <span class="muted-label">Primary use</span>
+      <p>{detail.primaryUse}</p>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-heading">
+    <h2>Signals it scores</h2>
+    <p>Each verdict combines several sub-scores so teams can see what is pulling the filter up or down.</p>
+  </div>
+  <div class="table-list">
+    {
+      detail.signals.map((signal) => (
+        <div>
+          <strong>{signal.name}</strong>
+          <p>{signal.description}</p>
+        </div>
+      ))
+    }
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-heading">
+    <h2>How to interpret the result</h2>
+    <p>{detail.interpretation}</p>
+  </div>
+  <ul class="bullet-list">
+    {detail.interpretationBullets.map((item) => <li>{item}</li>)}
+  </ul>
+</section>
+
+<section class="section">
+  <div class="section-heading">
+    <h2>What to do next when it drops</h2>
+    <p>Filters are only useful if they drive a clear next move.</p>
+  </div>
+  <ul class="bullet-list">
+    {detail.nextSteps.map((item) => <li>{item}</li>)}
+  </ul>
+</section>
+
+<section class="section">
+  <div class="section-heading">
+    <h2>Related pages</h2>
+    <p>Jump to the command or analyzer docs that typically trigger action from this filter.</p>
+  </div>
+  <div class="reference-grid">
+    {
+      detail.relatedLinks.map((link) => (
+        <a class="link-card" href={withBase(link.href)}>
+          <span class="link-card__eyebrow">{link.eyebrow}</span>
+          <h3>{link.label}</h3>
+          <p>{link.description}</p>
+        </a>
+      ))
+    }
+  </div>
+</section>

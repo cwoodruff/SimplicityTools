@@ -1,0 +1,63 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import DocsPageTemplate from '../../components/templates/DocsPageTemplate.astro';
+import ReferenceCodeBlock from '../../components/reference/ReferenceCodeBlock.astro';
+import { withBase } from '../../data/site';
+---
+
+<BaseLayout title="csproj reference" description="PackageReference guidance for SimplicityTools analyzers and primary-path annotations.">
+  <DocsPageTemplate
+    eyebrow="Integration"
+    title="csproj reference"
+    summary="Use a boring, explicit PackageReference shape. Analyzer packages should stay analyzer-only, and primary-path annotations should come from the metrics package only when you need that extra clarity."
+    breadcrumbs={[
+      { label: 'Home', href: withBase('/') },
+      { label: 'Integration', href: withBase('/integration/') },
+      { label: 'csproj reference' }
+    ]}
+  >
+    <section class="section">
+      <div class="section-heading">
+        <h2>Analyzer package contract</h2>
+        <p>The analyzer package should never leak into downstream consumers. Keep the reference private and explicit.</p>
+      </div>
+      <ReferenceCodeBlock
+        lang="xml"
+        code={`<ItemGroup>\n  <PackageReference Include="SimplicityTools.Analyzers" Version="x.y.z" PrivateAssets="all" />\n</ItemGroup>`}
+      />
+      <ul class="bullet-list">
+        <li><code>PrivateAssets="all"</code> keeps the analyzer package out of your published compile-time surface.</li>
+        <li>The analyzer package contributes diagnostics and code fixes only. It is not a runtime or API dependency.</li>
+        <li>Keep analyzer versioning independent from the Metrics / Filters / Tca package line when that serves your rollout cadence.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>When to add SimplicityTools.Metrics</h2>
+        <p>Add the metrics package only when your code wants the runtime/library surface or explicit primary-path annotations.</p>
+      </div>
+      <ReferenceCodeBlock
+        lang="xml"
+        code={`<ItemGroup>\n  <PackageReference Include="SimplicityTools.Metrics" Version="x.y.z" />\n</ItemGroup>`}
+      />
+      <ReferenceCodeBlock
+        lang="csharp"
+        label="Explicit primary path"
+        code={`using SimplicityTools.Metrics;\n\n[PrimaryPath]\npublic sealed class CheckoutHandler\n{\n    public Task HandleAsync(Request request) => Task.CompletedTask;\n}`}
+      />
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Best practices</h2>
+        <p>These keep the package boundaries honest instead of hiding architectural drift behind clever MSBuild tricks.</p>
+      </div>
+      <ul class="bullet-list">
+        <li>Keep analyzer references in the app or solution layer that actually benefits from the diagnostics.</li>
+        <li>Use Directory.Build.props only if the whole solution wants the analyzer contract, not because editing many project files is annoying.</li>
+        <li>Do not add the metrics package everywhere just to get [PrimaryPath]; add it where explicit annotation provides real value.</li>
+      </ul>
+    </section>
+  </DocsPageTemplate>
+</BaseLayout>

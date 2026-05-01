@@ -1,0 +1,74 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import DocsPageTemplate from '../../components/templates/DocsPageTemplate.astro';
+import ReferenceCodeBlock from '../../components/reference/ReferenceCodeBlock.astro';
+import { withBase } from '../../data/site';
+---
+
+<BaseLayout title="CI/CD integration" description="Use SimplicityTools in CI/CD without breaking the zero-config first-run promise.">
+  <DocsPageTemplate
+    eyebrow="Integration"
+    title="CI/CD integration"
+    summary="The clean contract is simple: analyze everywhere, protect the committed baseline with diff on pull requests, and publish the HTML report when people need a shareable artifact. Keep the first run simple; add gates only after the team agrees on the baseline."
+    breadcrumbs={[
+      { label: 'Home', href: withBase('/') },
+      { label: 'Integration', href: withBase('/integration/') },
+      { label: 'CI/CD' }
+    ]}
+  >
+    <section class="section">
+      <div class="section-heading">
+        <h2>Minimal pattern</h2>
+        <p>This is the smallest pipeline shape that preserves the zero-config first-run story while still enforcing regressions where it matters.</p>
+      </div>
+      <ol class="step-list">
+        <li>Install the .NET SDK required by the repo.</li>
+        <li>Install the global SimplicityTools CLI in the job.</li>
+        <li>Run <code>dotnet simplicity analyze</code> on all relevant builds.</li>
+        <li>Run <code>dotnet simplicity diff --fail-on-regression</code> on pull requests once the baseline is committed.</li>
+        <li>Optionally generate <code>dotnet simplicity report</code> and publish <code>simplicity-report/</code> as an artifact.</li>
+      </ol>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>GitHub Actions</h2>
+        <p>The GitHub Actions flow mirrors the docs source exactly: setup SDK, install tool, restore, analyze, and gate PRs with diff.</p>
+      </div>
+      <ReferenceCodeBlock
+        lang="yaml"
+        code={`name: Complexity Check\non: [pull_request, push]\n\njobs:\n  simplicity:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-dotnet@v4\n        with:\n          dotnet-version: '10.0.x'\n      - run: dotnet tool install --global SimplicityTools.Cli\n      - run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH\n      - run: dotnet restore\n      - run: dotnet simplicity analyze YourSolution.sln\n      - if: github.event_name == 'pull_request'\n        run: dotnet simplicity diff YourSolution.sln --fail-on-regression`}
+      />
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Azure Pipelines and GitLab CI</h2>
+        <p>The contract does not change. Only the setup step syntax is platform-specific.</p>
+      </div>
+      <div class="reference-grid">
+        <div class="card">
+          <h3>Azure Pipelines</h3>
+          <ReferenceCodeBlock lang="yaml" code={`- task: UseDotNet@2\n  inputs:\n    version: '10.0.x'\n- script: dotnet tool install --global SimplicityTools.Cli\n- script: echo "##vso[task.prependpath]$HOME/.dotnet/tools"\n- script: dotnet restore\n- script: dotnet simplicity diff $(Build.SourcesDirectory)/YourSolution.sln --fail-on-regression`} />
+        </div>
+        <div class="card">
+          <h3>GitLab CI</h3>
+          <ReferenceCodeBlock lang="yaml" code={`complexity-check:\n  image: mcr.microsoft.com/dotnet/sdk:10.0\n  script:\n    - dotnet tool install --global SimplicityTools.Cli\n    - export PATH="$HOME/.dotnet/tools:$PATH"\n    - dotnet restore\n    - dotnet simplicity analyze $CI_PROJECT_DIR/YourSolution.sln\n    - dotnet simplicity diff $CI_PROJECT_DIR/YourSolution.sln --fail-on-regression`} />
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Do not skip these operational details</h2>
+        <p>The common failures are boring, which is exactly why they keep breaking otherwise good pipelines.</p>
+      </div>
+      <ul class="bullet-list">
+        <li>Commit <code>.simplicity-baseline.json</code> if you expect diff to work in CI.</li>
+        <li>Add <code>~/.dotnet/tools</code> (or the Windows equivalent) to PATH explicitly in every job.</li>
+        <li>Restore the solution before running the CLI so analyzers and project references resolve consistently.</li>
+        <li>Publish <code>simplicity-report/</code> as an artifact if you want the HTML output to survive the job.</li>
+      </ul>
+    </section>
+  </DocsPageTemplate>
+</BaseLayout>

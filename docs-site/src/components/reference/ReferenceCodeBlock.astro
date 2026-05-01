@@ -1,0 +1,16 @@
+---
+import { Code } from 'astro:components';
+
+interface Props {
+  code: string;
+  lang?: string;
+  label?: string;
+}
+
+const { code, lang = 'text', label } = Astro.props;
+---
+
+<div class="reference-code-block">
+  {label ? <span class="muted-label">{label}</span> : null}
+  <Code code={code.trim()} lang={lang} />
+</div>

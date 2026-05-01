@@ -1,21 +1,26 @@
 ---
-updated_at: 2026-04-30T21:40:50.629-04:00
-focus_area: Sprint 7 kickoff - Packaging UX & Documentation
-active_issues: [44, 45, 46, 47, 48, 49]
+updated_at: 2026-05-01T05:50:05.727-04:00
+focus_area: Sprint 8 kickoff - Astro Website (tools.simplicity-first.dev)
+active_issues: [50, 51, 52, 55, 57, 58, 59, 60, 61]
 ---
 
 # What We're Focused On
 
-Sprint 7: Packaging UX & Documentation. Milestones 1–6 are complete. Team is now executing Milestone 7 on `sprint/7-packaging-ux-documentation` branch.
+Sprint 8: Astro Website. Milestones 1–7 are complete. Team is now executing Milestone 8 on `sprint/8-astro-website` branch.
 
 **Wave 1 (Ready Now):**
-- Link: #44 Add install badges and quickstart to README
-- Link: #45 Create first-run examples in docs
+- Link: #50 Astro project setup and GitHub Pages configuration
 
-**Wave 2 (After #44 complete):**
-- Link: #47 Update README 'Add to Your Project' section
-- Link: #46 Document library integration for each package
+**Wave 2 (After #50 complete):**
+- Link: #51 Navigation, layouts, and site structure
+- Link: #52 Homepage and landing pages (top-level pages)
 
-**Wave 3 (After #45, #46, #47 complete):**
-- Link: #48 Create package troubleshooting guide
-- Link: #49 Add package-specific CI/CD examples to docs
+**Wave 3 (After #51 and #52 complete):**
+- Link: #55 Analyzer documentation and code examples
+- Link: #58 Homepage and landing pages (content finalization)
+- Link: #59 Documentation pages: CLI commands and filters
+
+**Wave 4 (After Wave 3 complete):**
+- Link: #57 SEO, metadata, and build validation
+- Link: #60 Styling, brand consistency, and responsive design
+- Link: #61 Custom domain and GitHub Pages deployment workflow

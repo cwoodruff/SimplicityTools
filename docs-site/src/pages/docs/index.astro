@@ -1,0 +1,76 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import DocsPageTemplate from '../../components/templates/DocsPageTemplate.astro';
+import { docsLinks, withBase } from '../../data/site';
+---
+
+<BaseLayout title="Docs hub" description="Browse SimplicityTools docs by the job you are trying to do right now.">
+  <DocsPageTemplate
+    title="Docs hub"
+    summary="Start with the contract that matches your task. The site now carries the core command, filter, configuration, analyzer, and integration content directly instead of pushing everything back to repository markdown."
+    breadcrumbs={[{ label: 'Home', href: withBase('/') }, { label: 'Docs' }]}
+  >
+    <section class="section">
+      <div class="section-heading">
+        <h2>Core reference pages</h2>
+        <p>These are the pages most teams need after the first install succeeds.</p>
+      </div>
+      <div class="card-grid">
+        <a class="link-card" href={withBase('/docs/commands/')}>
+          <span class="link-card__eyebrow">CLI</span>
+          <h3>Command reference</h3>
+          <p>Usage, examples, output shape, and operational notes for analyze, report, baseline, diff, budget, and watch.</p>
+        </a>
+        <a class="link-card" href={withBase('/docs/filters/')}>
+          <span class="link-card__eyebrow">Filters</span>
+          <h3>Filter reference</h3>
+          <p>TwoAmTest, HalfRule, and PrimaryPathFirst explained as signals, interpretations, and next moves.</p>
+        </a>
+        <a class="link-card" href={withBase('/docs/configuration/')}>
+          <span class="link-card__eyebrow">Config</span>
+          <h3>simplicity.json reference</h3>
+          <p>The schema shape, default values, override patterns, and behavior rules that matter in real use.</p>
+        </a>
+        <a class="link-card" href={withBase('/docs/library-usage/')}>
+          <span class="link-card__eyebrow">Packages</span>
+          <h3>Library usage</h3>
+          <p>Use Metrics, Filters, Tca, and analyzers programmatically without blurring package boundaries.</p>
+        </a>
+        <a class="link-card" href={withBase('/analyzers/')}>
+          <span class="link-card__eyebrow">Analyzers</span>
+          <h3>Analyzer reference</h3>
+          <p>Overview plus SF0001-SF0007 pages with examples, code-fix notes, and source links.</p>
+        </a>
+        <a class="link-card" href={withBase('/integration/')}>
+          <span class="link-card__eyebrow">Integration</span>
+          <h3>IDE + CI guides</h3>
+          <p>Setup guidance for editors, pipelines, and csproj references that preserves the zero-config first-run promise.</p>
+        </a>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Repository markdown that still matters</h2>
+        <p>The site carries the core reference now, but the repository markdown is still useful for quick scans and long-form narrative.</p>
+      </div>
+      <div class="three-up">
+        <a class="link-card" href={docsLinks.quickstart} target="_blank" rel="noreferrer">
+          <span class="link-card__eyebrow">Markdown</span>
+          <h3>Quickstart</h3>
+          <p>Five essential commands with real sample output.</p>
+        </a>
+        <a class="link-card" href={docsLinks.guide} target="_blank" rel="noreferrer">
+          <span class="link-card__eyebrow">Markdown</span>
+          <h3>Full guide</h3>
+          <p>Long-form repository guide covering command behavior, integration, and troubleshooting notes.</p>
+        </a>
+        <a class="link-card" href={docsLinks.troubleshooting} target="_blank" rel="noreferrer">
+          <span class="link-card__eyebrow">Markdown</span>
+          <h3>Troubleshooting</h3>
+          <p>Symptom-first guidance for PATH, SDK, permissions, CI, and IDE cache issues.</p>
+        </a>
+      </div>
+    </section>
+  </DocsPageTemplate>
+</BaseLayout>

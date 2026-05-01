@@ -1,0 +1,25 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import DocsPageTemplate from '../../../components/templates/DocsPageTemplate.astro';
+import FilterReferencePage from '../../../components/reference/FilterReferencePage.astro';
+import { filterDetails } from '../../../data/reference-content';
+import { withBase } from '../../../data/site';
+
+const detail = filterDetails.halfrule;
+---
+
+<BaseLayout title={detail.title} description={detail.summary}>
+  <DocsPageTemplate
+    eyebrow="Filter"
+    title={detail.title}
+    summary={detail.summary}
+    breadcrumbs={[
+      { label: 'Home', href: withBase('/') },
+      { label: 'Docs', href: withBase('/docs/') },
+      { label: 'Filters', href: withBase('/docs/filters/') },
+      { label: detail.title }
+    ]}
+  >
+    <FilterReferencePage detail={detail} />
+  </DocsPageTemplate>
+</BaseLayout>

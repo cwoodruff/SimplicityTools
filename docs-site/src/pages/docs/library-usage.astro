@@ -1,0 +1,75 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import DocsPageTemplate from '../../components/templates/DocsPageTemplate.astro';
+import ReferenceCodeBlock from '../../components/reference/ReferenceCodeBlock.astro';
+import { withBase } from '../../data/site';
+---
+
+<BaseLayout title="Library usage" description="Use SimplicityTools packages programmatically instead of going through the CLI.">
+  <DocsPageTemplate
+    eyebrow="Libraries"
+    title="Library usage"
+    summary="The CLI is the fastest front door, but the packages are composable when you need to embed metrics, filters, TCA estimates, or analyzer annotations into your own tooling. Keep the dependency direction clean: Metrics first, Filters on top, Tca on top of both, analyzers separately."
+    breadcrumbs={[
+      { label: 'Home', href: withBase('/') },
+      { label: 'Docs', href: withBase('/docs/') },
+      { label: 'Library usage' }
+    ]}
+  >
+    <section class="section">
+      <div class="section-heading">
+        <h2>Package roles</h2>
+        <p>Each package owns a different layer of the contract.</p>
+      </div>
+      <div class="three-up">
+        <div class="card">
+          <h3>Metrics</h3>
+          <p>Collect a <code>SimplicitySnapshot</code> from a solution. This is the foundation layer.</p>
+        </div>
+        <div class="card">
+          <h3>Filters</h3>
+          <p>Evaluate the snapshot into pass/fail teaching verdicts for TwoAmTest, HalfRule, and PrimaryPathFirst.</p>
+        </div>
+        <div class="card">
+          <h3>Tca</h3>
+          <p>Turn the same snapshot and verdicts into an annual cost estimate for architecture drag.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Compose the stack explicitly</h2>
+        <p>Start with the snapshot, then add interpretation and cost. Do not jump straight to TCA if you still need to explain the underlying shape.</p>
+      </div>
+      <ReferenceCodeBlock
+        lang="csharp"
+        code={`using SimplicityTools.Filters;\nusing SimplicityTools.Metrics;\nusing SimplicityTools.Tca;\n\nvar collector = new SimplicityCollector();\nvar snapshot = await collector.CollectAsync("path/to/Solution.sln");\n\nvar verdicts = new[]\n{\n    TwoAmTestEvaluator.Evaluate(snapshot),\n    HalfRuleEvaluator.Evaluate(snapshot),\n    PrimaryPathFirstEvaluator.Evaluate(snapshot)\n};\n\nvar estimate = TcaEstimate.Create(snapshot, verdicts);\n\nConsole.WriteLine(snapshot.ToSummary());\nConsole.WriteLine(estimate.ToExecutiveSummary());`}
+      />
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Versioning guidance</h2>
+        <p>Package boundaries only help if upgrades remain legible.</p>
+      </div>
+      <ul class="bullet-list">
+        <li><code>SimplicityTools.Metrics</code>, <code>SimplicityTools.Filters</code>, and <code>SimplicityTools.Tca</code> version together.</li>
+        <li><code>SimplicityTools.Analyzers</code> and <code>SimplicityTools.Cli</code> release independently.</li>
+        <li>Use the same version across Metrics / Filters / Tca unless you are deliberately testing a breaking change boundary.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>When to stay with the CLI instead</h2>
+        <p>Just because the packages are composable does not mean every team needs to wire them manually.</p>
+      </div>
+      <ul class="bullet-list">
+        <li>Use the CLI when you need a quick read, a baseline gate, or a shareable report with no custom plumbing.</li>
+        <li>Use the libraries when you are embedding snapshots or verdicts into another tool, dashboard, or workflow you already own.</li>
+        <li>Use analyzers separately when the main need is IDE/build feedback rather than a custom application integration.</li>
+      </ul>
+    </section>
+  </DocsPageTemplate>
+</BaseLayout>
