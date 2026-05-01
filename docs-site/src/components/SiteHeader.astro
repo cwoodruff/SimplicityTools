@@ -1,0 +1,92 @@
+---
+import { cliPackageUrl, primaryNavigation, repoUrl, withBase } from '../data/site';
+
+interface Props {
+  pathname: string;
+}
+
+const { pathname } = Astro.props;
+const currentPath = pathname.endsWith('/') ? pathname : `${pathname}/`;
+const isActive = (href: string) => {
+  const target = withBase(href);
+  return href === '/' ? currentPath === target : currentPath.startsWith(target);
+};
+---
+
+<header class="site-header" data-site-header>
+  <div class="container site-header__inner">
+    <a class="brand" href={withBase('/')}>
+      <span class="brand__mark">S</span>
+      <span>
+        <strong>SimplicityTools</strong>
+        <small>Measure complexity before it measures your team.</small>
+      </span>
+    </a>
+
+    <button
+      class="site-nav-toggle"
+      type="button"
+      aria-controls="site-nav"
+      aria-expanded="false"
+      aria-label="Toggle primary navigation"
+      data-nav-toggle
+    >
+      Menu
+    </button>
+
+    <nav class="site-nav" id="site-nav" aria-label="Primary" data-nav>
+      <div class="site-nav__links">
+        {
+          primaryNavigation.map((link) => (
+            <a
+              class:list={["site-nav__link", { 'is-active': isActive(link.href) }]}
+              href={withBase(link.href)}
+              aria-current={isActive(link.href) ? 'page' : undefined}
+            >
+              {link.label}
+            </a>
+          ))
+        }
+      </div>
+      <div class="site-nav__actions">
+        <a class="button button--ghost button--sm" href={repoUrl} target="_blank" rel="noreferrer">GitHub</a>
+        <a class="button button--sm" href={cliPackageUrl} target="_blank" rel="noreferrer">Install</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<script>
+  const header = document.querySelector('[data-site-header]');
+  const button = header?.querySelector('[data-nav-toggle]');
+  const nav = header?.querySelector('[data-nav]');
+
+  if (button instanceof HTMLButtonElement && nav instanceof HTMLElement) {
+    const closeMenu = () => {
+      nav.dataset.open = 'false';
+      button.setAttribute('aria-expanded', 'false');
+    };
+
+    button.addEventListener('click', () => {
+      const nextState = nav.dataset.open === 'true' ? 'false' : 'true';
+      nav.dataset.open = nextState;
+      button.setAttribute('aria-expanded', nextState);
+    });
+
+    nav.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', () => closeMenu());
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeMenu();
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 769) {
+        closeMenu();
+      }
+    });
+  }
+</script>

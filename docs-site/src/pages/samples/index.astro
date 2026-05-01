@@ -1,0 +1,50 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import DocsPageTemplate from '../../components/templates/DocsPageTemplate.astro';
+import { docsLinks, withBase } from '../../data/site';
+---
+
+<BaseLayout
+  title="Samples hub"
+  description="Explore the simplified and over-engineered sample solutions used throughout the SimplicityTools docs."
+>
+  <DocsPageTemplate
+    eyebrow="Samples"
+    title="Samples hub"
+    summary="The samples are teaching assets, not filler. Use them to show what healthy shape looks like, to compare metric output, and to validate the CLI flow before you point the tool at your own solution."
+    breadcrumbs={[{ label: 'Home', href: withBase('/') }, { label: 'Samples' }]}
+  >
+    <section class="section">
+      <div class="section-heading">
+        <h2>Sample solutions</h2>
+        <p>Each sample is already used in the docs. This hub makes them easier to find from the site.</p>
+      </div>
+      <div class="two-up">
+        <a class="sample-card" href={docsLinks.simplifiedSample} target="_blank" rel="noreferrer">
+          <span class="link-card__eyebrow">Healthy shape</span>
+          <h3>Sample.Simplified</h3>
+          <p>A lean reference solution with a small project graph, low complexity, and a clear primary path.</p>
+          <pre><code>dotnet simplicity analyze samples/Sample.Simplified/Sample.Simplified.sln</code></pre>
+        </a>
+        <a class="sample-card" href={docsLinks.overEngineeredSample} target="_blank" rel="noreferrer">
+          <span class="link-card__eyebrow">Anti-pattern reference</span>
+          <h3>Sample.OverEngineered</h3>
+          <p>A deliberately heavy solution that makes abstraction depth, drift, and report storytelling obvious.</p>
+          <pre><code>dotnet simplicity analyze samples/Sample.OverEngineered/Sample.OverEngineered.sln</code></pre>
+        </a>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Recommended teaching flow</h2>
+        <p>Use the samples to make the tool value concrete before you ask a team to trust the numbers on their own codebase.</p>
+      </div>
+      <ol class="step-list">
+        <li>Run <code>analyze</code> on both samples and compare the metrics summary.</li>
+        <li>Generate a report for the over-engineered sample so the visual story becomes obvious.</li>
+        <li>Use <code>budget</code> and <code>diff</code> to show how the toolkit supports ongoing decisions, not just snapshots.</li>
+      </ol>
+    </section>
+  </DocsPageTemplate>
+</BaseLayout>

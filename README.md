@@ -4,6 +4,8 @@
 
 SimplicityTools makes it obvious when a codebase becomes harder to understand, change, and operate. It runs on your first build with zero config, surfaces Roslyn diagnostics inline in your editor, and produces a shareable HTML report for teams and stakeholders.
 
+**Website:** https://tools.simplicity-first.dev
+
 ## The Problem
 
 As solutions grow, complexity compounds. Extra layers creep in. Unused dependencies accumulate. Method complexity drifts. Your team spends more time understanding the codebase than changing it. But most complexity metrics stop at counting lines and cyclomatic complexity. They don't explain *what* to fix or *why* it matters to the business.
@@ -242,6 +244,7 @@ SimplicityTools/
 ├── docs/
 │   ├── using-the-simplicity-tools.md   # Complete command reference and workflows
 │   └── simplicity-schema.json           # Configuration schema reference
+├── docs-site/                          # Astro site for https://tools.simplicity-first.dev
 └── tests/
     ├── SimplicityTools.Metrics.Tests/
     ├── SimplicityTools.Filters.Tests/
@@ -256,6 +259,28 @@ SimplicityTools/
 - **Self-contained reports** — HTML reports include all CSS inline. No external assets. Works offline, in air-gapped CI/CD, anywhere.
 - **Primary-path teaching** — The toolkit teaches "what's your core business flow?" through explicit `[PrimaryPath]` annotations or convention-based detection (Controllers, Endpoints, Handlers, Pages).
 - **Roslyn round-trip validation** — Code fixes are tested end-to-end: analyze → fix → reanalyze to verify the fix actually resolved the issue.
+
+## Website Development
+
+- Live site: https://tools.simplicity-first.dev
+- Local docs workflow:
+  ```bash
+  cd docs-site
+  npm install
+  npm run dev
+  ```
+- Validation before deploy:
+  ```bash
+  cd docs-site
+  npm run build:validate
+  ```
+- Deployment runs from `.github/workflows/deploy-site.yml` on pushes to `main` and publishes `docs-site/dist/` to `gh-pages`.
+- Operator checklist after merge to `main`:
+  1. Let the first successful `Deploy docs site` workflow create the `gh-pages` branch.
+  2. In GitHub repository settings, set Pages to deploy from `gh-pages` / root.
+  3. Set the custom domain to `tools.simplicity-first.dev` and confirm `gh-pages/CNAME` still contains that value.
+  4. Create or verify the DNS `CNAME` record: `tools.simplicity-first.dev` → `cwoodruff.github.io`.
+  5. Wait for DNS/Pages propagation, then verify `https://tools.simplicity-first.dev`, `/robots.txt`, and `/sitemap.xml`.
 
 ## Next Steps
 

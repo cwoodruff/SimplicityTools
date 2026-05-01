@@ -1,0 +1,39 @@
+---
+import { docsLinks, repoUrl, withBase } from '../data/site';
+---
+
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div>
+      <p class="footer-title">SimplicityTools</p>
+      <p>
+        A .NET toolkit for spotting architectural drag early, teaching better trade-offs, and keeping first-run
+        value obvious.
+      </p>
+    </div>
+    <div>
+      <p class="footer-title">Explore</p>
+      <ul class="footer-links">
+        <li><a href={withBase('/getting-started/')}>Getting started</a></li>
+        <li><a href={withBase('/features/')}>Features</a></li>
+        <li><a href={withBase('/samples/')}>Samples</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="footer-title">Reference</p>
+      <ul class="footer-links">
+        <li><a href={withBase('/docs/')}>Docs hub</a></li>
+        <li><a href={withBase('/docs/commands/')}>CLI commands</a></li>
+        <li><a href={withBase('/analyzers/')}>Analyzer docs</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="footer-title">Project</p>
+      <ul class="footer-links">
+        <li><a href={repoUrl} target="_blank" rel="noreferrer">GitHub repository</a></li>
+        <li><a href={docsLinks.contributing} target="_blank" rel="noreferrer">Contributing</a></li>
+        <li><a href={docsLinks.issues} target="_blank" rel="noreferrer">Open an issue</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>

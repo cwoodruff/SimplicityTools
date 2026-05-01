@@ -1,0 +1,38 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import DocsPageTemplate from '../../components/templates/DocsPageTemplate.astro';
+import { withBase } from '../../data/site';
+---
+
+<BaseLayout title="Integration guides" description="Setup guides for using SimplicityTools analyzers and CLI in IDEs, CI/CD pipelines, and csproj files.">
+  <DocsPageTemplate
+    eyebrow="Integration"
+    title="Integration guides"
+    summary="Use these guides when you are moving from a local first run to shared team usage. The contract stays the same; the packaging and workflow details are what change."
+    breadcrumbs={[
+      { label: 'Home', href: withBase('/') },
+      { label: 'Docs', href: withBase('/docs/') },
+      { label: 'Integration' }
+    ]}
+  >
+    <section class="section">
+      <div class="three-up">
+        <a class="link-card" href={withBase('/integration/ide-setup/')}>
+          <span class="link-card__eyebrow">IDE</span>
+          <h3>ide-setup</h3>
+          <p>Light up diagnostics and the two in-repo code fixes in Visual Studio, Rider, and VS Code.</p>
+        </a>
+        <a class="link-card" href={withBase('/integration/ci-cd/')}>
+          <span class="link-card__eyebrow">Pipeline</span>
+          <h3>ci-cd</h3>
+          <p>Protect the baseline and publish reports from GitHub Actions, Azure Pipelines, and GitLab CI.</p>
+        </a>
+        <a class="link-card" href={withBase('/integration/csproj-reference/')}>
+          <span class="link-card__eyebrow">MSBuild</span>
+          <h3>csproj-reference</h3>
+          <p>Use the correct PackageReference contract and explicit primary-path annotations without leaking analyzer packages downstream.</p>
+        </a>
+      </div>
+    </section>
+  </DocsPageTemplate>
+</BaseLayout>

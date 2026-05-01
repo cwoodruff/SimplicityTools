@@ -1,0 +1,37 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import DocsPageTemplate from '../../../components/templates/DocsPageTemplate.astro';
+import { withBase } from '../../../data/site';
+import { commandCards } from '../../../data/reference-content';
+---
+
+<BaseLayout title="CLI commands" description="Reference pages for the six SimplicityTools CLI commands.">
+  <DocsPageTemplate
+    eyebrow="CLI"
+    title="CLI commands"
+    summary="The CLI surface is intentionally small: six commands that cover first-run analysis, baselines, regression checks, budgets, reports, and live watch feedback. Start from the contract, then wire it into your workflow."
+    breadcrumbs={[
+      { label: 'Home', href: withBase('/') },
+      { label: 'Docs', href: withBase('/docs/') },
+      { label: 'Commands' }
+    ]}
+  >
+    <section class="section">
+      <div class="section-heading">
+        <h2>Command map</h2>
+        <p>Pick the page that matches the job you are trying to do right now.</p>
+      </div>
+      <div class="card-grid">
+        {
+          commandCards.map((card) => (
+            <a class="link-card" href={withBase(card.href)}>
+              <span class="link-card__eyebrow">{card.eyebrow}</span>
+              <h3>{card.label}</h3>
+              <p>{card.description}</p>
+            </a>
+          ))
+        }
+      </div>
+    </section>
+  </DocsPageTemplate>
+</BaseLayout>

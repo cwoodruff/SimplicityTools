@@ -1,0 +1,73 @@
+---
+import '../styles/site.css';
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import {
+  absoluteUrl,
+  siteDescription,
+  siteTitle,
+  socialImageAlt,
+  socialImagePath
+} from '../data/site';
+
+interface Props {
+  title?: string;
+  description?: string;
+  pageClass?: string;
+  canonicalPath?: string;
+  ogType?: 'website' | 'article';
+  robots?: string;
+  socialImage?: string;
+}
+
+const {
+  title = siteTitle,
+  description = siteDescription,
+  pageClass = '',
+  canonicalPath,
+  ogType = 'website',
+  robots = 'index,follow',
+  socialImage = socialImagePath
+} = Astro.props;
+const pageTitle = title === siteTitle ? title : `${title} | ${siteTitle}`;
+const canonicalUrl = absoluteUrl(canonicalPath ?? Astro.url.pathname);
+const socialImageUrl = absoluteUrl(socialImage);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <meta name="robots" content={robots} />
+    <meta name="theme-color" content="#050816" />
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="sitemap" href={absoluteUrl('/sitemap.xml')} />
+    <title>{pageTitle}</title>
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:site_name" content={siteTitle} />
+    <meta property="og:image" content={socialImageUrl} />
+    <meta property="og:image:alt" content={socialImageAlt} />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImageUrl} />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <div class="site-shell">
+      <SiteHeader pathname={Astro.url.pathname} />
+      <main id="main-content" class={`page-shell ${pageClass}`.trim()}>
+        <slot />
+      </main>
+      <SiteFooter />
+    </div>
+  </body>
+</html>

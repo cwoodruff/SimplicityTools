@@ -1,0 +1,80 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import DocsPageTemplate from '../../components/templates/DocsPageTemplate.astro';
+import ReferenceCodeBlock from '../../components/reference/ReferenceCodeBlock.astro';
+import { withBase } from '../../data/site';
+---
+
+<BaseLayout title="Configuration" description="simplicity.json reference for SimplicityTools CLI and report behavior.">
+  <DocsPageTemplate
+    eyebrow="Configuration"
+    title="simplicity.json reference"
+    summary="Configuration is optional on the first run and strict once you add it. Place simplicity.json beside the solution, override only what you need, and let unsupported values fail fast instead of silently changing the contract."
+    breadcrumbs={[
+      { label: 'Home', href: withBase('/') },
+      { label: 'Docs', href: withBase('/docs/') },
+      { label: 'Configuration' }
+    ]}
+  >
+    <section class="section">
+      <div class="section-heading">
+        <h2>Full shape</h2>
+        <p>The current schema covers TCA inputs and filter thresholds.</p>
+      </div>
+      <ReferenceCodeBlock
+        lang="json"
+        code={`{\n  "tca": {\n    "teamSize": 8,\n    "averageEngineerMonthlySalaryUsd": 15000,\n    "estimatedMonthlyIncidentCount": 4,\n    "onCallHourlyRateUsd": 150,\n    "attritionCoefficientPercent": 15\n  },\n  "filters": {\n    "primaryPathRatioTarget": 0.6,\n    "prematureAbstractionRatioTarget": 0.25,\n    "maxMethodComplexity": 5,\n    "maxOnboardingHours": 40,\n    "passingScore": 0.7\n  }\n}`}
+      />
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Behavior rules</h2>
+        <p>The loader is permissive about missing files and strict about bad files. That is an intentional boundary.</p>
+      </div>
+      <ul class="bullet-list">
+        <li>Missing <code>simplicity.json</code> produces a warning and the CLI continues with built-in defaults.</li>
+        <li>Partial files are allowed; omitted values fall back to defaults.</li>
+        <li>Unsupported properties and out-of-range values fail fast instead of being ignored.</li>
+        <li>The file is loaded from the solution directory only, not by walking parent folders.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Practical minimal override</h2>
+        <p>Override only the thresholds you actually want the team to own.</p>
+      </div>
+      <ReferenceCodeBlock
+        lang="json"
+        code={`{\n  "filters": {\n    "primaryPathRatioTarget": 0.75,\n    "maxMethodComplexity": 4\n  }\n}`}
+      />
+      <p class="section-note">If a threshold changes, treat it like a policy decision. Otherwise you are just moving the goalposts to make the output quieter.</p>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Where configuration shows up</h2>
+        <p>Different commands consume the same file in different ways.</p>
+      </div>
+      <div class="table-list">
+        <div>
+          <strong>budget</strong>
+          <p>Uses filter thresholds directly to render the four budget dimensions.</p>
+        </div>
+        <div>
+          <strong>report</strong>
+          <p>Uses the same thresholds in the HTML budget section and related guidance.</p>
+        </div>
+        <div>
+          <strong>watch</strong>
+          <p>Reloads the file on every pass so threshold changes show up without restarting the process.</p>
+        </div>
+        <div>
+          <strong>TCA inputs</strong>
+          <p>Feed cost-of-complexity calculations for CLI/report flows; library consumers can pass inputs directly instead.</p>
+        </div>
+      </div>
+    </section>
+  </DocsPageTemplate>
+</BaseLayout>

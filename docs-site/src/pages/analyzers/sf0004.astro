@@ -1,0 +1,24 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ReferencePageTemplate from '../../components/templates/ReferencePageTemplate.astro';
+import AnalyzerReferencePage from '../../components/reference/AnalyzerReferencePage.astro';
+import { analyzerDetails } from '../../data/reference-content';
+import { withBase } from '../../data/site';
+
+const detail = analyzerDetails.sf0004;
+---
+
+<BaseLayout title={detail.id} description={detail.summary}>
+  <ReferencePageTemplate
+    eyebrow="Analyzer"
+    title={detail.id}
+    summary={detail.summary}
+    breadcrumbs={[
+      { label: 'Home', href: withBase('/') },
+      { label: 'Analyzers', href: withBase('/analyzers/') },
+      { label: detail.id }
+    ]}
+  >
+    <AnalyzerReferencePage detail={detail} />
+  </ReferencePageTemplate>
+</BaseLayout>

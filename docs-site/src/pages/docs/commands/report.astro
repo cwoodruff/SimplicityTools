@@ -1,0 +1,31 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import DocsPageTemplate from '../../../components/templates/DocsPageTemplate.astro';
+import CommandReferencePage from '../../../components/reference/CommandReferencePage.astro';
+import { commandDetails } from '../../../data/reference-content';
+import { withBase } from '../../../data/site';
+
+const detail = commandDetails.report;
+---
+
+<BaseLayout title={
+  detail.title === 'analyze' ? 'analyze command' :
+  detail.title === 'report' ? 'report command' :
+  detail.title === 'baseline' ? 'baseline command' :
+  detail.title === 'diff' ? 'diff command' :
+  detail.title === 'budget' ? 'budget command' : 'watch command'
+} description={detail.summary}>
+  <DocsPageTemplate
+    eyebrow="CLI command"
+    title={detail.title}
+    summary={detail.summary}
+    breadcrumbs={[
+      { label: 'Home', href: withBase('/') },
+      { label: 'Docs', href: withBase('/docs/') },
+      { label: 'Commands', href: withBase('/docs/commands/') },
+      { label: detail.title }
+    ]}
+  >
+    <CommandReferencePage detail={detail} />
+  </DocsPageTemplate>
+</BaseLayout>

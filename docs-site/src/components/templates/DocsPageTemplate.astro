@@ -1,0 +1,28 @@
+---
+import Breadcrumbs from '../Breadcrumbs.astro';
+
+interface Crumb {
+  label: string;
+  href?: string;
+}
+
+interface Props {
+  title: string;
+  summary: string;
+  eyebrow?: string;
+  breadcrumbs?: Crumb[];
+}
+
+const { title, summary, eyebrow = 'Docs hub', breadcrumbs = [] } = Astro.props;
+---
+
+<section class="page-hero page-hero--compact">
+  {breadcrumbs.length > 0 ? <Breadcrumbs items={breadcrumbs} /> : null}
+  <p class="eyebrow">{eyebrow}</p>
+  <h1>{title}</h1>
+  <p class="lede max-copy">{summary}</p>
+</section>
+
+<div class="section-stack">
+  <slot />
+</div>

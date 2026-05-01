@@ -1,0 +1,61 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ReferencePageTemplate from '../../components/templates/ReferencePageTemplate.astro';
+import { withBase } from '../../data/site';
+import { analyzerCards } from '../../data/reference-content';
+---
+
+<BaseLayout title="Analyzer reference" description="Overview of the seven SimplicityTools Roslyn diagnostics and the setup guides that make them useful in IDEs and CI.">
+  <ReferencePageTemplate
+    eyebrow="Analyzers"
+    title="Analyzer reference"
+    summary="SimplicityTools ships seven Roslyn diagnostics. Two of them fix code for you, all of them exist to teach a simpler shape, and each one maps back to one of the Simplicity-First filters."
+    breadcrumbs={[
+      { label: 'Home', href: withBase('/') },
+      { label: 'Reference', href: withBase('/reference/') },
+      { label: 'Analyzers' }
+    ]}
+  >
+    <section class="section">
+      <div class="section-heading">
+        <h2>SF0001–SF0007</h2>
+        <p>Browse individual diagnostics for firing conditions, examples, code-fix details, and source links.</p>
+      </div>
+      <div class="card-grid">
+        {
+          analyzerCards.map((card) => (
+            <a class="link-card" href={withBase(card.href)}>
+              <span class="link-card__eyebrow">{card.eyebrow}</span>
+              <h3>{card.label}</h3>
+              <p>{card.description}</p>
+            </a>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Install and operational guides</h2>
+        <p>The diagnostic pages explain the rule. The integration guides explain how to make the rules show up in the places teams already work.</p>
+      </div>
+      <div class="three-up">
+        <a class="link-card" href={withBase('/integration/ide-setup/')}>
+          <span class="link-card__eyebrow">IDE</span>
+          <h3>IDE setup</h3>
+          <p>Visual Studio, Rider, and VS Code guidance for getting diagnostics and code fixes to light up reliably.</p>
+        </a>
+        <a class="link-card" href={withBase('/integration/ci-cd/')}>
+          <span class="link-card__eyebrow">CI</span>
+          <h3>CI/CD integration</h3>
+          <p>Use analyzers and CLI checks together so the same simplification contract shows up in pull requests.</p>
+        </a>
+        <a class="link-card" href={withBase('/integration/csproj-reference/')}>
+          <span class="link-card__eyebrow">MSBuild</span>
+          <h3>csproj reference</h3>
+          <p>Correct PackageReference shape, PrivateAssets guidance, and primary-path annotation best practices.</p>
+        </a>
+      </div>
+    </section>
+  </ReferencePageTemplate>
+</BaseLayout>
