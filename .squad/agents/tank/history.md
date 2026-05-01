@@ -108,3 +108,20 @@ Warnings: 0               ✅ clean
 - All Analyzer docs (SF0001–SF0007), CLI/filter/config/library pages, integration guides passed Build, Structure, and Responsive validation phases.
 - Docs-site build passing; zero errors/warnings.
 - Pre-existing non-doc validation failure noted in root solution tests (TcaPackageValidationTests.PackedTcaPackage_ShipsOnlyLibraryAssets_DeclaresLibraryDependencies_AndBuildsInAConsumer). Unrelated to Wave 3 content work; investigation deferred to post-Wave-3.
+
+## Learnings
+
+- **2026-05-01T12:58:06.465-04:00:** Sample.Simplified startup on macOS is sensitive to the executable assembly name. `samples/Sample.Simplified/App/App.csproj` now uses `Sample.Simplified.Demo` while keeping `RootNamespace` stable, and launch coverage lives in `samples/Sample.Simplified/App.Tests/EndToEnd/StartupSmokeTests.cs` plus `tests/SimplicityTools.Cli.Tests/AnalyzeCommandTests.cs`.
+
+## Sample.Simplified Startup Fix — Regression Validation & Approval
+**Timestamp:** 2026-05-01T16:58:06.465Z
+
+**Decision:** "Sample.Simplified startup proof must exercise the real launcher" — Treat the startup fix as valid only when executable assembly name avoids `.App` suffix and both generated apphost + `dotnet run --no-build` start cleanly.
+
+**Validation Work:**
+- Reproduced the macOS startup failure with the `.App` suffix.
+- Verified in-process tests alone did not cover the failure path.
+- Confirmed regression only shows when sample is launched via real process (developer startup path).
+- Added regression proof and validation notes for Trinity's implementation.
+- Approved implementation for merge.
+- Coordinated with Morpheus (analysis) and Trinity (implementation).

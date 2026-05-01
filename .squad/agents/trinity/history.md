@@ -31,6 +31,7 @@
 - 2026-04-30T06:57:15.306-04:00: SF0005 should stay scoped to classes only; broadening constructor-count warnings to structs turns data-carrier shapes into false positives instead of surfacing service objects doing too much.
 - 2026-04-30T06:57:15.306-04:00: For SF0001, removing a base interface safely requires inlining its members into direct dependent interfaces before dropping the inheritance edge; otherwise consumers typed to the surviving interface lose inherited members and the fix breaks compilation.
 - 2026-04-30T06:57:15.306-04:00: Explicit interface implementations need the same revision pass to check the original specifier symbol before rewriting, because Roslyn semantic lookups on already-rewritten nodes are no longer anchored to the original syntax tree.
+- 2026-05-01T12:58:06.465-04:00: On macOS, executable assembly names that end with `.App` can break `dotnet run` startup even when the sample logic is fine, because the generated launch target collides with the platform's app-bundle semantics. For `samples/Sample.Simplified/App/App.csproj`, renaming the output assembly to `Sample.Simplified.Demo` and covering it with a `dotnet run` smoke test in `App.Tests/EndToEnd/StartupSmokeTests.cs` keeps the startup path deterministic.
 
 ---
 
@@ -126,3 +127,15 @@
 - Analyzer pages deployed under `/analyzers/` route as part of information architecture for Wave 3.
 - Deep reference material organized into task-shaped sections alongside CLI, filter, config, and library usage guides.
 - Documentation complete and build passing; ready for production deployment.
+
+## Sample.Simplified Startup Fix — macOS Native Apphost Issue Resolved
+**Timestamp:** 2026-05-01T16:58:06.465Z
+
+**Decision:** "Avoid `.App` executable names for macOS-run samples" — Renamed Sample.Simplified executable assembly from `Sample.Simplified.App` to `Sample.Simplified.Demo` and added `dotnet run` smoke test.
+
+**Implementation:**
+- On macOS, `dotnet run` was exiting with code 137 during startup while sample logic was healthy.
+- Root cause: The `.App` suffix is an unsafe launch target under Apple integrity enforcement.
+- Solution: Use non-`.App` assembly name to keep sample runnable with regression coverage.
+- Added regression proof through real process launch test in `samples/Sample.Simplified/App.Tests/EndToEnd/StartupSmokeTests.cs`.
+- Coordinated with Morpheus (root-cause) and Tank (validation).

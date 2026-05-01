@@ -1,5 +1,26 @@
 # Squad Decisions
 
+### 2026-05-01T12:58:06.465-04:00: Sample.Simplified startup should avoid native apphost
+**By:** Morpheus
+**What:** For `samples/Sample.Simplified/App/App.csproj`, disable native apphost generation and rely on the managed host path (`dotnet` launching the DLL) for local startup.
+**Why:** In this repo worktree on macOS, the generated apphost is ad-hoc signed and rejected at launch under Apple integrity enforcement, which kills the sample before `Main()` runs. The DLL executes correctly via `dotnet exec`, so this is a host packaging issue, not an application logic issue. For sample apps, zero-config first run matters more than producing a native launcher.
+
+---
+
+### 2026-05-01T12:58:06.465-04:00: Sample.Simplified startup proof must exercise the real launcher
+**By:** Tank
+**What:** Treat the Sample.Simplified startup fix as valid only when the executable assembly name avoids the `.App` suffix and both the generated apphost plus `dotnet run --no-build` start cleanly.
+**Why:** In-process tests did not cover the failure path. The regression only shows up when the sample is launched the way a developer actually starts it, so the proof has to include a real process launch.
+
+---
+
+### 2026-05-01T12:58:06.465-04:00: Avoid `.App` executable names for macOS-run samples
+**By:** Trinity
+**What:** Renamed the Sample.Simplified executable assembly from `Sample.Simplified.App` to `Sample.Simplified.Demo` and added a `dotnet run` smoke test so the sample startup path is exercised through the real CLI entry point.
+**Why:** On macOS, `dotnet run` was exiting with code 137 during startup while the sample logic itself was healthy. The failure traced to the generated executable name ending in `.App`, which is an unsafe launch target on that platform; using a non-`.App` assembly name keeps the sample runnable and gives us regression coverage.
+
+---
+
 ### 2026-05-01T08:56:52-04:00: Milestone 8 Closure & Operator Handoff
 **By:** Morpheus
 **Status:** ✅ COMPLETE
