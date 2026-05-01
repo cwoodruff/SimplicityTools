@@ -414,3 +414,15 @@ Morpheus, 2026-04-30T17:29:31.278-04:00
 **By:** Trinity
 **What:** `SimplicityTools.Metrics` package validation should prove three things together: the packed `.nupkg` contains the repo-level README/icon metadata assets, the `lib/net10.0/` payload is limited to the library DLL plus XML docs, and a downstream consumer can restore/build against the packed package from a repo-local folder source.
 **Why:** Local `dotnet pack` success alone does not prove the shipped asset set is clean for consumers. Checking the actual `.nupkg` contents and then compiling a fresh consumer against that package catches missing docs, accidental extra assemblies, and package-shape regressions before the Filters/Tca packages copy the same pattern.
+
+### 2026-04-30T19:52:08.101-04:00: Milestone 5 workflow rereview approved
+**By:** Tank
+**Verdict:** Approved
+**What:** Approve `.github/workflows/nuget-publish.yml` for Milestone 5 release gating. The analyzer-consumer validation block now imports `xml.etree.ElementTree as ET` before calling `ET.fromstring(...)`, and it clears `artifacts/analyzer-consumer-validation` before recreating the package source, global package cache, and consumer workspace.
+**Why:** The prior blocker was a workflow execution failure, not a package-shape failure. Independent rerun proof now shows the gate can parse the analyzer nuspec, validate the packaged analyzer contract, build a fresh consumer that emits `warning SF0001`, and avoid false passes from stale validation state on repeated executions.
+**Evidence:**
+- `dotnet restore SimplicityTools.sln --verbosity minimal`
+- `dotnet build SimplicityTools.sln --configuration Release --no-restore --verbosity minimal`
+- `dotnet test tests/SimplicityTools.Analyzers.Tests/SimplicityTools.Analyzers.Tests.csproj --configuration Release --no-build --verbosity minimal --filter FullyQualifiedName~AnalyzerPackageValidationTests`
+- `dotnet pack src/SimplicityTools.Analyzers/SimplicityTools.Analyzers.csproj --configuration Release --no-build --output artifacts/packages -p:Version=0.4.0-ci.tankreview --verbosity minimal`
+- Two end-to-end reruns of the workflow's analyzer-consumer validation logic against the packed nupkg both passed, both emitted `warning SF0001`, and the second run removed an injected stale sentinel before rebuilding.
