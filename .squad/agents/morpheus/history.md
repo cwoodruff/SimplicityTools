@@ -34,6 +34,11 @@
 - **2026-05-02T06:08:59.230-04:00 — Central version contract:** `Directory.Build.props` now owns the repo-wide release baseline in `SimplicityToolsReleaseVersion`, with local package defaults and validation CI versions derived from it rather than hardcoded per project or workflow.
 - **2026-05-02T06:08:59.230-04:00 — Docs-site sync pattern:** `docs-site/scripts/extract-version.mjs` generates `docs-site/src/data/version.ts` from `Directory.Build.props`, and `docs-site/src/components/SiteFooter.astro` renders that release line in the public footer.
 - **2026-05-02T06:08:59.230-04:00 — Key paths:** Version source of truth lives in `Directory.Build.props`; release-generation behavior lives in `.github/workflows/nuget-publish.yml`; public display contract lives in `docs-site/src/components/SiteFooter.astro` and `docs-site/src/data/version.ts`.
+- **2026-05-02T06:43:28.375-04:00 — Workflow dispatch routing:** GitHub run `25250085225` failed because `workflow_dispatch` paired `release_group=validation` with a non-empty `version`, and the old resolver treated any version input as a release build. The stable contract is simpler: validation always emits `<release-version>-ci.<run-number>` artifacts and ignores stale version input.
+- **2026-05-02T06:43:28.375-04:00 — Review outcome:** Trinity’s revised release resolver is acceptable when it keeps release groups (`libraries`, `analyzers`, `cli`) on the versioned path but routes validation independently and documents that behavior in `CONTRIBUTING.md`.
+- **2026-05-02T06:43:28.375-04:00 — Key paths:** Failure evidence lives in GitHub Actions run `25250085225`; dispatch routing lives in `.github/workflows/nuget-publish.yml`; operator guidance lives in `CONTRIBUTING.md`.
+- **2026-05-02T06:43:28.375-04:00 — Validation dispatch hardening:** The safest shell contract is to normalize `workflow_dispatch` validation runs to an empty effective version before any SemVer or release-group checks. That preserves release behavior for `libraries`, `analyzers`, and `cli` while making stale UI input harmless.
+- **2026-05-02T06:43:28.375-04:00 — Validation proof:** Reproducing the resolver locally as an input matrix is enough to prove the workflow fix before burning a full GitHub run; include validation default, validation with stale version, release groups with and without overrides, and a tag path.
 
 ## Active Status (Milestone 8 Closed, Sample.Simplified Startup Addressed)
 
@@ -86,3 +91,24 @@ Updated the NuGet workflow to support manual `workflow_dispatch` runs with expli
 
 **Decision Propagated to:** `.squad/decisions.md`  
 **Orchestration Logs:** `.squad/orchestration-log/2026-05-02T10-08-59Z-*`
+
+---
+
+## 2026-05-02T10:43:28Z — Orchestration: NuGet Workflow Validation Fix Complete
+
+**Role in orchestration:** Review + replacement author
+
+### Review (2026-05-02T06:43:28.375-04:00)
+Reviewed Tank's rejection against GitHub Actions run 25250085225. Confirmed that old workflow resolver keyed validation routing off the stale, non-empty `version` field rather than `release_group` first. Root cause identified: dispatcher must be release_group-first to avoid stale UI state corrupting routing.
+
+### Replacement Author (2026-05-02T06:43:28.375-04:00)
+Authored new dispatch-resolution logic in `.github/workflows/nuget-publish.yml`:
+- Check `release_group` before applying version constraints
+- Validation dispatch ignores non-empty version and emits CI-only packages
+- Libraries, analyzers, CLI groups preserve explicit SemVer override and Directory.Build.props fallback
+- Updated CONTRIBUTING.md and decision/history files
+
+**Tank re-reviewed and approved.** Fix ready for deployment.
+
+---
+

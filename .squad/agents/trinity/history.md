@@ -49,3 +49,22 @@
 
 **Decision Propagated to:** `.squad/decisions.md`  
 **Orchestration Logs:** `.squad/orchestration-log/2026-05-02T10-08-59Z-trinity.md`
+
+## Learnings
+
+- GitHub Actions workflow-dispatch forms can retain a previously entered version value, so NuGet validation runs must branch on `release_group` first and ignore stale `version` input when `release_group=validation`.
+- `.github/workflows/nuget-publish.yml` owns the release-shape gating for validation, libraries, analyzers, and cli dispatches; `Directory.Build.props` remains the canonical source for the shared release line.
+- `CONTRIBUTING.md` documents the operator contract for the NuGet release pipeline, including when validation runs use CI-only versions versus when upload-ready package groups use the canonical or explicit SemVer.
+
+---
+
+## 2026-05-02T10:43:28Z — Orchestration: NuGet Workflow Validation Fix Complete
+
+**Role in orchestration:** Design contributor (validation dispatch spec)
+
+Contributed design clarification: NuGet release pipeline should resolve `release_group` before applying version rules so validation runs always emit CI-only package version and ignore optional `version` value still present in GitHub Actions form. Root cause: GitHub retains prior dispatch inputs between manual dispatches; without release_group-first routing, a user can select validation and still trip the versioned-release gate due to stale form state.
+
+**Outcome:** Morpheus authored replacement fix implementing this design. Tank approved after comprehensive local validation.
+
+---
+

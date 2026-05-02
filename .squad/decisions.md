@@ -1,5 +1,83 @@
 # Squad Decisions
 
+### 2026-05-02T06:43:28.375-04:00: Tank rereview — NuGet workflow dispatch validation routing
+**By:** Tank
+**Revision author:** Morpheus
+**Verdict:** Approved
+
+**What I validated:**
+- Replayed the current `.github/workflows/nuget-publish.yml` release-shape step locally across the workflow-dispatch matrix.
+- Confirmed `release_group=validation` now emits `0.4.0-ci.<run-number>` even when `version` is non-empty or stale.
+- Confirmed `libraries`, `analyzers`, and `cli` still accept explicit SemVer overrides, still fall back to `Directory.Build.props` when blank, and keep invalid explicit versions blocked.
+- Built and packed the affected package sets locally; package versions and `.snupkg` pairing matched expectations, and the CLI package installed successfully from the locally packed feed.
+- Ran the existing package validation suites in `tests/SimplicityTools.{Metrics,Filters,Tca,Analyzers}.Tests` successfully.
+
+**GitHub status note:**
+- The currently deployed workflow on `main` is still not the approved replacement. Run `25250085225` reproduces the old `workflow_dispatch` validation-group failure.
+- Push run `25240574498` on the same deployed SHA fails later on `Sample.Simplified` startup coverage, which is unrelated to the dispatch-routing fix.
+
+**Why approved:**
+The replacement fix addresses the reported bug and preserves the release-group behaviors that matter. The remaining lack of a green GitHub run is a deployment/proof gap, not a defect in Morpheus's rewritten dispatch logic.
+
+---
+
+### 2026-05-02T06:43:28.375-04:00: NuGet workflow validation dispatch revision
+**By:** Morpheus
+
+**Decision:** In `.github/workflows/nuget-publish.yml`, resolve `workflow_dispatch` intent by `release_group` first and normalize `validation` runs to an empty effective version before any release-version guard logic executes.
+
+**Why:** GitHub keeps prior dispatch input values in the UI. If validation routing keys off a non-empty `version` field, a stale value can incorrectly force the release-only path and fail the run before build validation starts. Normalizing validation input preserves zero-config validation while keeping `libraries`, `analyzers`, `cli`, and tag-triggered releases on their existing contracts.
+
+**Implications:**
+
+- `release_group=validation` always emits `<SimplicityToolsReleaseVersion>-ci.<run-number>` packages.
+- A populated validation `version` input is ignored and surfaced as a notice, not an error.
+- `libraries`, `analyzers`, and `cli` still accept an explicit SemVer override or fall back to `SimplicityToolsReleaseVersion`.
+- Tag releases remain authoritative for publish behavior.
+
+---
+
+### 2026-05-02T06:43:28.375-04:00: Validation dispatch ignores optional version
+**By:** Morpheus
+**What:** The NuGet release pipeline must treat `release_group=validation` as a validation-only path even when the GitHub Actions form still contains a `version` value. Only `libraries`, `analyzers`, and `cli` may consume the version input for upload-ready builds; when those groups omit a version, the workflow falls back to `SimplicityToolsReleaseVersion` from `Directory.Build.props`.
+**Why:** The failing GitHub run proved the old resolver let a stale UI field push validation into the versioned-build branch, which breaks the zero-config validation contract for no release value. Ignoring that field on validation keeps the contract obvious, preserves CI-only package suffixes, and avoids making operators debug workflow form state.
+
+---
+
+### 2026-05-02T06:43:28.375-04:00: NuGet validation dispatches ignore stale version input
+**By:** Trinity
+**What:** The `NuGet release pipeline` workflow should resolve `release_group` before applying workflow-dispatch version rules so `validation` runs always emit the CI-only package version and ignore any optional `version` value still present in the GitHub Actions form.
+**Why:** GitHub can retain the prior `version` field between manual dispatches. Without this guard, a user can choose `validation` and still trip the versioned-release gate, which blocks the intended validation path even though no publishable release group was requested.
+
+---
+
+### 2026-05-02T06:43:28.375-04:00: Tank — NuGet workflow validation
+
+**By:** Tank
+**Decision:** Reject the current NuGet workflow revision as a fix for the reported validation-group failure.
+
+**Evidence**
+- GitHub Actions run `25250085225` on `main` failed in `Resolve release shape` with `requested_group="validation"` and `requested_version="0.4.0"`.
+- The current local workflow rewrite still rejects that same tuple with `Workflow dispatch versioned builds must target libraries, analyzers, or cli.`
+- The only behavior change I could validate is different blank-version handling for `libraries`, `analyzers`, and `cli`: those now fall back to `SimplicityToolsReleaseVersion` from `Directory.Build.props`.
+
+**Required revision**
+
+1. Decide the contract for `validation` dispatches with a populated `version` field:
+   - either accept it and normalize to `<version>-ci.<run-number>`, or
+   - make the UI/path impossible or unmistakable by ignoring/clearing `version` when `validation` is selected and tightening the message/docs.
+2. Add regression coverage for the release-shape input matrix so these combinations are proven explicitly:
+   - `validation` + blank version
+   - `validation` + explicit version
+   - `libraries|analyzers|cli` + blank version
+   - `libraries|analyzers|cli` + explicit version
+
+**Reviewer handoff**
+
+- **Requested revision owner:** Morpheus
+
+---
+
 ### 2026-05-01T12:58:06.465-04:00: Sample.Simplified startup should avoid native apphost
 **By:** Morpheus
 **What:** For `samples/Sample.Simplified/App/App.csproj`, disable native apphost generation and rely on the managed host path (`dotnet` launching the DLL) for local startup.
