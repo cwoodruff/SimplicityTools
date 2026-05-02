@@ -115,6 +115,7 @@ Warnings: 0               ✅ clean
 - **2026-05-01T13:31:28.564-04:00:** Sample.Simplified project rename keeps the app project at `samples/Sample.Simplified/Sample.Simplified.App/Sample.Simplified.App.csproj` and the test project at `samples/Sample.Simplified/Sample.Simplified.Tests/Sample.Simplified.Tests.csproj`, while preserving `AssemblyName=Sample.Simplified.Demo` so renamed project identity does not reintroduce the macOS apphost startup failure. Coverage now expects `Sample.Simplified.Tests` namespaces and the CLI regression path resolves the renamed app project.
 - **2026-05-01T13:51:44.498-04:00:** Docs-site custom-domain proof now lives in `docs-site/scripts/check-links.mjs` and `.github/workflows/deploy-site.yml`: canonical URLs, `og:url`, `robots.txt`, `sitemap.xml`, and `CNAME` must all resolve to `https://simplicitytools.dev`, the deploy workflow syncs `docs-site/public/CNAME` from the repo-root `CNAME`, and any lingering `tools.simplicity-first.dev` reference is a validation failure.
 - **2026-05-01T19:30:22.856-04:00:** NuGet release safety now lives in `.github/workflows/nuget-publish.yml`: validation packs CI-version artifacts, the publish job revalidates package IDs and exact tag version before `dotnet nuget push`, and it pushes only `.nupkg` files so matching `.snupkg` symbols ride with the primary package. Supporting release guidance remains in `CONTRIBUTING.md`.
+- **2026-05-02T06:08:59.230-04:00:** Shared release version now anchors in `Directory.Build.props` via `SimplicityToolsReleaseVersion`; package defaults derive `$(SimplicityToolsReleaseVersion)-local`, `.github/workflows/nuget-publish.yml` falls back to that property for release-group packaging and CI validation suffixes, and `docs-site/scripts/extract-version.mjs` feeds the Astro footer through `docs-site/src/data/version.ts` and `docs-site/src/components/SiteFooter.astro`.
 
 ## Sample.Simplified Startup Fix — Regression Validation & Approval
 **Timestamp:** 2026-05-01T16:58:06.465Z
@@ -166,3 +167,33 @@ Validated the release workflow safety gates: confirmed release-group pack paths 
 - No regressions detected
 
 **Result:** Approved for production use.
+
+---
+
+## 2026-05-02T10:08:59Z — Shared Version Source Validation Approved
+
+**Squad Orchestration Input:** Tank background task validated shared version source implementation.
+
+**Validation Performed:**
+- Verified `Directory.Build.props` is canonical source for `SimplicityToolsReleaseVersion`
+- Confirmed workflow reads version correctly and applies suffix rules
+- Validated CLI pack output: `0.4.0-local` ✅
+- Validated CI version derivation: `-ci.<run-number>` ✅
+- Ran targeted package validation tests:
+  - `AnalyzerPackageValidationTests` ✅
+  - `MetricsPackageValidationTests` ✅
+  - `FiltersPackageValidationTests` ✅
+  - `TcaPackageValidationTests` ✅
+- Tested docs-site footer: `npm run build:validate` ✅
+- Footer renders "Version 0.4.0" correctly ✅
+
+**Pre-Existing Issues Noted:**
+- `AnalyzeCommandTests` sample-count drift (23 vs 24) unrelated to shared version contract
+
+**Sign-Off Complete:**
+- Morpheus contract approved ✅
+- Trinity implementation validated ✅
+- Link footer display confirmed ✅
+
+**Decision Propagated to:** `.squad/decisions.md`  
+**Orchestration Logs:** `.squad/orchestration-log/2026-05-02T10-08-59Z-tank.md`

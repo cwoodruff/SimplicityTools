@@ -669,3 +669,32 @@ Established information architecture for Wave 3 docs-site delivery. Top-level la
 - Validation runs stay allowed on branch pushes via CI-only versions, but release tags are the only publish gate
 
 ---
+
+### 2026-05-02T06:08:59.230-04:00: Central release version contract
+**By:** Morpheus
+**What:** `Directory.Build.props` is now the single editable source of truth for the repo-wide release baseline via `SimplicityToolsReleaseVersion`. Package defaults derive `-local`, branch-validation workflow builds derive `-ci.<run-number>`, workflow dispatch uses the same baseline unless an explicit override is supplied, and the Astro footer reads that property at build time.
+**Why:** MSBuild is the native packaging boundary for every publishable project in this repo, so anchoring the version there keeps the contract behind the packaging surface instead of inventing another config file. The website should display the public release line, not a local placeholder, and release prep needs one place to bump before generating artifacts.
+
+---
+
+### 2026-05-02T06:08:59.230-04:00: Shared release version implementation and validation
+**By:** Trinity
+**What:** Updated `.github/workflows/nuget-publish.yml` to read `SimplicityToolsReleaseVersion` from `Directory.Build.props` as the default for all package builds. Local package defaults emit `-local`, CI validation builds derive `-ci.<run-number>`, and manual workflow_dispatch runs use the baseline unless an explicit override is supplied. The Astro site footer receives the same version via `docs-site/scripts/extract-version.mjs` build-time extraction.
+**Why:** One canonical version property eliminates sync burden across three independent package types (libraries, CLI, website) and turns version updates into a single edit point in MSBuild configuration.
+
+---
+
+### 2026-05-02T06:08:59.230-04:00: Shared version source validation approved
+**By:** Tank
+**What:** Approved the shared version-source implementation after running targeted package validation tests and docs-site build validation. Confirmed that `Directory.Build.props` is read correctly, package defaults emit `-local` versions, and the Astro footer renders the canonical version correctly in the build output.
+**Why:** The implementation must not break existing package validation, CLI output, or site rendering before it ships. Targeted tests confirm the contract holds.
+**Notes:** A full `dotnet test SimplicityTools.sln` still hits pre-existing `AnalyzeCommandTests` sample-count failures unrelated to the shared version contract.
+
+---
+
+### 2026-05-02T06:08:59.230-04:00: Central Version Source & Website Footer Display
+**By:** Link
+**What:** Established a single source of truth for SimplicityTools version that serves both release workflows and the public website footer. `Directory.Build.props` contains the canonical version (currently `0.4.0-local`); `docs-site/scripts/extract-version.mjs` reads it at build time; `npm run prebuild` ensures the version is always current before site builds.
+**Why:** Eliminates version drift between NuGet packages, CLI, and website. Release workflows can now trust that the website always displays the correct version, and contributors never manually sync version strings.
+**Implementation:** Added `prebuild` script to `docs-site/package.json`; created `extract-version.mjs` to parse `Directory.Build.props` and generate `docs-site/src/data/version.ts`; updated `SiteFooter.astro` to import and display the version.
+**Testing:** Full build validated via `npm run build:validate`; version appears in footer HTML; all 32 pages built successfully; link checker passed.

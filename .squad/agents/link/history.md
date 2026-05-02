@@ -160,3 +160,45 @@ Earlier work archived in history-archive.md:
 **Decision merged:** "Docs-site custom domain source of truth and validation gate" — Repository-root `CNAME` is the canonical custom-domain artifact; workflow syncs to `docs-site/public/CNAME` before validation/deploy to prevent Pages drift.
 
 **Key artifact:** `docs-site/` Astro config, `.github/workflows/deploy-site.yml`, and repo-root `CNAME` now unified on `simplicitytools.dev`.
+
+## Sprint 8: Astro Website (Milestone 8) — Version Sync & Footer Display
+**Timestamp:** 2026-05-02T06:08:59.230-04:00  
+**Session:** version-footer-integration
+
+- **Central version source established:** `Directory.Build.props` is the single source of truth (currently `0.4.0-local`)
+- **Automated version extraction:** Created `docs-site/scripts/extract-version.mjs` that runs at prebuild time to populate `src/data/version.ts`
+- **Footer integration complete:** `SiteFooter.astro` now imports and displays the version with styled typography
+- **Developer experience improved:** Build process is transparent — `npm run build` automatically syncs version, no manual steps needed
+- **Documentation updated:** `docs-site/README.md` explains the auto-generated version pattern so contributors understand the workflow
+- **Validation passed:** Full site build, all 32 pages generated, links verified, footer version displays correctly in HTML output
+
+**Decision merged:** "Central Version Source & Website Footer Display" — Single version source eliminates drift and makes first-run experience clearer for users checking what version they're on.
+
+---
+
+## 2026-05-02T10:08:59Z — Website Footer Version Display Complete
+
+**Squad Orchestration Input:** Link background task updated docs-site footer to show shared SimplicityTools version.
+
+**Implementation Delivered:**
+- Created `docs-site/scripts/extract-version.mjs` to parse `Directory.Build.props` XML and extract canonical version
+- Added `prebuild` script to `docs-site/package.json` for automatic version extraction before every build
+- Generated `docs-site/src/data/version.ts` containing the current version
+- Updated `docs-site/src/components/SiteFooter.astro` to import and display `toolVersion`
+- Added `.footer-version` styling to `docs-site/src/styles/site.css` (muted color, top border)
+- Documented version sync workflow in `docs-site/README.md`
+
+**Validation Passed:**
+- Full build: `npm run build:validate` ✅
+- Footer displays: `<p class="footer-version">Version 0.4.0-local</p>` ✅
+- All 32 pages built successfully ✅
+- Link checker passed ✅
+
+**Morpheus Approved:** Central release version contract ✅  
+**Trinity Implemented:** Workflow feeds version to build system ✅  
+**Tank Validated:** Footer rendering confirmed ✅  
+
+**Release Handoff:** Operators can now trust website always displays correct version. No manual version sync needed.
+
+**Decision Propagated to:** `.squad/decisions.md`  
+**Orchestration Logs:** `.squad/orchestration-log/2026-05-02T10-08-59Z-link.md`

@@ -31,6 +31,9 @@
 - **2026-05-01T19:30:22.856-04:00 — NuGet release workflow:** `.github/workflows/nuget-publish.yml` now separates validation-only CI packaging from upload-ready manual dispatch builds by requiring an explicit SemVer for `libraries`, `analyzers`, or `cli` on workflow dispatch, while keeping tag pushes as the only automated publish gate.
 - **2026-05-01T19:30:22.856-04:00 — Release safety pattern:** The publish path validates the exact artifact set and version before pushing, and release artifacts must include both `.nupkg` and matching `.snupkg` files. Keep release proof centered on the workflow plus `CONTRIBUTING.md` guidance rather than ad hoc scripts.
 - **2026-05-01T19:30:22.856-04:00 — Key paths:** Release orchestration lives in `.github/workflows/nuget-publish.yml`; operator guidance lives in `CONTRIBUTING.md`.
+- **2026-05-02T06:08:59.230-04:00 — Central version contract:** `Directory.Build.props` now owns the repo-wide release baseline in `SimplicityToolsReleaseVersion`, with local package defaults and validation CI versions derived from it rather than hardcoded per project or workflow.
+- **2026-05-02T06:08:59.230-04:00 — Docs-site sync pattern:** `docs-site/scripts/extract-version.mjs` generates `docs-site/src/data/version.ts` from `Directory.Build.props`, and `docs-site/src/components/SiteFooter.astro` renders that release line in the public footer.
+- **2026-05-02T06:08:59.230-04:00 — Key paths:** Version source of truth lives in `Directory.Build.props`; release-generation behavior lives in `.github/workflows/nuget-publish.yml`; public display contract lives in `docs-site/src/components/SiteFooter.astro` and `docs-site/src/data/version.ts`.
 
 ## Active Status (Milestone 8 Closed, Sample.Simplified Startup Addressed)
 
@@ -63,3 +66,23 @@ Updated the NuGet workflow to support manual `workflow_dispatch` runs with expli
 - `.snupkg` files no longer treated as primary packages in publish set
 
 **Next:** Tag-based automation ready for production use.
+
+---
+
+## 2026-05-02T10:08:59Z — Central Release Version Contract Approved
+
+**Squad Orchestration Input:** Morpheus background task approved shared version contract.
+
+**Contract Locked:**
+- `Directory.Build.props` is the single editable source of truth for the repo-wide release baseline via `SimplicityToolsReleaseVersion`
+- Package defaults derive `-local`, CI validation builds derive `-ci.<run-number>`, workflow dispatch uses the same baseline unless an explicit override is supplied
+- The Astro footer reads that property at build time
+
+**Rationale:** MSBuild is the native packaging boundary for every publishable project in this repo, so anchoring the version there keeps the contract behind the packaging surface instead of inventing another config file.
+
+**Trinity Implemented:** Workflow now reads `SimplicityToolsReleaseVersion` from `Directory.Build.props` and applies version derivation rules  
+**Link Implemented:** Website footer displays version automatically via `docs-site/scripts/extract-version.mjs`  
+**Tank Validated:** All package types and docs-site rendering verified against contract  
+
+**Decision Propagated to:** `.squad/decisions.md`  
+**Orchestration Logs:** `.squad/orchestration-log/2026-05-02T10-08-59Z-*`
