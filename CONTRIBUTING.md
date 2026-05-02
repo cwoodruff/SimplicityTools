@@ -22,9 +22,9 @@ SimplicityTools uses SemVer tags to drive package versions in CI.
 
 ### What CI does with those tags
 
-- Normal branch pushes run build, test, and pack as a dry run.
-- Dry-run packages use a CI-only version (`0.4.0-ci.<run-number>`) so the workflow proves packaging without publishing.
-- Tag pushes use the SemVer from the tag and publish only the package group that matches the tag.
+- Normal branch pushes run build, test, and package validation artifacts with a CI-only version (`0.4.0-ci.<run-number>`).
+- Manual workflow dispatch can build upload-ready NuGet artifacts for `libraries`, `analyzers`, or `cli` when you supply an explicit SemVer.
+- Tag pushes remain the publish gate: CI reads the SemVer from the tag, validates the matching package group, and publishes the generated `.nupkg` and `.snupkg` files to NuGet.org.
 
 ### Local default versions
 
@@ -39,7 +39,7 @@ dotnet build SimplicityTools.sln --nologo --verbosity minimal
 dotnet test SimplicityTools.sln --nologo --no-build --verbosity minimal
 ```
 
-### 2. Dry-run the packages you plan to release
+### 2. Package the release candidates you plan to ship
 
 Shared libraries:
 
@@ -98,9 +98,18 @@ Example analyzer reference:
 </ItemGroup>
 ```
 
-### 4. Cut the real release tag
+### 4. Optional: build upload-ready artifacts in GitHub Actions
 
-When the dry run is good, create the tag that matches the package group:
+Use **Actions → NuGet release pipeline → Run workflow** when you want GitHub to build the exact packages before you cut a tag:
+
+- Set `release_group` to `libraries`, `analyzers`, or `cli`
+- Set `version` to the exact SemVer you plan to release
+
+That run will validate the solution, produce upload-ready `.nupkg` and `.snupkg` artifacts, and stop short of publishing.
+
+### 5. Cut the real release tag
+
+When the release candidate is good, create the tag that matches the package group:
 
 ```bash
 git tag libraries/v0.4.0

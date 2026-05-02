@@ -1,4 +1,4 @@
-name: NuGet packages
+name: NuGet release pipeline
 
 on:
   push:
@@ -11,6 +11,21 @@ on:
       - 'analyzers/v*'
       - 'cli/v*'
   workflow_dispatch:
+    inputs:
+      release_group:
+        description: Package group to build
+        type: choice
+        required: true
+        default: validation
+        options:
+          - validation
+          - libraries
+          - analyzers
+          - cli
+      version:
+        description: Optional SemVer for upload-ready packages (for example 0.4.0 or 0.4.0-rc.1)
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -24,6 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       release_group: ${{ steps.release.outputs.release_group }}
+      pack_version: ${{ steps.release.outputs.pack_version }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -41,6 +57,9 @@ jobs:
         run: |
           ref_type="${GITHUB_REF_TYPE:-branch}"
           ref_name="${GITHUB_REF_NAME}"
+          requested_group="${{ github.event.inputs.release_group || 'validation' }}"
+          requested_version="${{ github.event.inputs.version || '' }}"
+          semver_pattern='^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z]+)*$'
 
           if [[ "$ref_type" == "tag" ]]; then
             if [[ "$ref_name" =~ ^libraries/v([0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z]+)*)$ ]]; then
@@ -56,9 +75,37 @@ jobs:
               echo "::error::Unsupported tag '$ref_name'. Use libraries/vX.Y.Z, analyzers/vX.Y.Z, or cli/vX.Y.Z."
               exit 1
             fi
+          elif [[ -n "$requested_version" ]]; then
+            if [[ ! "$requested_version" =~ $semver_pattern ]]; then
+              echo "::error::Workflow dispatch version must be a SemVer value such as 0.4.0 or 0.4.0-rc.1."
+              exit 1
+            fi
+
+            case "$requested_group" in
+              libraries|analyzers|cli)
+                echo "release_group=$requested_group" >> "$GITHUB_OUTPUT"
+                echo "pack_version=$requested_version" >> "$GITHUB_OUTPUT"
+                ;;
+              *)
+                echo "::error::Workflow dispatch versioned builds must target libraries, analyzers, or cli."
+                exit 1
+                ;;
+            esac
           else
-            echo "release_group=validation" >> "$GITHUB_OUTPUT"
-            echo "pack_version=0.4.0-ci.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+            case "$requested_group" in
+              validation)
+                echo "release_group=validation" >> "$GITHUB_OUTPUT"
+                echo "pack_version=0.4.0-ci.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+                ;;
+              libraries|analyzers|cli)
+                echo "::error::Workflow dispatch release builds for '$requested_group' require an explicit version."
+                exit 1
+                ;;
+              *)
+                echo "::error::Unsupported workflow dispatch release_group '$requested_group'."
+                exit 1
+                ;;
+            esac
           fi
 
       - name: Restore solution
@@ -91,7 +138,7 @@ jobs:
           --logger "console;verbosity=detailed"
           --filter "FullyQualifiedName=SimplicityTools.Cli.Tests.AnalyzeCommandPerformanceTests.AnalyzeCommand_OverEngineeredSample_CompletesWithinExpectedThresholdAtP95"
 
-      - name: Dry-run pack
+      - name: Pack NuGet artifacts
         shell: bash
         run: |
           mkdir -p "$PACKAGE_OUTPUT_DIR"
@@ -137,7 +184,7 @@ jobs:
       - name: Validate packed metadata
         shell: bash
         run: |
-          python - <<'PY'
+          python3 - <<'PY'
           import glob
           import pathlib
           import sys
@@ -188,12 +235,17 @@ jobs:
                       if not any(local_name(child.tag) == tag_name for child in metadata):
                           print(f"{package.name} is missing {label}", file=sys.stderr)
                           sys.exit(1)
+
+              symbol_package = package.with_suffix(".snupkg")
+              if not symbol_package.exists():
+                  print(f"{package.name} is missing matching symbol package {symbol_package.name}", file=sys.stderr)
+                  sys.exit(1)
           PY
 
       - name: Validate analyzer consumer package
         shell: bash
         run: |
-          python - <<'PY'
+          python3 - <<'PY'
           import glob
           import json
           import os
@@ -337,8 +389,9 @@ jobs:
       - name: Upload package artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: nuget-packages
+          name: nuget-packages-${{ steps.release.outputs.release_group }}-${{ steps.release.outputs.pack_version }}
           path: artifacts/packages/*
+          if-no-files-found: error
 
   publish:
     if: startsWith(github.ref, 'refs/tags/')
@@ -350,8 +403,104 @@ jobs:
       - name: Download packaged artifacts
         uses: actions/download-artifact@v4
         with:
-          name: nuget-packages
+          name: nuget-packages-${{ needs.validate.outputs.release_group }}-${{ needs.validate.outputs.pack_version }}
           path: artifacts/packages
+
+      - name: Validate publishable artifacts
+        shell: bash
+        env:
+          EXPECTED_RELEASE_GROUP: ${{ needs.validate.outputs.release_group }}
+          EXPECTED_VERSION: ${{ needs.validate.outputs.pack_version }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import sys
+          import xml.etree.ElementTree as ET
+          import zipfile
+
+          expected_release_group = os.environ["EXPECTED_RELEASE_GROUP"]
+          expected_version = os.environ["EXPECTED_VERSION"]
+          package_dir = pathlib.Path("artifacts/packages")
+
+          expected_ids_by_group = {
+              "libraries": {
+                  "SimplicityTools.Metrics",
+                  "SimplicityTools.Filters",
+                  "SimplicityTools.Tca",
+              },
+              "analyzers": {
+                  "SimplicityTools.Analyzers",
+              },
+              "cli": {
+                  "SimplicityTools.Cli",
+              },
+          }
+
+          if expected_release_group not in expected_ids_by_group:
+              print(f"Unsupported release group '{expected_release_group}' for publish validation.", file=sys.stderr)
+              sys.exit(1)
+
+          packages = sorted(
+              package
+              for package in package_dir.glob("*.nupkg")
+              if not package.name.endswith(".symbols.nupkg")
+          )
+
+          if not packages:
+              print("No NuGet packages found to publish.", file=sys.stderr)
+              sys.exit(1)
+
+          actual_ids = set()
+
+          def local_name(tag):
+              return tag.split("}", 1)[-1]
+
+          for package in packages:
+              with zipfile.ZipFile(package) as archive:
+                  nuspec_name = next((name for name in archive.namelist() if name.endswith(".nuspec")), None)
+                  if nuspec_name is None:
+                      print(f"{package.name} is missing a nuspec file.", file=sys.stderr)
+                      sys.exit(1)
+
+                  root = ET.fromstring(archive.read(nuspec_name))
+
+              metadata = next((child for child in root if local_name(child.tag) == "metadata"), None)
+              if metadata is None:
+                  print(f"{package.name} is missing nuspec metadata.", file=sys.stderr)
+                  sys.exit(1)
+
+              package_id = next((child.text for child in metadata if local_name(child.tag) == "id"), None)
+              package_version = next((child.text for child in metadata if local_name(child.tag) == "version"), None)
+
+              if package_id is None or package_version is None:
+                  print(f"{package.name} is missing package identity metadata.", file=sys.stderr)
+                  sys.exit(1)
+
+              if package_version != expected_version:
+                  print(
+                      f"{package.name} version '{package_version}' does not match expected release version '{expected_version}'.",
+                      file=sys.stderr)
+                  sys.exit(1)
+
+              if ".ci." in package_version or package_version.endswith("-local"):
+                  print(f"{package.name} still looks like a validation-only package version.", file=sys.stderr)
+                  sys.exit(1)
+
+              symbol_package = package.with_suffix(".snupkg")
+              if not symbol_package.exists():
+                  print(f"{package.name} is missing matching symbol package {symbol_package.name}.", file=sys.stderr)
+                  sys.exit(1)
+
+              actual_ids.add(package_id)
+
+          expected_ids = expected_ids_by_group[expected_release_group]
+          if actual_ids != expected_ids:
+              print(
+                  f"Publish artifact set mismatch. Expected {sorted(expected_ids)}, found {sorted(actual_ids)}.",
+                  file=sys.stderr)
+              sys.exit(1)
+          PY
 
       - name: Set up .NET 10 SDK
         uses: actions/setup-dotnet@v4
@@ -369,7 +518,7 @@ jobs:
           fi
 
           shopt -s nullglob
-          packages=(artifacts/packages/*.nupkg)
+          packages=(artifacts/packages/*.nupkg artifacts/packages/*.snupkg)
 
           if [[ ${#packages[@]} -eq 0 ]]; then
             echo "::error::No NuGet packages found to publish."
