@@ -23,7 +23,7 @@ on:
           - analyzers
           - cli
       version:
-        description: Optional SemVer for upload-ready packages (for example 0.4.0 or 0.4.0-rc.1)
+        description: Optional SemVer override for upload-ready packages (ignored for validation)
         required: false
         type: string
 
@@ -60,6 +60,29 @@ jobs:
           requested_group="${{ github.event.inputs.release_group || 'validation' }}"
           requested_version="${{ github.event.inputs.version || '' }}"
           semver_pattern='^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z]+)*$'
+          canonical_version="$(python3 - <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse("Directory.Build.props").getroot()
+
+          for element in root.iter():
+              if element.tag.split("}", 1)[-1] == "SimplicityToolsReleaseVersion" and element.text:
+                  print(element.text.strip())
+                  break
+          else:
+              print("::error::Directory.Build.props is missing SimplicityToolsReleaseVersion.", file=sys.stderr)
+              sys.exit(1)
+          PY
+          )"
+
+          effective_version="$requested_version"
+          if [[ "$requested_group" == "validation" ]]; then
+            effective_version=""
+            if [[ -n "$requested_version" ]]; then
+              echo "::notice::Validation runs ignore the optional version input and always use the CI-only package version."
+            fi
+          fi
 
           if [[ "$ref_type" == "tag" ]]; then
             if [[ "$ref_name" =~ ^libraries/v([0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z]+)*)$ ]]; then
@@ -75,31 +98,25 @@ jobs:
               echo "::error::Unsupported tag '$ref_name'. Use libraries/vX.Y.Z, analyzers/vX.Y.Z, or cli/vX.Y.Z."
               exit 1
             fi
-          elif [[ -n "$requested_version" ]]; then
-            if [[ ! "$requested_version" =~ $semver_pattern ]]; then
-              echo "::error::Workflow dispatch version must be a SemVer value such as 0.4.0 or 0.4.0-rc.1."
-              exit 1
-            fi
-
-            case "$requested_group" in
-              libraries|analyzers|cli)
-                echo "release_group=$requested_group" >> "$GITHUB_OUTPUT"
-                echo "pack_version=$requested_version" >> "$GITHUB_OUTPUT"
-                ;;
-              *)
-                echo "::error::Workflow dispatch versioned builds must target libraries, analyzers, or cli."
-                exit 1
-                ;;
-            esac
           else
             case "$requested_group" in
               validation)
                 echo "release_group=validation" >> "$GITHUB_OUTPUT"
-                echo "pack_version=0.4.0-ci.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+                echo "pack_version=${canonical_version}-ci.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
                 ;;
               libraries|analyzers|cli)
-                echo "::error::Workflow dispatch release builds for '$requested_group' require an explicit version."
-                exit 1
+                if [[ -n "$effective_version" ]]; then
+                  if [[ ! "$effective_version" =~ $semver_pattern ]]; then
+                    echo "::error::Workflow dispatch version must be a SemVer value such as 0.4.0 or 0.4.0-rc.1."
+                    exit 1
+                  fi
+
+                  echo "release_group=$requested_group" >> "$GITHUB_OUTPUT"
+                  echo "pack_version=$effective_version" >> "$GITHUB_OUTPUT"
+                else
+                  echo "release_group=$requested_group" >> "$GITHUB_OUTPUT"
+                  echo "pack_version=$canonical_version" >> "$GITHUB_OUTPUT"
+                fi
                 ;;
               *)
                 echo "::error::Unsupported workflow dispatch release_group '$requested_group'."

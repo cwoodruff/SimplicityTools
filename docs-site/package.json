@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "node ./scripts/extract-version.mjs",
+    "prebuild": "node ./scripts/extract-version.mjs",
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",

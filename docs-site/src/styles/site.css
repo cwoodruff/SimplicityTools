@@ -513,6 +513,14 @@ pre {
   margin-bottom: 0.65rem;
 }
 
+.footer-version {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(159, 177, 204, 0.2);
+}
+
 .section-note {
   padding: 1rem 1.1rem;
   border-left: 4px solid var(--accent);

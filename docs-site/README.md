@@ -22,6 +22,17 @@ npm run build:validate
 
 `check-links` validates internal links plus the required SEO and deployment artifacts (`canonical`, Open Graph, `robots.txt`, `sitemap.xml`, and `CNAME`).
 
+## Version synchronization
+
+The site footer automatically displays the current SimplicityTools release version, which is extracted from the shared `SimplicityToolsReleaseVersion` property in `Directory.Build.props` at build time.
+
+When you run `npm run build` or `npm run dev`, the matching npm pre-step (`prebuild` / `predev`) executes `scripts/extract-version.mjs`, which:
+1. Reads `SimplicityToolsReleaseVersion` from `../../Directory.Build.props`
+2. Generates `src/data/version.ts` with the current version
+3. The footer component imports and displays it
+
+Update that one MSBuild property when you are preparing the next release line, and the package defaults plus site footer stay in sync.
+
 ## Preview
 
 ```bash

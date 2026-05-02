@@ -203,6 +203,8 @@ See [Using SimplicityTools.Tca](#using-simplicitytoolstca) for cost model detail
 
 ### Package versioning at a glance
 
+- `Directory.Build.props` owns the shared release baseline in `SimplicityToolsReleaseVersion`.
+- Local package defaults, validation-only CI versions, and the docs-site footer all derive from that property.
 - `SimplicityTools.Metrics`, `SimplicityTools.Filters`, and `SimplicityTools.Tca` version together.
 - `SimplicityTools.Analyzers` can ship on its own cadence.
 - `SimplicityTools.Cli` can ship on its own cadence.
