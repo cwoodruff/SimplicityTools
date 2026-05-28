@@ -228,3 +228,166 @@ Add a regression that covers the dependent-interface scenario so this bug does n
 
 **Status:** ✅ Complete. Sprint 7 (Milestone 7) closed. Both #48 and #49 resolved.
 
+---
+
+### 2026-05-28T08:10:33.691+02:00: Codebase Review — Architecture Audit & Release Readiness Assessment
+**By:** Morpheus, Trinity, Tank, Switch, Link
+**Status:** ✅ FINDINGS RECORDED
+
+## Five-Agent Parallel Audit Completed
+
+The squad conducted a comprehensive codebase review across architecture, libraries, CLI, analyzers, and test coverage. All findings consolidated into `docs/CODEBASE_REVIEW_2026-05-28.md`.
+
+## Key Outcomes
+
+### ✅ Structurally Solid
+- All 7 analyzers implemented and tested (SF0001 dependent-interface bug fixed with regression)
+- CLI feature-complete (analyze, baseline, report, diff, budget, watch)
+- Zero-config principle enforced throughout
+- Release orchestration complete (central versioning, tag-driven CI, validation gates)
+- Documentation comprehensive (README, quickstart, library integration, CI/CD, troubleshooting)
+- Website deployed (32 Astro pages, version synced from MSBuild property)
+- Test coverage solid (21 analyzer, 20 metrics, filters, Tca, CLI integration tests)
+
+### ⚠️ Critical Path Blockers (P1–P3)
+
+| ID | Blocker | Owner | Effort | Status |
+|--|--|--|--|--|
+| **P1** | CS8604 null-safety warnings (Analyzers) | Tank/Trinity | 2–4h | Assigned |
+| **P2** | ReportGenerator method complexity exceeds SF0003 limit (CC=14) | Trinity | 4–6h | Assigned |
+| **P5a** | Analyzer package layout validation gate missing from CI | Trinity | 1–2h | Assigned |
+
+### Phase 1 Execution Tracks (48–72 hours, parallel)
+- **Track A:** Fix null-safety warnings (Tank/Trinity)
+- **Track B:** Refactor ReportGenerator complexity (Trinity)
+- **Track C:** Add analyzer package validation to CI (Trinity)
+- **Track D:** Fix dead documentation URLs, false claims (Link)
+
+### Phase 2 Follow-Up (1 week)
+- Audit analyzer logic vs. product promises (Switch + Tank)
+- Wire TCA/filter settings end-to-end (Trinity)
+- Improve docs, create changelog (Link)
+
+### Phase 3 Post-Release (Sprints 9–10)
+- Performance benchmarking, complexity refactor, extended tests
+
+## Release Verdict
+
+**Initial verdict:** ✅ **GO for 0.4.0** upon P1+P2+P5a completion (~48–96 hours, parallel)
+**Revised verdict** (per Link consolidation): ❌ **NOT GO until Phase 1 fixed** — dead URLs + broken analyzer package layout + null-safety + baseline drift = release integrity risk
+
+## Critical Findings Summary
+
+### Sample Baseline Contract Stale (Trinity)
+- Tests expect 23 files; current Sample.Simplified analyzes as 24
+- Breaks full-solution validation; blocks CI green
+
+### CLI Performance Gate Red (Tank)
+- P95 measured above threshold (~5.2s vs. < 5s limit)
+- Hotspot: repeated Roslyn symbol search in HeuristicCollectionPass
+
+### Analyzer Package Layout Broken (Tank + Trinity)
+- Packed as `lib/net10.0/` instead of `analyzers/dotnet/cs/`
+- Roslyn cannot discover diagnostics; consumers see 0 warnings
+- Release validation step missing
+
+### Help Links Pointing to Dead Site (Tank + Switch)
+- Diagnostics reference `https://simplicity-first.dev/...` (404)
+- Live site is `https://simplicitytools.dev/analyzers/sf000x/`
+
+### Config Advertising Unimplemented Behavior (Trinity)
+- `simplicity.json` advertises filter pass threshold, TCA inputs
+- CLI only uses them for `budget` command; report/diff/analyze ignore
+- Docs claim features that don't exist yet (snapshot command, TCA in reports)
+
+### Onboarding-Time Metric Stubbed (Trinity)
+- Hardcoded to TimeSpan.Zero
+- Weakens budget and TCA calculations
+
+## Decision Points Locked In
+
+1. **Blocker criteria:** Test failures, build warnings, package layout, dead documentation block tag push
+2. **Parallel work:** Blockers run on independent tracks (A–D); no sequential bottleneck
+3. **Phase gates:** Phase 1 must pass CI before Phase 2 PR; Phase 2 gates public announcement
+4. **Documentation as product:** Dead URLs and false claims are blockers, not nice-to-have
+
+## Routing & Tracking
+
+**Phase 1 Owners:**
+- **Tank:** Test baseline, perf gate, analyzer validation
+- **Trinity:** Null-safety, analyzer package layout, complexity refactor
+- **Link:** Dead URLs, false claims, docs improvements
+- **Switch:** Analyzer logic audits
+
+**Decision propagates to:** `.squad/decisions.md` (main section) after Phase 1 completion.
+
+## Implications
+
+- When future blockers surface during Phase 1 work, add to blocker list with owner and estimate
+- If Phase 1 takes > 3 days, escalate to Morpheus (may indicate scope creep)
+- Document any P95 threshold adjustments with justification in commit message
+- Use `.squad/decisions.md` as source of truth for release gate decisions
+
+---
+
+### 2026-05-28T08:10:33.691+02:00: Switch Decision — Analyzer Trust Gaps & Contract Hardening
+**By:** Switch (Trust & Security)
+**Status:** ✅ DECISION RECORDED
+
+**Core finding:** Do not add new analyzer surface area yet. First close contract gaps in existing seven rules: fix broken help-link routing, harden SF0001 code-fix safety, narrow/rename SF0004 to match heuristic, expand analyzer/package validation to cover suppression, sample solutions, and consumer-facing behavior.
+
+**Next steps prioritized:**
+1. Retarget all `helpLinkUri` to live routes (simplicitytools.dev, not simplicity-first.dev)
+2. SF0001 code-fix to refuse unsafe fixes; add regression tests for struct implementations and hierarchy chains
+3. SF0004 to either analyze primary-path flows or rename to "source call depth"
+4. Expand analyzer validation: suppression behavior, zero false positives on Simplified, expected diagnostics on OverEngineered, package code-fix discovery, SF0006 generics, SF0007 repeated-reference counting
+
+---
+
+### 2026-05-28T08:10:33.691+02:00: Tank Decision — Release Validation & Test Integrity
+**By:** Tank (QA & Release)
+**Status:** ✅ DECISION RECORDED
+
+**Core finding:** Treat repo quality recovery as three-part plan:
+1. Restore truth for teaching artifacts first (Sample.Simplified baseline, CLI assertions, customer docs)
+2. Repair broken help-link journeys (analyzer URLs: simplicity-first.dev → simplicitytools.dev)
+3. Prove packaged CLI, not just source-built (add release gate for pack → install → run flow)
+
+**Evidence:**
+- `dotnet test` fails on stale Sample.Simplified baseline (expects 23 files, current is 24)
+- CLI performance gate red (P95 ~5.2s vs. < 5s)
+- Analyzer help links point to dead site (404)
+- No CLI package-install validation in release pipeline
+
+**Impact:** Shipping without these fixes sends message that product doesn't trust its own teaching artifacts and first-run promises.
+
+---
+
+### 2026-05-28T08:10:33.691+02:00: Trinity Decision — Core Libraries & CLI Contract Completion
+**By:** Trinity (Implementation)
+**Status:** ✅ DECISION RECORDED
+
+**Core finding:** Feature-complete on paper but not contract-complete in implementation. Restore trust in shipped contract: fix failing validation, align docs with real surface, then implement missing config/TCA/onboarding paths before adding new commands.
+
+**Highest-priority findings:**
+1. Sample.Simplified baseline stale (23 vs. 24 files); breaks CLI tests
+2. CLI performance gate red (P95 > threshold)
+3. Onboarding-time metric stubbed (TimeSpan.Zero), weakens budget/TCA
+4. simplicity.json advertises more behavior than CLI uses
+5. Report/docs promise TCA and snapshot/history workflows that don't exist
+6. Library docs contain compile-breaking API examples (ProjectCount vs. TotalProjects)
+7. Invalid CLI commands exit successfully (should fail with non-zero)
+8. Structural dependency counting simplistic for conditional MSBuild graphs
+9. Primary-path heuristic needs tighter semantics
+10. TCA input validation tests narrow
+11. Transitive dependency vulnerability warning (Microsoft.Build.Tasks.Core)
+
+**Recommended implementation order:**
+1. Repair validation contract (baselines, tests, docs)
+2. Close docs/product gaps (remove or implement snapshot/history)
+3. Make configuration honest (wire filters.passingScore into evaluation)
+4. Finish missing metric path (implement onboarding-time estimation)
+5. Performance + hardening (profile HeuristicCollectionPass, add edge-case tests)
+
+---
+

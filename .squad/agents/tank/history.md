@@ -65,3 +65,36 @@ Established 3-phase site validation checklist for docs-site PRs: (1) Build Valid
 - Documentation site build passes with `npm run build:validate`
 
 **Status:** ✅ Complete. All commands verified and integrated into Copilot instructions.
+
+## Learnings
+- 2026-05-28: Current repo audit found Sample.Simplified teaching metrics drifted to 24 files while baselines/docs/tests still expect 23, analyzer HelpLinkUri values still point at 404ing simplicity-first.dev pages, and release automation still lacks a packed CLI install smoke test.
+
+---
+
+## 2026-05-28T06:10:33Z — Release Validation Audit Complete
+
+**Audit scope:** Broken flows, release readiness, test coverage gaps
+
+**Three-part recovery plan:**
+1. Restore truth for teaching artifacts (Sample.Simplified baseline = source of truth; update CLI assertions, customer docs, quickstart output together)
+2. Repair broken help-link journeys (retarget all analyzer `helpLinkUri` from simplicity-first.dev to live simplicitytools.dev routes)
+3. Prove packaged CLI (add release gate: pack → install from feed → run zero-config flow on Sample.Simplified)
+
+**Critical findings:**
+- Sample baseline stale (23 vs. 24 files) breaks full-solution validation
+- CLI performance gate red (P95 measured ~5.2s vs. < 5s limit); hotspot in HeuristicCollectionPass
+- Analyzer help links all dead (simplicity-first.dev → 404)
+- No CLI package-install validation in release pipeline
+
+**Evidence:**
+- `dotnet test` fails on stale baseline
+- P95 gate failure
+- Analyzer consumer produces 0 warnings (wrong package layout)
+- No dotnet tool install smoke test
+
+**Impact:** Shipping without these fixes violates teaching-artifact and zero-config first-run promises. Users will hit dead links immediately.
+
+**Phase 1 assignment:** Tank fixes test baseline + profiles perf gate + adds CLI validation gate (parallel with Trinity's null-safety and complexity).
+
+---
+

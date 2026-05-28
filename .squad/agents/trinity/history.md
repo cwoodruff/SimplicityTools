@@ -52,6 +52,10 @@
 
 ## Learnings
 
+- The current repo-level validation failures are dominated by contract drift: Sample.Simplified now analyzes to 24 total files, but tests/docs still assert 23.
+- The CLI configuration surface currently over-promises: tca inputs and filters.passingScore are parsed, but the shipped CLI only consumes filter thresholds for the budget report.
+- The docs currently advertise workflows and APIs that are not on the live surface, including a nonexistent `dotnet simplicity snapshot` command and outdated SimplicitySnapshot property names.
+
 - GitHub Actions workflow-dispatch forms can retain a previously entered version value, so NuGet validation runs must branch on `release_group` first and ignore stale `version` input when `release_group=validation`.
 - `.github/workflows/nuget-publish.yml` owns the release-shape gating for validation, libraries, analyzers, and cli dispatches; `Directory.Build.props` remains the canonical source for the shared release line.
 - `CONTRIBUTING.md` documents the operator contract for the NuGet release pipeline, including when validation runs use CI-only versions versus when upload-ready package groups use the canonical or explicit SemVer.
@@ -65,6 +69,39 @@
 Contributed design clarification: NuGet release pipeline should resolve `release_group` before applying version rules so validation runs always emit CI-only package version and ignore optional `version` value still present in GitHub Actions form. Root cause: GitHub retains prior dispatch inputs between manual dispatches; without release_group-first routing, a user can select validation and still trip the versioned-release gate due to stale form state.
 
 **Outcome:** Morpheus authored replacement fix implementing this design. Tank approved after comprehensive local validation.
+
+---
+
+## 2026-05-28T06:10:33Z — Codebase Review: Core Libraries Audit Complete
+
+**Audit scope:** Metrics, Filters, Tca, CLI; test coverage and docs drift
+
+**Key findings (11 items):**
+1. Sample baseline stale (tests expect 23, actual 24) — breaks validation
+2. CLI performance gate red (P95 ~5.2s vs. <5s) — hotspot: HeuristicCollectionPass
+3. Onboarding-time metric stubbed to TimeSpan.Zero — weakens budget/TCA
+4. Config advertises unimplemented behavior (filter pass threshold, TCA inputs)
+5. Docs promise snapshot/history workflows that don't exist
+6. Library API examples have name mismatches (ProjectCount vs. TotalProjects)
+7. Invalid CLI commands exit with code 0 (should fail)
+8. Structural dependency counting simplistic for conditional refs
+9. Primary-path heuristic needs tighter semantics
+10. TCA input validation narrow
+11. Transitive vulnerability warning (Microsoft.Build.Tasks.Core)
+
+**Critical path P1–P3:**
+- P1: CS8604 null-safety (2–4h)
+- P2: ReportGenerator complexity (4–6h)
+- P5a: Analyzer package validation (1–2h)
+
+**Recommended implementation order:**
+1. Repair validation contract (baseline, tests, docs)
+2. Close docs/product gaps (remove/implement snapshot, fix API names)
+3. Make config honest (wire filter threshold, TCA into CLI)
+4. Finish missing metric (implement onboarding-time estimation)
+5. Performance + hardening (profile, add edge-case tests)
+
+**Release verdict:** NOT ready until Phase 1 fixed. Null-safety, complexity, and analyzer package layout are non-negotiable before tag push.
 
 ---
 
