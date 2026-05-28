@@ -1,62 +1,3 @@
-# Link (DevRel) Agent History
-
-_Primary agent for packaging UX, documentation, and developer experience. Leading release workflow, CI/CD integration, and first-run onboarding._
-
----
-
-## Sprint 7: Packaging UX & Documentation (Milestone 7) ✅ COMPLETE
-
-**Timespan:** 2026-04-29 to 2026-04-30  
-**Status:** All three waves completed; Milestone 7 locked  
-**Impact:** First-run experience complete, documentation teaching-first, ready for M6 dry-run validation
-
-### Sprint 7 Wave Summary
-
-| Wave | Issues | Deliverables | Outcome |
-|------|--------|--------------|---------|
-| 1 | #44, #45 | NuGet badges in README; docs/quickstart.md with 5 essential commands | Zero-config validated; foundation established |
-| 2 | #46, #47 | docs/using-the-simplicity-tools.md Library Integration section; README "Add to Your Project" | Package consumers have clear integration path |
-| 3 | #48, #49 | docs/troubleshooting.md (symptom-first); CI/CD examples (GitHub/Azure/GitLab) | Complete onboarding path; regression gating pattern established |
-
-### Key Decisions Locked
-
-1. **Troubleshooting organization:** Symptom-first (users search by what they see, not technical terms)
-2. **CI/CD platforms:** GitHub Actions, Azure Pipelines, GitLab CI (90%+ adoption coverage)
-3. **Documentation navigation:** README → Quickstart → Library Integration → CI/CD → Troubleshooting
-4. **Primary CI/CD use case:** Regression gating (`--fail-on-regression`) as gateway to baseline adoption
-5. **Zero-config reinforced:** All examples work without simplicity.json
-
-### Packaging UX Outcomes
-
-- ✅ README badges and Quick Install section visible first
-- ✅ Five-command quickstart teaches the essentials with real output
-- ✅ Library integration guide provides copy-paste examples for all four packages
-- ✅ Troubleshooting covers all common issues (PATH, SDK, IDE cache, CI/CD, permissions)
-- ✅ CI/CD examples are platform-specific and regression-gating-focused
-- ✅ Documentation is cross-linked and scannable
-
-### Learnings from Sprint 7
-
-**Troubleshooting as product surface:**
-- Users self-diagnose better with symptom → cause → solution flow
-- Platform-specific paths (macOS/Windows/Linux) and tool names require exact coverage
-- Permission, file locking, and cache issues are more common than logic errors
-
-**CI/CD integration patterns:**
-- Regression gating is the key motivating use case (not just analyze)
-- Every platform needs explicit PATH setup
-- Baseline file handling (local create → git commit → CI restore) is #1 question
-- Trend tracking is valuable but optional
-
-**Documentation discovery:**
-- Cross-links help users find deeper guidance
-- Quick reference in main docs prevents "I'm done" misunderstanding
-- Comprehensive guide in separate file keeps main docs scannable
-- Verify all shell commands (bash/PowerShell/macOS) by running locally
-- Test CI/CD examples in real workflows before publishing
-
----
-
 ## Sprint 8: Astro Website 🚀 WAVES 1-2 COMPLETE, WAVE 3 ACTIVE
 
 **Timespan:** 2026-05-01 to present  
@@ -103,6 +44,47 @@ Earlier work archived in history-archive.md:
 - M4 NuGet packaging foundation  
 - M5 release workflow setup  
 - Ongoing DevRel strategy and packaging UX planning
+
+---
+
+## Sprint 8 (Ongoing): Copilot Instructions Analysis
+**Timestamp:** 2026-05-28T07:40:02.687+02:00  
+**Status:** Analysis complete; recommendations documented; ready for team review
+
+### Copilot Quick Start Instructions Scope
+
+Created `.github/copilot-instructions.md` content strategy to bridge Copilot sessions and the repository's workflow. This file answers "what do I need to know to work effectively here?" within the first 5 minutes of a session.
+
+**Key sections recommended:**
+1. Repository overview (SimplicityTools, complexity metrics, Roslyn analyzers)
+2. Project structure (5 packages, version grouping strategy)
+3. Team & AI context (Squad, decisions.md as compass)
+4. Central version management (Directory.Build.props drives all versions)
+5. Release & packaging (libraries/analyzers/cli tag strategy)
+6. Development workflow (xunit, round-trip validation, branch naming)
+7. Documentation principles (zero-config, teaching-first)
+8. Code standards (C# preview, nullable, net10.0, no external deps)
+9. CI/CD patterns (workflows, custom domain, GitHub Pages)
+10. Common task decision gates (package changes, API changes, doc changes)
+
+**Content architecture:**
+- **400–600 words** — scannable, links to full docs
+- Complements `.squad/templates/copilot-instructions.md` (Squad-specific agent guidance)
+- Leverages `.squad/decisions.md` as shared wisdom source
+- Embeds zero-config principle (core DevRel value) at code-standard level
+
+**What NOT to include:**
+- Step-by-step walkthroughs (docs/)
+- Architecture diagrams (decisions.md or docs/)
+- Personal preferences (.squad/ agent charters)
+- Credentials or secrets
+- Detailed implementation patterns (code/skills/)
+
+**Handoff readiness:**
+- Structure template prepared
+- All content sections identified
+- Cross-references mapped (decisions.md, CONTRIBUTING.md, .squad/)
+- Ready for implementation by DevRel or team lead
 
 ---
 
@@ -202,3 +184,65 @@ Earlier work archived in history-archive.md:
 
 **Decision Propagated to:** `.squad/decisions.md`  
 **Orchestration Logs:** `.squad/orchestration-log/2026-05-02T10-08-59Z-link.md`
+
+---
+
+## 2026-05-28T07:40:02.687+02:00 — Copilot Instructions Refresh Complete
+
+**Task:** Update `.github/copilot-instructions.md` with accurate, actionable guidance for future Copilot sessions.
+
+**Changes Made:**
+- **CLI test filtering (lines 79–88):** Documented the performance-test gating strategy with two separate test commands: exclude performance tests for functional CI, run performance gate independently for P95 validation.
+- **CI/CD workflow detail (lines 123–128):** Added explicit performance test strategy: excluded from main CLI run due to resource intensity, validates Sample.OverEngineered P95 threshold, isolates regression detection.
+- **Docs-site requirements (lines 204–210):** Added Node.js >= 20.0.0 requirement, `prebuild` script detail, and clarified `build:validate` includes link checking.
+- **Troubleshooting expansion (lines 324–331):** New subsection specifically for CLI performance test failures, with local profiling guidance and root-cause hints (O(n²) logic, Roslyn initialization, fixture compilation).
+
+**Reasoning:**
+- The file was already comprehensive and correct. Improvements were surgical, not wholesale replacement.
+- Performance test gating is a repo-specific detail Copilot sessions need on first run, not buried in CI logs.
+- Node version requirement for docs-site is operational knowledge critical for dev environment setup.
+- Troubleshooting section bridges "test failed" to "how to profile and fix" — teaching-first DevRel principle.
+
+**File Status:** 342 lines → 350 lines (8-line net addition, pure value).
+
+---
+
+## Learnings
+
+### Copilot Instructions Strategy
+
+- Copilot instructions are product surface, not meta-documentation. Every line must answer "what do I do next?" for someone unfamiliar with the repo.
+- Performance test gating is architectural knowledge, not implementation detail. It belongs in the Build section, not buried in workflow YAML comments.
+- CLI test filtering (`--filter` patterns) should include realistic examples (both exclude and single-gate) so Copilot sessions can adapt patterns to their needs.
+- Docs-site Node version requirement is "systems thinking" knowledge: it prevents dev environment setup failures that lead to 30-minute troubleshooting sessions.
+
+### Repository-Specific Conventions to Remember
+
+- **Version source:** `Directory.Build.props` is the single source of truth (`SimplicityToolsReleaseVersion`). All six locations derive from it: local package defaults, CI validation versions, release versions, and docs-site footer.
+- **Test gating:** Main CLI test suite excludes `AnalyzeCommandPerformanceTests`; performance gate runs separately as `AnalyzeCommand_OverEngineeredSample_CompletesWithinExpectedThresholdAtP95`. This pattern isolates regression detection from functional test feedback.
+- **Release groups:** Three independent package groups (libraries, analyzers, cli) with synchronized library versions but independent cadences for analyzers and CLI.
+- **Docs-site automation:** Version extraction runs at prebuild time; footer displays automatically; no manual sync needed.
+
+### Future Copilot Session Guidance
+
+When future Copilot sessions ask "why is this test excluded?" or "how do I run just the performance test?" — point them to `.github/copilot-instructions.md` lines 79–88 and 324–331. The file should answer 80% of "how do I..." questions for this repo without requiring deep archaeology.
+
+---
+
+
+## 2026-05-28T05:40:02.687Z — Copilot Instructions Refresh Complete
+
+**Task:** Review existing `.github/copilot-instructions.md` and apply surgical improvements based on verified findings.
+
+**Improvements Implemented:**
+1. CLI Test Filtering (lines 79–88): Two separate commands for functional tests (excluding performance) and performance gate separately
+2. CI/CD Workflow Detail (lines 123–128): Explicit performance test strategy showing main tests exclude performance gate
+3. Docs-Site Node Requirement (lines 204–210): Explicit Node.js >= 20.0.0 requirement, local dev command, build:validate clarification
+4. Troubleshooting Performance Gate (lines 324–331): New subsection with local profiling command and root-cause hints
+
+**Verification:**
+- File size: 342 → 350 lines (8-line net addition, pure signal)
+- All changes answer specific Copilot session questions
+- Signal-to-noise ratio maximized
+
+**Status:** ✅ Complete. `.github/copilot-instructions.md` refreshed and ready for team merge.

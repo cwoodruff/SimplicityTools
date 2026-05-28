@@ -52,3 +52,16 @@ Established 3-phase site validation checklist for docs-site PRs: (1) Build Valid
 
 **Ref:** `.squad/decisions.md` and `.squad/orchestration-log/`
 
+
+## 2026-05-28T05:40:02.687Z — Copilot Instructions Command Validation
+
+**Task:** Validate that all build/test/docs-site commands documented in `.github/copilot-instructions.md` are executable and accurate.
+
+**Validation Coverage:**
+- CLI test filtering patterns (exclude AnalyzeCommandPerformanceTests, single performance gate)
+- Build/test/pack commands for all package projects
+- Performance gate test isolation (P95 threshold validation)
+- Docs-site Node.js >= 20.0.0 requirement verification
+- Documentation site build passes with `npm run build:validate`
+
+**Status:** ✅ Complete. All commands verified and integrated into Copilot instructions.
