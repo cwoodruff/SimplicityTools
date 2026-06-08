@@ -914,7 +914,8 @@ To keep a trend report across builds, save historical snapshots:
 - name: Save snapshot for trends
   run: |
     mkdir -p .simplicity-history
-    cp $(dotnet simplicity snapshot YourSolution.sln) .simplicity-history/$(date +%Y-%m-%d).json
+    dotnet simplicity baseline YourSolution.sln
+    cp .simplicity-baseline.json .simplicity-history/$(date +%Y-%m-%d).json
   continue-on-error: true
 
 - name: Generate trend report

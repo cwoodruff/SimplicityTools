@@ -73,6 +73,8 @@ Two of the seven diagnostics come with IDE code fixes:
 
 ### ⚡ Quick Install
 
+> **Availability:** SimplicityTools is not on NuGet.org yet. The install commands and version badges below become valid once the matching release tag (`libraries/vX.Y.Z`, `analyzers/vX.Y.Z`, `cli/vX.Y.Z`) is published. Until then, [build from source](#get-started) or follow the [distribution plan](docs/distribution-plan.md). The badges self-update on first publish.
+
 | Package | Latest | Install |
 | --- | --- | --- |
 | **Cli** (global tool) | [![NuGet](https://img.shields.io/nuget/v/SimplicityTools.Cli.svg?logo=nuget)](https://www.nuget.org/packages/SimplicityTools.Cli/) | `dotnet tool install --global SimplicityTools.Cli` |
@@ -83,7 +85,7 @@ Two of the seven diagnostics come with IDE code fixes:
 
 ### Get Started
 
-1. **Install the global tool** (when published):
+1. **Install the global tool** (once published — see [availability](#-quick-install)):
    ```bash
    dotnet tool install --global SimplicityTools.Cli
    dotnet simplicity analyze path/to/YourSolution.sln
