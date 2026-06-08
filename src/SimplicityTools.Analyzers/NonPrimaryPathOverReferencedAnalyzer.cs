@@ -16,7 +16,7 @@ public sealed class NonPrimaryPathOverReferencedAnalyzer : DiagnosticAnalyzer
         category: AnalyzerCategories.PrimaryPathFirst,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        helpLinkUri: "https://simplicity-first.dev/analyzers/SF0007",
+        helpLinkUri: "https://simplicitytools.dev/analyzers/sf0007",
         description: "When supporting files become more referenced than primary-path files, the real business flow is no longer obvious.",
         customTags: [WellKnownDiagnosticTags.CompilationEnd]);
 

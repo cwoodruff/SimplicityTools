@@ -19,7 +19,7 @@ public sealed class AbstractionLayerDepthAnalyzer : DiagnosticAnalyzer
         category: AnalyzerCategories.PrimaryPathFirst,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        helpLinkUri: "https://simplicity-first.dev/analyzers/SF0004",
+        helpLinkUri: "https://simplicitytools.dev/analyzers/sf0004",
         description: "Long source-level call chains hide the primary path behind wrappers and indirection.",
         customTags: [WellKnownDiagnosticTags.CompilationEnd]);
 
