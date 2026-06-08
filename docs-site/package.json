@@ -13,7 +13,7 @@
     "build:validate": "npm run build && npm run check-links"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.12.0"
   },
   "dependencies": {
     "astro": "^6.4.4"
