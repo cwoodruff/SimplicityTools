@@ -18,7 +18,7 @@ public sealed class ConstructorParameterCountAnalyzer : DiagnosticAnalyzer
         category: AnalyzerCategories.TwoAmTest,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        helpLinkUri: "https://simplicitytools.dev/analyzers/sf0005",
+        helpLinkUri: "https://simplicitytools.dev/analyzers/sf0005/",
         description: "Large constructor parameter lists are a strong signal that a type is doing too much.");
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];

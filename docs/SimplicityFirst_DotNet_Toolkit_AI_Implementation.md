@@ -283,7 +283,7 @@ public sealed class SingleImplementationInterfaceAnalyzer : DiagnosticAnalyzer
         category:           "SimplicityFirst.HalfRule",
         defaultSeverity:    DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        helpLinkUri:        "https://simplicitytools.dev/analyzers/sf0001");
+        helpLinkUri:        "https://simplicitytools.dev/analyzers/sf0001/");
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
         ImmutableArray.Create(Rule);
@@ -313,7 +313,7 @@ Each fix provider lives in `src/SimplicityTools.Analyzers/CodeFixes/` and follow
 
 ### 4.4 Help Link URLs
 
-All analyzers point to `https://simplicitytools.dev/analyzers/sf000x` where x is the analyzer number (lowercase). These pages are live on the docs site.
+All analyzers point to `https://simplicitytools.dev/analyzers/sf000x/` where x is the analyzer number (lowercase). These pages are live on the docs site.
 
 ---
 

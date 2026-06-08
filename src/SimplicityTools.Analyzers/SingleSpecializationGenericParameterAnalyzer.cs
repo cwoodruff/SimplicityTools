@@ -16,7 +16,7 @@ public sealed class SingleSpecializationGenericParameterAnalyzer : DiagnosticAna
         category: AnalyzerCategories.HalfRule,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        helpLinkUri: "https://simplicitytools.dev/analyzers/sf0006",
+        helpLinkUri: "https://simplicitytools.dev/analyzers/sf0006/",
         description: "A generic parameter that is only ever bound to one concrete type is indirection without flexibility.",
         customTags: [WellKnownDiagnosticTags.CompilationEnd]);
 

@@ -16,7 +16,7 @@ public sealed class SingleImplementationInterfaceAnalyzer : DiagnosticAnalyzer
         category: AnalyzerCategories.HalfRule,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        helpLinkUri: "https://simplicitytools.dev/analyzers/sf0001",
+        helpLinkUri: "https://simplicitytools.dev/analyzers/sf0001/",
         description: "Interfaces with a single concrete implementation add indirection without buying polymorphism.");
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];

@@ -16,7 +16,7 @@ public sealed class UnusedDependencyAnalyzer : DiagnosticAnalyzer
         category: AnalyzerCategories.HalfRule,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        helpLinkUri: "https://simplicitytools.dev/analyzers/sf0002",
+        helpLinkUri: "https://simplicitytools.dev/analyzers/sf0002/",
         description: "Package references that contribute no used symbols add restore time and maintenance overhead without value.",
         customTags: [WellKnownDiagnosticTags.CompilationEnd]);
 
