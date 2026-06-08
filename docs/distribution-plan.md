@@ -24,9 +24,8 @@ Treat the 2026-05-28 review's blockers as open. Do not push a stable tag until a
   `dotnet build SimplicityTools.sln --nologo --verbosity minimal`
 - [ ] Full test suite green (Sample.Simplified baseline, CLI P95 perf gate):
   `dotnet test SimplicityTools.sln --nologo --no-build --verbosity minimal`
-- [ ] Analyzer package consumer validation: pack, reference from a scratch project with `PrivateAssets="all"`, confirm at least one `SF000x` diagnostic loads and **no** `lib/` compile assets or NuGet dependencies leak downstream.
-- [ ] CLI packaged smoke test: install from a local feed, then
-  `dotnet simplicity analyze ./samples/Sample.Simplified/Sample.Simplified.sln` succeeds.
+- [ ] Analyzer package consumer validation: pack, reference from a scratch project with `PrivateAssets="all"`, confirm at least one `SF000x` diagnostic loads and **no** `lib/` compile assets or NuGet dependencies leak downstream. The package must set `<developmentDependency>true</developmentDependency>`. See the local-feed steps in [`../CONTRIBUTING.md`](../CONTRIBUTING.md).
+- [ ] CLI packaged smoke test: pack and install from a local folder feed (`dotnet tool install --global SimplicityTools.Cli --add-source ./artifacts/local-feed --version <version>-local`; see [`../CONTRIBUTING.md`](../CONTRIBUTING.md)), then `dotnet simplicity analyze ./samples/Sample.Simplified/Sample.Simplified.sln` succeeds.
 - [ ] Docs reconciled: no `simplicity-first.dev` links in `src/` or `docs/`; no `dotnet simplicity snapshot`; README states pre-launch availability.
 
 Go/No-Go: any unchecked box = NO-GO.
