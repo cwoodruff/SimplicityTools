@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://tools.simplicity-first.dev/sitemap.xml
+Sitemap: https://simplicitytools.dev/sitemap.xml
