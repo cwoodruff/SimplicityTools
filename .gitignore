@@ -438,8 +438,15 @@ FodyWeavers.xsd
 # Squad: SubSquad activation file (local to this machine)
 .squad-workstream
 
+# macOS Finder metadata
 **/.DS_Store
-.DS_Store
-.DS_Store
-.DS_Store
-/tests/SimplicityTools.Cli.Tests/.workspace/49fb6008621e43cca504c092bf4abc8f/.idea
+
+# JetBrains Rider / IntelliJ
+**/.idea/
+
+# CLI test workspaces
+tests/SimplicityTools.Cli.Tests/.workspace/
+
+# Local CLI output
+simplicity-report/
+out.txt
