@@ -9,43 +9,15 @@ internal static class CommandLineEntryPoint
     {
         try
         {
-            if (args.Length == 0 ||
-                string.Equals(args[0], "--help", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(args[0], "-h", StringComparison.Ordinal) ||
-                string.Equals(args[0], "help", StringComparison.OrdinalIgnoreCase))
+            if (args.Length == 0 || IsHelpToken(args[0]))
             {
                 WriteUsage(Console.Out);
                 return 0;
             }
 
-            if (string.Equals(args[0], "analyze", StringComparison.OrdinalIgnoreCase))
+            if (Commands.TryGetValue(args[0], out var command))
             {
-                return await RunAnalyzeAsync(args[1..]).ConfigureAwait(false);
-            }
-
-            if (string.Equals(args[0], "report", StringComparison.OrdinalIgnoreCase))
-            {
-                return await RunReportAsync(args[1..]).ConfigureAwait(false);
-            }
-
-            if (string.Equals(args[0], "baseline", StringComparison.OrdinalIgnoreCase))
-            {
-                return await RunBaselineAsync(args[1..]).ConfigureAwait(false);
-            }
-
-            if (string.Equals(args[0], "diff", StringComparison.OrdinalIgnoreCase))
-            {
-                return await RunDiffAsync(args[1..]).ConfigureAwait(false);
-            }
-
-            if (string.Equals(args[0], "budget", StringComparison.OrdinalIgnoreCase))
-            {
-                return await RunBudgetAsync(args[1..]).ConfigureAwait(false);
-            }
-
-            if (string.Equals(args[0], "watch", StringComparison.OrdinalIgnoreCase))
-            {
-                return await RunWatchAsync(args[1..]).ConfigureAwait(false);
+                return await command(args[1..]).ConfigureAwait(false);
             }
 
             Console.Error.WriteLine($"Unknown command '{args[0]}'.");
@@ -57,6 +29,24 @@ internal static class CommandLineEntryPoint
             Console.Error.WriteLine(exception.Message);
             return 1;
         }
+    }
+
+    private static readonly Dictionary<string, Func<string[], Task<int>>> Commands =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["analyze"] = RunAnalyzeAsync,
+            ["report"] = RunReportAsync,
+            ["baseline"] = RunBaselineAsync,
+            ["diff"] = RunDiffAsync,
+            ["budget"] = RunBudgetAsync,
+            ["watch"] = RunWatchAsync
+        };
+
+    private static bool IsHelpToken(string arg)
+    {
+        return string.Equals(arg, "--help", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(arg, "-h", StringComparison.Ordinal) ||
+               string.Equals(arg, "help", StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task<int> RunAnalyzeAsync(string[] args)
