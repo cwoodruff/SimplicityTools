@@ -9,9 +9,12 @@ internal static class CommandLineEntryPoint
     {
         try
         {
-            if (args.Length == 0)
+            if (args.Length == 0 ||
+                string.Equals(args[0], "--help", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(args[0], "-h", StringComparison.Ordinal) ||
+                string.Equals(args[0], "help", StringComparison.OrdinalIgnoreCase))
             {
-                WriteUsage();
+                WriteUsage(Console.Out);
                 return 0;
             }
 
@@ -45,8 +48,9 @@ internal static class CommandLineEntryPoint
                 return await RunWatchAsync(args[1..]).ConfigureAwait(false);
             }
 
-            WriteUsage();
-            return 0;
+            Console.Error.WriteLine($"Unknown command '{args[0]}'.");
+            WriteUsage(Console.Error);
+            return 1;
         }
         catch (Exception exception)
         {
@@ -182,14 +186,16 @@ internal static class CommandLineEntryPoint
         }
     }
 
-    private static void WriteUsage()
+    private static void WriteUsage() => WriteUsage(Console.Out);
+
+    private static void WriteUsage(TextWriter writer)
     {
-        Console.WriteLine("Usage:");
-        Console.WriteLine("  dotnet simplicity analyze <solution.sln>");
-        Console.WriteLine("  dotnet simplicity report <solution.sln>");
-        Console.WriteLine("  dotnet simplicity baseline <solution.sln>");
-        Console.WriteLine("  dotnet simplicity diff <solution.sln> [--fail-on-regression]");
-        Console.WriteLine("  dotnet simplicity budget <solution.sln>");
-        Console.WriteLine("  dotnet simplicity watch <solution.sln>");
+        writer.WriteLine("Usage:");
+        writer.WriteLine("  dotnet simplicity analyze <solution.sln>");
+        writer.WriteLine("  dotnet simplicity report <solution.sln>");
+        writer.WriteLine("  dotnet simplicity baseline <solution.sln>");
+        writer.WriteLine("  dotnet simplicity diff <solution.sln> [--fail-on-regression]");
+        writer.WriteLine("  dotnet simplicity budget <solution.sln>");
+        writer.WriteLine("  dotnet simplicity watch <solution.sln>");
     }
 }

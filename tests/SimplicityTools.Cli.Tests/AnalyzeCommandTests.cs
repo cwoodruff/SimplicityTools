@@ -60,6 +60,35 @@ public sealed class AnalyzeCommandTests
     }
 
     [Fact]
+    public async Task UnknownCommand_WritesUsageToStandardErrorAndReturnsNonZeroExitCode()
+    {
+        await BuildCliAsync();
+
+        var result = await RunProcessAsync(
+            "dotnet",
+            [GetCliAssemblyPath(), "dif"],
+            GetRepositoryRoot());
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains("Unknown command 'dif'", result.StandardError);
+        Assert.Contains("Usage:", result.StandardError);
+    }
+
+    [Fact]
+    public async Task HelpFlag_WritesUsageAndReturnsZeroExitCode()
+    {
+        await BuildCliAsync();
+
+        var result = await RunProcessAsync(
+            "dotnet",
+            [GetCliAssemblyPath(), "--help"],
+            GetRepositoryRoot());
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("Usage:", result.StandardOutput);
+    }
+
+    [Fact]
     public async Task SampleSimplified_AppStartsViaAppHostAndDotnetRun()
     {
         var workspace = CreateSampleWorkspace("Sample.Simplified");
