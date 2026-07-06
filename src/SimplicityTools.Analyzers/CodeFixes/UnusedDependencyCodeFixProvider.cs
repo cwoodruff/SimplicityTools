@@ -20,6 +20,7 @@ public sealed class UnusedDependencyCodeFixProvider : CodeFixProvider
         var textDocument = context.TextDocument;
         var diagnostic = context.Diagnostics[0];
         if (!diagnostic.Properties.TryGetValue(PackageReferenceAnalysis.PackageIdPropertyName, out var packageId) ||
+            packageId is null ||
             string.IsNullOrWhiteSpace(packageId))
         {
             return;

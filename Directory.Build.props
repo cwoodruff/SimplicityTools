@@ -15,6 +15,9 @@
     <IsSimplicityLibraryPackage Condition="'$(MSBuildProjectName)' == 'SimplicityTools.Metrics'">true</IsSimplicityLibraryPackage>
     <IsSimplicityLibraryPackage Condition="'$(MSBuildProjectName)' == 'SimplicityTools.Filters'">true</IsSimplicityLibraryPackage>
     <IsSimplicityLibraryPackage Condition="'$(MSBuildProjectName)' == 'SimplicityTools.Tca'">true</IsSimplicityLibraryPackage>
+
+    <!-- Release gate from docs/distribution-plan.md: zero warnings. Debug builds stay permissive for local iteration. -->
+    <TreatWarningsAsErrors Condition="'$(Configuration)' == 'Release'">true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(IsSimplicityPackage)' == 'true'">

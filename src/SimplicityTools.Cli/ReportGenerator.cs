@@ -678,17 +678,7 @@ internal static class ReportGenerator
         bool showXAxisLabels)
     {
         var values = trendPoints.Select(metric.Selector).ToArray();
-        var min = metric.Minimum ?? values.Min();
-        var max = metric.Maximum ?? values.Max();
-
-        if (max <= min)
-        {
-            max = min + 1d;
-        }
-
-        var padding = metric.Maximum is null ? Math.Max((max - min) * 0.1d, 0.5d) : 0d;
-        min = metric.Minimum ?? Math.Max(0d, min - padding);
-        max = metric.Maximum ?? max + padding;
+        var (min, max) = GetTrendAxisRange(metric, values);
         var bottom = top + height;
 
         builder.AppendLine($"<text class=\"chart-series-label\" x=\"16\" y=\"{FormatNumber(top + 14d)}\" fill=\"{metric.Color}\" font-size=\"12\" font-weight=\"600\">{metric.Title}</text>");
@@ -713,14 +703,7 @@ internal static class ReportGenerator
 
         builder.AppendLine($"<polyline points=\"{string.Join(' ', points)}\" fill=\"none\" stroke=\"{metric.Color}\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" />");
 
-        for (var index = 0; index < trendPoints.Count; index++)
-        {
-            var x = GetXPosition(trendPoints.Count, index, left, width);
-            var y = bottom - (((values[index] - min) / (max - min)) * height);
-            var radius = trendPoints[index].IsCurrent ? 5d : 4d;
-            var fill = trendPoints[index].IsCurrent ? BrandAccentColor : metric.Color;
-            builder.AppendLine($"<circle cx=\"{FormatNumber(x)}\" cy=\"{FormatNumber(y)}\" r=\"{FormatNumber(radius)}\" fill=\"{fill}\" stroke=\"#f0f0f0\" stroke-width=\"1.5\" />");
-        }
+        AppendTrendDataPoints(builder, metric, trendPoints, values, min, max, left, width, height, bottom);
 
         var lastValue = values[^1];
         var lastX = GetXPosition(trendPoints.Count, trendPoints.Count - 1, left, width);
@@ -729,11 +712,59 @@ internal static class ReportGenerator
 
         if (showXAxisLabels)
         {
-            for (var index = 0; index < trendPoints.Count; index++)
-            {
-                var x = GetXPosition(trendPoints.Count, index, left, width);
-                builder.AppendLine($"<text class=\"chart-point-label\" x=\"{FormatNumber(x)}\" y=\"{FormatNumber(bottom + 18d)}\" fill=\"#b6b6b6\" font-size=\"11\" text-anchor=\"middle\">{trendPoints[index].Label}</text>");
-            }
+            AppendTrendXAxisLabels(builder, trendPoints, left, width, bottom);
+        }
+    }
+
+    private static (double Min, double Max) GetTrendAxisRange(TrendMetric metric, IReadOnlyList<double> values)
+    {
+        var min = metric.Minimum ?? values.Min();
+        var max = metric.Maximum ?? values.Max();
+
+        if (max <= min)
+        {
+            max = min + 1d;
+        }
+
+        var padding = metric.Maximum is null ? Math.Max((max - min) * 0.1d, 0.5d) : 0d;
+        min = metric.Minimum ?? Math.Max(0d, min - padding);
+        max = metric.Maximum ?? max + padding;
+        return (min, max);
+    }
+
+    private static void AppendTrendDataPoints(
+        StringBuilder builder,
+        TrendMetric metric,
+        IReadOnlyList<TrendPoint> trendPoints,
+        IReadOnlyList<double> values,
+        double min,
+        double max,
+        double left,
+        double width,
+        double height,
+        double bottom)
+    {
+        for (var index = 0; index < trendPoints.Count; index++)
+        {
+            var x = GetXPosition(trendPoints.Count, index, left, width);
+            var y = bottom - (((values[index] - min) / (max - min)) * height);
+            var radius = trendPoints[index].IsCurrent ? 5d : 4d;
+            var fill = trendPoints[index].IsCurrent ? BrandAccentColor : metric.Color;
+            builder.AppendLine($"<circle cx=\"{FormatNumber(x)}\" cy=\"{FormatNumber(y)}\" r=\"{FormatNumber(radius)}\" fill=\"{fill}\" stroke=\"#f0f0f0\" stroke-width=\"1.5\" />");
+        }
+    }
+
+    private static void AppendTrendXAxisLabels(
+        StringBuilder builder,
+        IReadOnlyList<TrendPoint> trendPoints,
+        double left,
+        double width,
+        double bottom)
+    {
+        for (var index = 0; index < trendPoints.Count; index++)
+        {
+            var x = GetXPosition(trendPoints.Count, index, left, width);
+            builder.AppendLine($"<text class=\"chart-point-label\" x=\"{FormatNumber(x)}\" y=\"{FormatNumber(bottom + 18d)}\" fill=\"#b6b6b6\" font-size=\"11\" text-anchor=\"middle\">{trendPoints[index].Label}</text>");
         }
     }
 
