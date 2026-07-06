@@ -16,7 +16,7 @@ Warning: simplicity.json was not found in '/Users/cwoodruff/Git/SimplicityTools/
 Simplicity Snapshot (2026-05-01)
 ----------------------------------------
 Projects: 2
-Total files: 23
+Total files: 24
 Primary path files: 5
 Abstraction layers: 1
 Single-impl interfaces: 0
@@ -26,7 +26,7 @@ Est. onboarding: 0h
 ```
 
 **What this means:**
-- **Projects/Files:** The scope of the solution (2 projects, 23 files).
+- **Projects/Files:** The scope of the solution (2 projects, 24 files).
 - **Abstraction layers:** How many levels of indirection exist (1 = good; high numbers signal over-engineering).
 - **Single-impl interfaces:** Interfaces with only one implementation (dead abstraction).
 - **Avg complexity:** Average cyclomatic complexity per method (1.4 is healthy; >5 signals refactoring needed).
@@ -50,7 +50,7 @@ Warning: simplicity.json was not found in '/Users/cwoodruff/Git/SimplicityTools/
 Simplicity Snapshot (2026-05-01)
 ----------------------------------------
 Projects: 2
-Total files: 23
+Total files: 24
 Primary path files: 5
 Abstraction layers: 1
 Single-impl interfaces: 0
@@ -112,7 +112,7 @@ Current snapshot: 2026-05-01
 
 Metric delta
 - Total projects: 2 -> 2 (0)
-- Total files: 23 -> 23 (0)
+- Total files: 24 -> 24 (0)
 - Primary path files: 5 -> 5 (0)
 - Abstraction layers: 1 -> 1 (0)
 - Single-implementation interfaces: 0 -> 0 (0)
@@ -202,7 +202,7 @@ Initial snapshot
 Simplicity Snapshot (2026-05-01)
 ----------------------------------------
 Projects: 2
-Total files: 23
+Total files: 24
 Primary path files: 5
 Abstraction layers: 1
 Single-impl interfaces: 0
