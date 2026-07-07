@@ -143,7 +143,7 @@ internal sealed class WatchCommandRunner
 
         try
         {
-            LoadConfiguration();
+            var configuration = LoadConfiguration();
             var snapshot = await _collectSnapshotAsync(_solutionPath).ConfigureAwait(false);
 
             _outputWriter.WriteLine(heading);
@@ -154,7 +154,7 @@ internal sealed class WatchCommandRunner
                 _outputWriter.WriteLine($"Change detected: {change.FormatForDisplay(_solutionDirectory)}");
             }
 
-            _outputWriter.WriteLine(WatchAnalysisReportBuilder.Create(snapshot));
+            _outputWriter.WriteLine(WatchAnalysisReportBuilder.Create(snapshot, configuration.Filters.ToFilterThresholds()));
             _outputWriter.WriteLine();
             await _outputWriter.FlushAsync().ConfigureAwait(false);
         }
@@ -172,15 +172,16 @@ internal sealed class WatchCommandRunner
         }
     }
 
-    private void LoadConfiguration()
+    private SimplicityConfiguration LoadConfiguration()
     {
         var configPath = SimplicityConfigurationLoader.GetPathForSolution(_solutionPath);
         var configExists = File.Exists(configPath);
-        _ = SimplicityConfigurationLoader.LoadForSolution(
+        var configuration = SimplicityConfigurationLoader.LoadForSolution(
             _solutionPath,
             _errorWriter,
             warnWhenMissing: !_hasWarnedAboutMissingConfiguration || configExists);
         _hasWarnedAboutMissingConfiguration = !configExists;
+        return configuration;
     }
 
     private bool ShouldIgnorePath(string fullPath)
@@ -289,7 +290,7 @@ internal sealed record WatchChangeNotification(WatcherChangeTypes ChangeType, st
 
 internal static class WatchAnalysisReportBuilder
 {
-    public static string Create(SimplicitySnapshot snapshot)
+    public static string Create(SimplicitySnapshot snapshot, FilterThresholds? thresholds = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
@@ -299,7 +300,8 @@ internal static class WatchAnalysisReportBuilder
         builder.AppendLine("Filter Verdicts");
         builder.AppendLine("---------------");
 
-        foreach (var verdict in Evaluate(snapshot))
+        var verdicts = SnapshotFilterEvaluation.Evaluate(snapshot, thresholds ?? FilterThresholds.Default);
+        foreach (var verdict in SnapshotFilterEvaluation.GetFilterOrder().Select(filter => verdicts[filter]))
         {
             builder.AppendLine($"{verdict.Filter}: {(verdict.Passes ? "PASS" : "FAIL")} ({verdict.Score:F2})");
             builder.AppendLine($"  {verdict.Summary}");
@@ -320,13 +322,4 @@ internal static class WatchAnalysisReportBuilder
         return builder.ToString().TrimEnd();
     }
 
-    private static IReadOnlyList<FilterVerdict> Evaluate(SimplicitySnapshot snapshot)
-    {
-        return
-        [
-            TwoAmTestEvaluator.Evaluate(snapshot),
-            HalfRuleEvaluator.Evaluate(snapshot),
-            PrimaryPathFirstEvaluator.Evaluate(snapshot)
-        ];
-    }
 }

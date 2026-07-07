@@ -14,17 +14,29 @@ public static class PrimaryPathFirstEvaluator
     /// </summary>
     /// <param name="snapshot">The snapshot to score.</param>
     /// <returns>The filter verdict for the snapshot.</returns>
-    public static FilterVerdict Evaluate(SimplicitySnapshot snapshot)
+    public static FilterVerdict Evaluate(SimplicitySnapshot snapshot) =>
+        Evaluate(snapshot, FilterThresholds.Default);
+
+    /// <summary>
+    /// Evaluates the Primary Path First filter against a collected snapshot with custom thresholds.
+    /// </summary>
+    /// <param name="snapshot">The snapshot to score.</param>
+    /// <param name="thresholds">The thresholds to score against.</param>
+    /// <returns>The filter verdict for the snapshot.</returns>
+    public static FilterVerdict Evaluate(SimplicitySnapshot snapshot, FilterThresholds thresholds)
     {
+        ArgumentNullException.ThrowIfNull(thresholds);
+
         var subScores = new[]
         {
-            new FilterSubScore("Primary path concentration", FilterScoring.PrimaryPathConcentration(snapshot)),
+            new FilterSubScore("Primary path concentration", FilterScoring.PrimaryPathConcentration(snapshot, thresholds.PrimaryPathRatioTarget)),
             new FilterSubScore("Abstraction dilution", FilterScoring.RatioThreshold(snapshot.AbstractionLayerCount, snapshot.PrimaryPathFileCount, MaxLayersPerPrimaryPathFile)),
             new FilterSubScore("Project count", FilterScoring.InverseThreshold(snapshot.TotalProjects, 5.0))
         };
 
         return FilterScoring.CreateVerdict(
             FilterName.PrimaryPathFirst,
+            thresholds.PassingScore,
             subScores,
             new Dictionary<string, string>
             {

@@ -1,4 +1,5 @@
 using SimplicityTools.Cli;
+using SimplicityTools.Filters;
 using SimplicityTools.Metrics;
 
 return await CommandLineEntryPoint.RunAsync(args);
@@ -49,55 +50,46 @@ internal static class CommandLineEntryPoint
                string.Equals(arg, "help", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static async Task<int> RunAnalyzeAsync(string[] args)
+    private static Task<int> RunAnalyzeAsync(string[] args)
     {
-        if (args.Length != 1)
+        return RunWithSnapshotAsync(args, static (snapshot, _, _) =>
         {
-            WriteUsage();
-            return 1;
-        }
-
-        _ = SimplicityConfigurationLoader.LoadForSolution(args[0], Console.Error);
-        var collector = new SimplicityCollector();
-        var snapshot = await collector.CollectAsync(args[0]).ConfigureAwait(false);
-        Console.WriteLine(snapshot.ToSummary());
-        return 0;
+            Console.WriteLine(snapshot.ToSummary());
+            return Task.FromResult(0);
+        });
     }
 
-    private static async Task<int> RunReportAsync(string[] args)
+    private static Task<int> RunReportAsync(string[] args)
     {
-        if (args.Length != 1)
+        return RunWithSnapshotAsync(args, static async (snapshot, configuration, solutionPath) =>
         {
-            WriteUsage();
-            return 1;
-        }
-
-        _ = SimplicityConfigurationLoader.LoadForSolution(args[0], Console.Error);
-        var collector = new SimplicityCollector();
-        var snapshot = await collector.CollectAsync(args[0]).ConfigureAwait(false);
-        var outputDirectory = "./simplicity-report";
-        await ReportGenerator.GenerateHtmlReportAsync(snapshot, args[0], outputDirectory).ConfigureAwait(false);
-        Console.WriteLine($"Report generated to {Path.Combine(outputDirectory, "index.html")}");
-        return 0;
+            await SnapshotHistory.AppendAsync(solutionPath, snapshot).ConfigureAwait(false);
+            var outputDirectory = "./simplicity-report";
+            await ReportGenerator.GenerateHtmlReportAsync(
+                snapshot,
+                solutionPath,
+                outputDirectory,
+                Console.Error,
+                configuration.Filters.ToFilterThresholds()).ConfigureAwait(false);
+            Console.WriteLine($"Report generated to {Path.Combine(outputDirectory, "index.html")}");
+            Console.WriteLine($"Snapshot saved to {SnapshotHistory.GetDirectoryPath(solutionPath)}");
+            return 0;
+        });
     }
 
-    private static async Task<int> RunBaselineAsync(string[] args)
+    private static Task<int> RunBaselineAsync(string[] args)
     {
-        if (args.Length != 1)
+        return RunWithSnapshotAsync(args, static async (snapshot, _, solutionPath) =>
         {
-            WriteUsage();
-            return 1;
-        }
+            var baselinePath = await BaselineSnapshotFile.WriteAsync(solutionPath, snapshot).ConfigureAwait(false);
+            await SnapshotHistory.AppendAsync(solutionPath, snapshot).ConfigureAwait(false);
 
-        _ = SimplicityConfigurationLoader.LoadForSolution(args[0], Console.Error);
-        var collector = new SimplicityCollector();
-        var snapshot = await collector.CollectAsync(args[0]).ConfigureAwait(false);
-        var baselinePath = await BaselineSnapshotFile.WriteAsync(args[0], snapshot).ConfigureAwait(false);
-
-        Console.WriteLine(snapshot.ToSummary());
-        Console.WriteLine();
-        Console.WriteLine($"Baseline written to {baselinePath}");
-        return 0;
+            Console.WriteLine(snapshot.ToSummary());
+            Console.WriteLine();
+            Console.WriteLine($"Baseline written to {baselinePath}");
+            Console.WriteLine($"Snapshot saved to {SnapshotHistory.GetDirectoryPath(solutionPath)}");
+            return 0;
+        });
     }
 
     private static async Task<int> RunDiffAsync(string[] args)
@@ -120,18 +112,33 @@ internal static class CommandLineEntryPoint
             failOnRegression = true;
         }
 
-        _ = SimplicityConfigurationLoader.LoadForSolution(args[0], Console.Error);
-        var collector = new SimplicityCollector();
-        var currentSnapshot = await collector.CollectAsync(args[0]).ConfigureAwait(false);
-        var baselinePath = BaselineSnapshotFile.GetPath(args[0]);
-        var baselineSnapshot = await BaselineSnapshotFile.ReadAsync(args[0]).ConfigureAwait(false);
-        var report = SnapshotDiffReportBuilder.Create(baselinePath, baselineSnapshot, currentSnapshot);
+        return await RunWithSnapshotAsync([args[0]], async (currentSnapshot, configuration, solutionPath) =>
+        {
+            var baselinePath = BaselineSnapshotFile.GetPath(solutionPath);
+            var baselineSnapshot = await BaselineSnapshotFile.ReadAsync(solutionPath).ConfigureAwait(false);
+            var report = SnapshotDiffReportBuilder.Create(
+                baselinePath,
+                baselineSnapshot,
+                currentSnapshot,
+                configuration.Filters.ToFilterThresholds());
 
-        Console.WriteLine(report.Content);
-        return failOnRegression && report.HasRegression ? 1 : 0;
+            Console.WriteLine(report.Content);
+            return failOnRegression && report.HasRegression ? 1 : 0;
+        }).ConfigureAwait(false);
     }
 
-    private static async Task<int> RunBudgetAsync(string[] args)
+    private static Task<int> RunBudgetAsync(string[] args)
+    {
+        return RunWithSnapshotAsync(args, static (snapshot, configuration, _) =>
+        {
+            Console.WriteLine(ComplexityBudgetReportBuilder.Create(snapshot, configuration.Filters));
+            return Task.FromResult(0);
+        });
+    }
+
+    private static async Task<int> RunWithSnapshotAsync(
+        string[] args,
+        Func<SimplicitySnapshot, SimplicityConfiguration, string, Task<int>> action)
     {
         if (args.Length != 1)
         {
@@ -139,12 +146,11 @@ internal static class CommandLineEntryPoint
             return 1;
         }
 
-        var configuration = SimplicityConfigurationLoader.LoadForSolution(args[0], Console.Error);
-        var collector = new SimplicityCollector();
-        var snapshot = await collector.CollectAsync(args[0]).ConfigureAwait(false);
-
-        Console.WriteLine(ComplexityBudgetReportBuilder.Create(snapshot, configuration.Filters));
-        return 0;
+        var solutionPath = args[0];
+        var configuration = SimplicityConfigurationLoader.LoadForSolution(solutionPath, Console.Error);
+        var collector = new SimplicityCollector(Console.Error.WriteLine);
+        var snapshot = await collector.CollectAsync(solutionPath).ConfigureAwait(false);
+        return await action(snapshot, configuration, solutionPath).ConfigureAwait(false);
     }
 
     private static async Task<int> RunWatchAsync(string[] args)

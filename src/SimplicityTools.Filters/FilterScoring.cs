@@ -4,10 +4,9 @@ namespace SimplicityTools.Filters;
 
 internal static class FilterScoring
 {
-    internal const double PassThreshold = 0.7;
-
     internal static FilterVerdict CreateVerdict(
         FilterName filter,
+        double passingScore,
         IReadOnlyList<FilterSubScore> subScores,
         IReadOnlyDictionary<string, string> violationMessages,
         IReadOnlyDictionary<string, string> recommendationMessages)
@@ -23,9 +22,9 @@ internal static class FilterScoring
 
         return new FilterVerdict(
             filter,
-            score >= PassThreshold,
+            score >= passingScore,
             score,
-            CreateSummary(filter, score, boundedSubScores),
+            CreateSummary(filter, score, passingScore, boundedSubScores),
             boundedSubScores,
             failingSubScores
                 .Select(subScore => violationMessages[subScore.Name])
@@ -61,11 +60,11 @@ internal static class FilterScoring
         return Clamp(maxRatio / ((double)numerator / denominator));
     }
 
-    internal static double PrimaryPathConcentration(SimplicitySnapshot snapshot)
-        => Clamp(snapshot.PrimaryPathRatio / 0.60);
+    internal static double PrimaryPathConcentration(SimplicitySnapshot snapshot, double ratioTarget)
+        => Clamp(snapshot.PrimaryPathRatio / ratioTarget);
 
-    internal static double PrematureAbstraction(double ratio)
-        => Clamp(2.0 - (ratio / 0.25));
+    internal static double PrematureAbstraction(double ratio, double ratioTarget)
+        => Clamp(2.0 - (ratio / ratioTarget));
 
     internal static double UnusedDependencyAccumulation(int count)
         => count <= 0 ? 1.0 : Clamp(1.0 - (count * 0.1));
@@ -73,11 +72,11 @@ internal static class FilterScoring
     internal static double Clamp(double value)
         => double.IsNaN(value) ? 0.0 : Math.Clamp(value, 0.0, 1.0);
 
-    private static string CreateSummary(FilterName filter, double score, IReadOnlyCollection<FilterSubScore> subScores)
+    private static string CreateSummary(FilterName filter, double score, double passingScore, IReadOnlyCollection<FilterSubScore> subScores)
     {
-        var metCheckCount = subScores.Count(subScore => subScore.Score >= PassThreshold);
-        var outcome = score >= PassThreshold ? "passes" : "fails";
+        var metCheckCount = subScores.Count(subScore => subScore.Score >= passingScore);
+        var outcome = score >= passingScore ? "passes" : "fails";
 
-        return $"{filter} {outcome} with score {score:F2} ({metCheckCount}/{subScores.Count} checks at or above 0.70).";
+        return $"{filter} {outcome} with score {score:F2} ({metCheckCount}/{subScores.Count} checks at or above {passingScore:F2}).";
     }
 }

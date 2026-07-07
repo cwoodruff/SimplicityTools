@@ -13,15 +13,16 @@ internal static class SnapshotDiffReportBuilder
     private const double AverageMethodComplexityRegressionThreshold = 0.5d;
     private const double FilterScoreRegressionThreshold = 0.1d;
 
-    public static SnapshotDiffReport Create(string baselinePath, SimplicitySnapshot baseline, SimplicitySnapshot current)
+    public static SnapshotDiffReport Create(string baselinePath, SimplicitySnapshot baseline, SimplicitySnapshot current, FilterThresholds? thresholds = null)
     {
         ArgumentNullException.ThrowIfNull(baselinePath);
         ArgumentNullException.ThrowIfNull(baseline);
         ArgumentNullException.ThrowIfNull(current);
 
         var regressions = new List<string>();
-        var baselineVerdicts = SnapshotFilterEvaluation.Evaluate(baseline);
-        var currentVerdicts = SnapshotFilterEvaluation.Evaluate(current);
+        var filterThresholds = thresholds ?? FilterThresholds.Default;
+        var baselineVerdicts = SnapshotFilterEvaluation.Evaluate(baseline, filterThresholds);
+        var currentVerdicts = SnapshotFilterEvaluation.Evaluate(current, filterThresholds);
 
         AddMetricRegression(
             regressions,

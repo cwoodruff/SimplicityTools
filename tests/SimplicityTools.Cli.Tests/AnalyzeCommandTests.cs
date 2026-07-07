@@ -184,6 +184,7 @@ public sealed class AnalyzeCommandTests
         finally
         {
             await RestoreOptionalFileAsync(baselinePath, originalContent);
+            DeleteDirectoryIfExists(Path.Combine(solutionDirectory, ".simplicity-history"));
         }
     }
 
@@ -214,6 +215,61 @@ public sealed class AnalyzeCommandTests
         finally
         {
             await RestoreOptionalFileAsync(baselinePath, originalContent);
+            DeleteDirectoryIfExists(Path.Combine(Path.GetDirectoryName(solutionPath)!, ".simplicity-history"));
+        }
+    }
+
+    [Fact]
+    public async Task DiffCommand_FailsWithClearErrorWhenBaselineIsMissing()
+    {
+        await BuildCliAsync();
+        var workspace = CreateSampleWorkspace("Sample.Simplified");
+
+        try
+        {
+            var result = await RunProcessAsync(
+                "dotnet",
+                [GetCliAssemblyPath(), "diff", Path.Combine(workspace, "Sample.Simplified.sln")],
+                workspace);
+
+            Assert.Equal(1, result.ExitCode);
+            Assert.Contains("Baseline file was not found", result.StandardError);
+            Assert.Contains("dotnet simplicity baseline", result.StandardError);
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(workspace);
+        }
+    }
+
+    [Fact]
+    public async Task ReportCommand_WritesHistoryAndUnlocksTrendOnSecondRun()
+    {
+        await BuildCliAsync();
+        var workspace = CreateSampleWorkspace("Sample.Simplified");
+
+        try
+        {
+            var solutionPath = Path.Combine(workspace, "Sample.Simplified.sln");
+
+            var firstRun = await RunProcessAsync("dotnet", [GetCliAssemblyPath(), "report", solutionPath], workspace);
+            Assert.Equal(0, firstRun.ExitCode);
+            Assert.Contains("Snapshot saved to", firstRun.StandardOutput);
+
+            var historyDirectory = Path.Combine(workspace, ".simplicity-history");
+            Assert.Single(Directory.GetFiles(historyDirectory, "*.json"));
+
+            var secondRun = await RunProcessAsync("dotnet", [GetCliAssemblyPath(), "report", solutionPath], workspace);
+            Assert.Equal(0, secondRun.ExitCode);
+            Assert.Equal(2, Directory.GetFiles(historyDirectory, "*.json").Length);
+
+            var htmlContent = await File.ReadAllTextAsync(Path.Combine(workspace, "simplicity-report", "index.html"));
+            Assert.Contains("Trend Wave", htmlContent);
+            Assert.DoesNotContain("acting as your teaching baseline", htmlContent);
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(workspace);
         }
     }
 
@@ -389,6 +445,52 @@ public sealed class AnalyzeCommandTests
     }
 
     [Fact]
+    public async Task WatchCommandRunner_AppliesConfiguredFilterThresholds()
+    {
+        var workspace = CreateSampleWorkspace("Sample.Simplified");
+        try
+        {
+            var solutionPath = Path.Combine(workspace, "Sample.Simplified.sln");
+            await File.WriteAllTextAsync(
+                Path.Combine(workspace, "simplicity.json"),
+                """{ "filters": { "passingScore": 0.99 } }""");
+
+            using var outputWriter = new StringWriter(CultureInfo.InvariantCulture);
+            using var errorWriter = new StringWriter(CultureInfo.InvariantCulture);
+            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+
+            var runner = new WatchCommandRunner(
+                solutionPath,
+                outputWriter,
+                errorWriter,
+                debounceDelay: TimeSpan.FromMilliseconds(150));
+
+            var runTask = runner.RunAsync(cancellationTokenSource.Token);
+            try
+            {
+                await WaitForConditionAsync(
+                    () => NormalizeLineEndings(outputWriter.ToString()).Contains("Filter Verdicts", StringComparison.Ordinal),
+                    TimeSpan.FromSeconds(15));
+            }
+            finally
+            {
+                cancellationTokenSource.Cancel();
+            }
+
+            await runTask;
+
+            var output = NormalizeLineEndings(outputWriter.ToString());
+            // Sample.Simplified passes every filter at the default 0.70, but its primary-path
+            // concentration cannot reach a 0.99 passing score.
+            Assert.Contains("PrimaryPathFirst: FAIL", output);
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(workspace);
+        }
+    }
+
+    [Fact]
     public async Task WatchCommandRunner_ReanalyzesAfterFileChangesAndPrintsFilterVerdicts()
     {
         var workspace = CreateSampleWorkspace("Sample.Simplified");
@@ -526,6 +628,7 @@ public sealed class AnalyzeCommandTests
             finally
             {
                 DeleteDirectoryIfExists(workspace);
+                DeleteDirectoryIfExists(Path.Combine(Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!, ".simplicity-history"));
             }
         }
     }
@@ -562,6 +665,7 @@ public sealed class AnalyzeCommandTests
         finally
         {
             DeleteDirectoryIfExists(workspace);
+            DeleteDirectoryIfExists(Path.Combine(Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!, ".simplicity-history"));
         }
     }
 
@@ -724,9 +828,8 @@ public sealed class AnalyzeCommandTests
 
     private static async Task<SimplicitySnapshot> LoadSnapshotAsync(string baselinePath)
     {
-        await using var stream = File.OpenRead(baselinePath);
-        return await JsonSerializer.DeserializeAsync<SimplicitySnapshot>(stream, new JsonSerializerOptions(JsonSerializerDefaults.Web))
-            ?? throw new InvalidOperationException($"Could not load baseline snapshot from '{baselinePath}'.");
+        var json = await File.ReadAllTextAsync(baselinePath);
+        return SnapshotEnvelope.Deserialize(json, $"Baseline file '{baselinePath}'");
     }
 
     private static async Task<string?> ReadOptionalFileAsync(string path)

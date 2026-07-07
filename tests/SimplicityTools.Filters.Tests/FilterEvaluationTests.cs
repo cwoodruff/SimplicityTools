@@ -100,6 +100,48 @@ public sealed class FilterEvaluationTests
         AssertAllScoresAreBounded(verdict);
     }
 
+    [Fact]
+    public void Evaluators_HonorCustomThresholds()
+    {
+        // Perfect under the defaults.
+        var snapshot = CreateSnapshot(
+            totalProjects: 2,
+            totalFiles: 20,
+            primaryPathFileCount: 5,
+            abstractionLayerCount: 6,
+            averageMethodComplexity: 5,
+            estimatedOnboardingTime: TimeSpan.FromHours(40));
+
+        Assert.True(TwoAmTestEvaluator.Evaluate(snapshot).Passes);
+
+        // Tighter complexity and onboarding targets drop the sub-scores; a raised passing score
+        // turns the previously perfect snapshot into a failure.
+        var strict = FilterThresholds.Default with
+        {
+            MaxMethodComplexity = 2.5,
+            MaxOnboardingHours = 20,
+            PassingScore = 0.95
+        };
+
+        var verdict = TwoAmTestEvaluator.Evaluate(snapshot, strict);
+
+        Assert.False(verdict.Passes);
+        Assert.Equal(0.5, Assert.Single(verdict.SubScores, subScore => subScore.Name == "Diagnosability").Score);
+        Assert.Equal(0.5, Assert.Single(verdict.SubScores, subScore => subScore.Name == "Cognitive load").Score);
+    }
+
+    [Fact]
+    public void PrimaryPathFirstEvaluator_HonorsCustomRatioTarget()
+    {
+        var snapshot = CreateSnapshot(totalProjects: 2, totalFiles: 10, primaryPathFileCount: 6);
+
+        var relaxed = PrimaryPathFirstEvaluator.Evaluate(snapshot, FilterThresholds.Default with { PrimaryPathRatioTarget = 0.30 });
+        var strict = PrimaryPathFirstEvaluator.Evaluate(snapshot, FilterThresholds.Default with { PrimaryPathRatioTarget = 0.90 });
+
+        Assert.Equal(1.0, Assert.Single(relaxed.SubScores, subScore => subScore.Name == "Primary path concentration").Score);
+        Assert.Equal(0.6 / 0.9, Assert.Single(strict.SubScores, subScore => subScore.Name == "Primary path concentration").Score, precision: 10);
+    }
+
     private static void AssertAllScoresAreBounded(FilterVerdict verdict)
     {
         Assert.InRange(verdict.Score, 0.0, 1.0);

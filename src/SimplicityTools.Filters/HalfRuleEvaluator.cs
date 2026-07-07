@@ -12,17 +12,29 @@ public static class HalfRuleEvaluator
     /// </summary>
     /// <param name="snapshot">The snapshot to score.</param>
     /// <returns>The filter verdict for the snapshot.</returns>
-    public static FilterVerdict Evaluate(SimplicitySnapshot snapshot)
+    public static FilterVerdict Evaluate(SimplicitySnapshot snapshot) =>
+        Evaluate(snapshot, FilterThresholds.Default);
+
+    /// <summary>
+    /// Evaluates the Half-Rule against a collected snapshot with custom thresholds.
+    /// </summary>
+    /// <param name="snapshot">The snapshot to score.</param>
+    /// <param name="thresholds">The thresholds to score against.</param>
+    /// <returns>The filter verdict for the snapshot.</returns>
+    public static FilterVerdict Evaluate(SimplicitySnapshot snapshot, FilterThresholds thresholds)
     {
+        ArgumentNullException.ThrowIfNull(thresholds);
+
         var subScores = new[]
         {
-            new FilterSubScore("Premature abstraction", FilterScoring.PrematureAbstraction(snapshot.PrematureAbstractionRatio)),
+            new FilterSubScore("Premature abstraction", FilterScoring.PrematureAbstraction(snapshot.PrematureAbstractionRatio, thresholds.PrematureAbstractionRatioTarget)),
             new FilterSubScore("Dependency accumulation", FilterScoring.UnusedDependencyAccumulation(snapshot.UnusedDependencyCount)),
             new FilterSubScore("Dependency sprawl", FilterScoring.RatioThreshold(snapshot.ExternalDependencyCount, snapshot.TotalProjects, 8.0))
         };
 
         return FilterScoring.CreateVerdict(
             FilterName.HalfRule,
+            thresholds.PassingScore,
             subScores,
             new Dictionary<string, string>
             {

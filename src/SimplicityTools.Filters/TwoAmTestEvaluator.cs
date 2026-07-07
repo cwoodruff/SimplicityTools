@@ -12,12 +12,23 @@ public static class TwoAmTestEvaluator
     /// </summary>
     /// <param name="snapshot">The snapshot to score.</param>
     /// <returns>The filter verdict for the snapshot.</returns>
-    public static FilterVerdict Evaluate(SimplicitySnapshot snapshot)
+    public static FilterVerdict Evaluate(SimplicitySnapshot snapshot) =>
+        Evaluate(snapshot, FilterThresholds.Default);
+
+    /// <summary>
+    /// Evaluates the 2 AM Test against a collected snapshot with custom thresholds.
+    /// </summary>
+    /// <param name="snapshot">The snapshot to score.</param>
+    /// <param name="thresholds">The thresholds to score against.</param>
+    /// <returns>The filter verdict for the snapshot.</returns>
+    public static FilterVerdict Evaluate(SimplicitySnapshot snapshot, FilterThresholds thresholds)
     {
+        ArgumentNullException.ThrowIfNull(thresholds);
+
         var subScores = new List<FilterSubScore>
         {
             new("Discoverability", FilterScoring.InverseThreshold(snapshot.PrimaryPathFileCount, 5.0)),
-            new("Diagnosability", FilterScoring.InverseThreshold(snapshot.AverageMethodComplexity, 5.0)),
+            new("Diagnosability", FilterScoring.InverseThreshold(snapshot.AverageMethodComplexity, thresholds.MaxMethodComplexity)),
             new("Fixability", FilterScoring.RatioThreshold(snapshot.AbstractionLayerCount, snapshot.TotalProjects, 3.0))
         };
 
@@ -25,11 +36,12 @@ public static class TwoAmTestEvaluator
         // sub-scores instead of treating the metric as a perfect zero.
         if (snapshot.EstimatedOnboardingTime is { } onboardingTime)
         {
-            subScores.Add(new FilterSubScore("Cognitive load", FilterScoring.InverseThreshold(onboardingTime.TotalHours, 40.0)));
+            subScores.Add(new FilterSubScore("Cognitive load", FilterScoring.InverseThreshold(onboardingTime.TotalHours, thresholds.MaxOnboardingHours)));
         }
 
         return FilterScoring.CreateVerdict(
             FilterName.TwoAmTest,
+            thresholds.PassingScore,
             subScores,
             new Dictionary<string, string>
             {
