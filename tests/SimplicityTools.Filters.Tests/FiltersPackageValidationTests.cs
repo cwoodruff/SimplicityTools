@@ -99,17 +99,19 @@ public sealed class FiltersPackageValidationTests
             {
                 public static void Main()
                 {
-                    var snapshot = new SimplicitySnapshot(
-                        TotalProjects: 2,
-                        TotalFiles: 12,
-                        PrimaryPathFileCount: 6,
-                        AbstractionLayerCount: 1,
-                        ExternalDependencyCount: 1,
-                        UnusedDependencyCount: 0,
-                        InterfacesWithSingleImplementation: 0,
-                        AverageMethodComplexity: 2,
-                        EstimatedOnboardingTime: TimeSpan.FromHours(8),
-                        CollectedAt: DateTimeOffset.Parse("2026-04-30T19:09:43.583-04:00"));
+                    var snapshot = new SimplicitySnapshot
+                    {
+                        TotalProjects = 2,
+                        TotalFiles = 12,
+                        PrimaryPathFileCount = 6,
+                        AbstractionLayerCount = 1,
+                        ExternalDependencyCount = 1,
+                        UnusedDependencyCount = 0,
+                        InterfacesWithSingleImplementation = 0,
+                        AverageMethodComplexity = 2,
+                        EstimatedOnboardingTime = TimeSpan.FromHours(8),
+                        CollectedAt = DateTimeOffset.Parse("2026-04-30T19:09:43.583-04:00")
+                    };
 
                     var verdicts = new[]
                     {

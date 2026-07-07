@@ -109,17 +109,19 @@ public sealed class TcaPackageValidationTests
             {
                 public static void Main()
                 {
-                    var snapshot = new SimplicitySnapshot(
-                        TotalProjects: 3,
-                        TotalFiles: 18,
-                        PrimaryPathFileCount: 9,
-                        AbstractionLayerCount: 2,
-                        ExternalDependencyCount: 2,
-                        UnusedDependencyCount: 0,
-                        InterfacesWithSingleImplementation: 1,
-                        AverageMethodComplexity: 2.5,
-                        EstimatedOnboardingTime: TimeSpan.FromHours(10),
-                        CollectedAt: DateTimeOffset.Parse("2026-04-30T19:09:43.583-04:00"));
+                    var snapshot = new SimplicitySnapshot
+                    {
+                        TotalProjects = 3,
+                        TotalFiles = 18,
+                        PrimaryPathFileCount = 9,
+                        AbstractionLayerCount = 2,
+                        ExternalDependencyCount = 2,
+                        UnusedDependencyCount = 0,
+                        InterfacesWithSingleImplementation = 1,
+                        AverageMethodComplexity = 2.5,
+                        EstimatedOnboardingTime = TimeSpan.FromHours(10),
+                        CollectedAt = DateTimeOffset.Parse("2026-04-30T19:09:43.583-04:00")
+                    };
 
                     var verdicts = new[]
                     {

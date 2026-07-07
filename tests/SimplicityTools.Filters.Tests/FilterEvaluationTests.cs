@@ -189,15 +189,17 @@ public sealed class FilterEvaluationTests
         int interfacesWithSingleImplementation = 0,
         double averageMethodComplexity = 1,
         TimeSpan? estimatedOnboardingTime = null) =>
-        new(
-            totalProjects,
-            totalFiles,
-            primaryPathFileCount,
-            abstractionLayerCount,
-            externalDependencyCount,
-            unusedDependencyCount,
-            interfacesWithSingleImplementation,
-            averageMethodComplexity,
-            estimatedOnboardingTime ?? TimeSpan.FromHours(8),
-            DateTimeOffset.Parse("2026-04-29T21:22:50.867-04:00"));
+        new()
+        {
+            TotalProjects = totalProjects,
+            TotalFiles = totalFiles,
+            PrimaryPathFileCount = primaryPathFileCount,
+            AbstractionLayerCount = abstractionLayerCount,
+            ExternalDependencyCount = externalDependencyCount,
+            UnusedDependencyCount = unusedDependencyCount,
+            InterfacesWithSingleImplementation = interfacesWithSingleImplementation,
+            AverageMethodComplexity = averageMethodComplexity,
+            EstimatedOnboardingTime = estimatedOnboardingTime ?? TimeSpan.FromHours(8),
+            CollectedAt = DateTimeOffset.Parse("2026-04-29T21:22:50.867-04:00")
+        };
 }

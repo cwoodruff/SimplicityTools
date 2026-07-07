@@ -6,28 +6,60 @@ namespace SimplicityTools.Metrics;
 /// <summary>
 /// Immutable summary of the simplicity signals collected for a solution.
 /// </summary>
-/// <param name="TotalProjects">The number of projects in the solution.</param>
-/// <param name="TotalFiles">The number of countable source files in the solution.</param>
-/// <param name="PrimaryPathFileCount">The number of files identified as part of the primary path.</param>
-/// <param name="AbstractionLayerCount">The number of abstraction layers detected in the solution.</param>
-/// <param name="ExternalDependencyCount">The number of external package dependencies referenced by the solution.</param>
-/// <param name="UnusedDependencyCount">The number of external package dependencies that appear unused.</param>
-/// <param name="InterfacesWithSingleImplementation">The number of interfaces with a single implementation.</param>
-/// <param name="AverageMethodComplexity">The average cyclomatic complexity across measured methods.</param>
-/// <param name="EstimatedOnboardingTime">The estimated onboarding time for understanding the solution, or null when the metric has not been computed.</param>
-/// <param name="CollectedAt">The timestamp when the snapshot was collected.</param>
-public sealed record SimplicitySnapshot(
-    int TotalProjects,
-    int TotalFiles,
-    int PrimaryPathFileCount,
-    int AbstractionLayerCount,
-    int ExternalDependencyCount,
-    int UnusedDependencyCount,
-    int InterfacesWithSingleImplementation,
-    double AverageMethodComplexity,
-    TimeSpan? EstimatedOnboardingTime,
-    DateTimeOffset CollectedAt)
+public sealed record SimplicitySnapshot
 {
+    /// <summary>
+    /// Gets the number of projects in the solution.
+    /// </summary>
+    public required int TotalProjects { get; init; }
+
+    /// <summary>
+    /// Gets the number of countable source files in the solution.
+    /// </summary>
+    public required int TotalFiles { get; init; }
+
+    /// <summary>
+    /// Gets the number of files identified as part of the primary path.
+    /// </summary>
+    public required int PrimaryPathFileCount { get; init; }
+
+    /// <summary>
+    /// Gets the number of interface types declared in the solution, used as the proxy for
+    /// abstraction layers.
+    /// </summary>
+    public required int AbstractionLayerCount { get; init; }
+
+    /// <summary>
+    /// Gets the number of external package dependencies referenced by the solution.
+    /// </summary>
+    public required int ExternalDependencyCount { get; init; }
+
+    /// <summary>
+    /// Gets the number of external package dependencies that appear unused.
+    /// </summary>
+    public required int UnusedDependencyCount { get; init; }
+
+    /// <summary>
+    /// Gets the number of interfaces with a single implementation.
+    /// </summary>
+    public required int InterfacesWithSingleImplementation { get; init; }
+
+    /// <summary>
+    /// Gets the average cyclomatic complexity across measured methods.
+    /// </summary>
+    public required double AverageMethodComplexity { get; init; }
+
+    /// <summary>
+    /// Gets the estimated onboarding time for understanding the solution, or null when the
+    /// metric has not been computed.
+    /// </summary>
+    public required TimeSpan? EstimatedOnboardingTime { get; init; }
+
+    /// <summary>
+    /// Gets the timestamp when the snapshot was collected.
+    /// </summary>
+    public required DateTimeOffset CollectedAt { get; init; }
+
     /// <summary>
     /// Gets the fraction of counted files that belong to the primary path.
     /// </summary>
@@ -77,15 +109,17 @@ public sealed record SimplicitySnapshot(
     /// </summary>
     /// <returns>An empty snapshot with zeroed metrics and a current timestamp.</returns>
     public static SimplicitySnapshot Empty() =>
-        new(
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            null,
-            DateTimeOffset.UtcNow);
+        new()
+        {
+            TotalProjects = 0,
+            TotalFiles = 0,
+            PrimaryPathFileCount = 0,
+            AbstractionLayerCount = 0,
+            ExternalDependencyCount = 0,
+            UnusedDependencyCount = 0,
+            InterfacesWithSingleImplementation = 0,
+            AverageMethodComplexity = 0,
+            EstimatedOnboardingTime = null,
+            CollectedAt = DateTimeOffset.UtcNow
+        };
 }

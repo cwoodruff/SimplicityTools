@@ -107,16 +107,18 @@ public sealed class SimplicityCollector : ISimplicityCollector
         var semanticMetrics = await semanticCollectionPass.CollectAsync(solution, structuralMetrics.ProjectFilePaths, cancellationToken).ConfigureAwait(false);
         var heuristicMetrics = await heuristicCollectionPass.CollectAsync(solution, structuralMetrics.ProjectFilePaths, cancellationToken).ConfigureAwait(false);
 
-        return new SimplicitySnapshot(
-            structuralMetrics.TotalProjects,
-            heuristicMetrics.AnalyzedFileCount,
-            heuristicMetrics.PrimaryPathFileCount,
-            semanticMetrics.AbstractionLayerCount,
-            semanticMetrics.ExternalDependencyCount,
-            semanticMetrics.UnusedDependencyCount,
-            semanticMetrics.InterfacesWithSingleImplementation,
-            semanticMetrics.AverageMethodComplexity,
-            null,
-            collectedAt);
+        return new SimplicitySnapshot
+        {
+            TotalProjects = structuralMetrics.TotalProjects,
+            TotalFiles = heuristicMetrics.AnalyzedFileCount,
+            PrimaryPathFileCount = heuristicMetrics.PrimaryPathFileCount,
+            AbstractionLayerCount = semanticMetrics.AbstractionLayerCount,
+            ExternalDependencyCount = semanticMetrics.ExternalDependencyCount,
+            UnusedDependencyCount = semanticMetrics.UnusedDependencyCount,
+            InterfacesWithSingleImplementation = semanticMetrics.InterfacesWithSingleImplementation,
+            AverageMethodComplexity = semanticMetrics.AverageMethodComplexity,
+            EstimatedOnboardingTime = null,
+            CollectedAt = collectedAt
+        };
     }
 }

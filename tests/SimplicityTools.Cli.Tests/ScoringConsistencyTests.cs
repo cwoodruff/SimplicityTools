@@ -12,17 +12,19 @@ namespace SimplicityTools.Cli.Tests;
 public sealed class ScoringConsistencyTests
 {
     private static SimplicitySnapshot CreateSnapshot(double averageMethodComplexity) =>
-        new(
-            TotalProjects: 2,
-            TotalFiles: 20,
-            PrimaryPathFileCount: 14,
-            AbstractionLayerCount: 1,
-            ExternalDependencyCount: 0,
-            UnusedDependencyCount: 0,
-            InterfacesWithSingleImplementation: 0,
-            AverageMethodComplexity: averageMethodComplexity,
-            EstimatedOnboardingTime: null,
-            CollectedAt: DateTimeOffset.UnixEpoch);
+        new()
+        {
+            TotalProjects = 2,
+            TotalFiles = 20,
+            PrimaryPathFileCount = 14,
+            AbstractionLayerCount = 1,
+            ExternalDependencyCount = 0,
+            UnusedDependencyCount = 0,
+            InterfacesWithSingleImplementation = 0,
+            AverageMethodComplexity = averageMethodComplexity,
+            EstimatedOnboardingTime = null,
+            CollectedAt = DateTimeOffset.UnixEpoch
+        };
 
     [Fact]
     public void BudgetAndReportBands_AgreeOnConfiguredComplexityThreshold()

@@ -18,17 +18,19 @@ public sealed class SnapshotPersistenceTests : IDisposable
     }
 
     private static SimplicitySnapshot CreateSnapshot(int totalFiles = 20) =>
-        new(
-            TotalProjects: 2,
-            TotalFiles: totalFiles,
-            PrimaryPathFileCount: 5,
-            AbstractionLayerCount: 1,
-            ExternalDependencyCount: 3,
-            UnusedDependencyCount: 1,
-            InterfacesWithSingleImplementation: 0,
-            AverageMethodComplexity: 1.5,
-            EstimatedOnboardingTime: null,
-            CollectedAt: new DateTimeOffset(2026, 7, 6, 12, 0, 0, TimeSpan.Zero));
+        new()
+        {
+            TotalProjects = 2,
+            TotalFiles = totalFiles,
+            PrimaryPathFileCount = 5,
+            AbstractionLayerCount = 1,
+            ExternalDependencyCount = 3,
+            UnusedDependencyCount = 1,
+            InterfacesWithSingleImplementation = 0,
+            AverageMethodComplexity = 1.5,
+            EstimatedOnboardingTime = null,
+            CollectedAt = new DateTimeOffset(2026, 7, 6, 12, 0, 0, TimeSpan.Zero)
+        };
 
     [Fact]
     public async Task Baseline_WritesVersionedEnvelope_AndRoundTrips()
