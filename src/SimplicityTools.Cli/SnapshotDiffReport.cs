@@ -7,15 +7,25 @@ namespace SimplicityTools.Cli;
 
 internal sealed record SnapshotDiffReport(string Content, bool HasRegression);
 
+/// <summary>
+/// Structured outcome of a baseline comparison, shared by the text report and the JSON output.
+/// </summary>
+internal sealed record SnapshotDiffResult(
+    SimplicitySnapshot Baseline,
+    SimplicitySnapshot Current,
+    IReadOnlyList<string> Regressions)
+{
+    public bool HasRegression => Regressions.Count > 0;
+}
+
 internal static class SnapshotDiffReportBuilder
 {
     private const double PrematureAbstractionRegressionThreshold = 0.05d;
     private const double AverageMethodComplexityRegressionThreshold = 0.5d;
     private const double FilterScoreRegressionThreshold = 0.1d;
 
-    public static SnapshotDiffReport Create(string baselinePath, SimplicitySnapshot baseline, SimplicitySnapshot current, FilterThresholds? thresholds = null)
+    public static SnapshotDiffResult CreateResult(SimplicitySnapshot baseline, SimplicitySnapshot current, FilterThresholds? thresholds = null)
     {
-        ArgumentNullException.ThrowIfNull(baselinePath);
         ArgumentNullException.ThrowIfNull(baseline);
         ArgumentNullException.ThrowIfNull(current);
 
@@ -52,6 +62,26 @@ internal static class SnapshotDiffReportBuilder
                     $"{filter} score decreased by {Math.Abs(scoreDelta).ToString("F2", CultureInfo.InvariantCulture)} (threshold -0.10).");
             }
         }
+
+        return new SnapshotDiffResult(baseline, current, regressions);
+    }
+
+    public static SnapshotDiffReport Create(string baselinePath, SimplicitySnapshot baseline, SimplicitySnapshot current, FilterThresholds? thresholds = null)
+    {
+        return Render(baselinePath, CreateResult(baseline, current, thresholds), thresholds);
+    }
+
+    public static SnapshotDiffReport Render(string baselinePath, SnapshotDiffResult result, FilterThresholds? thresholds = null)
+    {
+        ArgumentNullException.ThrowIfNull(baselinePath);
+        ArgumentNullException.ThrowIfNull(result);
+
+        var baseline = result.Baseline;
+        var current = result.Current;
+        var regressions = result.Regressions;
+        var filterThresholds = thresholds ?? FilterThresholds.Default;
+        var baselineVerdicts = SnapshotFilterEvaluation.Evaluate(baseline, filterThresholds);
+        var currentVerdicts = SnapshotFilterEvaluation.Evaluate(current, filterThresholds);
 
         var builder = new StringBuilder();
         builder.AppendLine("Simplicity Diff");
@@ -91,7 +121,7 @@ internal static class SnapshotDiffReportBuilder
             builder.AppendLine($"- {regression}");
         }
 
-        return new SnapshotDiffReport(builder.ToString().TrimEnd(), regressions.Count > 0);
+        return new SnapshotDiffReport(builder.ToString().TrimEnd(), result.HasRegression);
     }
 
     private static void AddMetricRegression(ICollection<string> regressions, string metricName, double delta, double threshold)

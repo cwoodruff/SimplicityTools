@@ -4,9 +4,46 @@ using SimplicityTools.Metrics;
 
 namespace SimplicityTools.Cli;
 
+/// <summary>
+/// A single budget dimension with both raw values (for JSON output) and pre-formatted display
+/// strings (for the text scorecard).
+/// </summary>
+internal sealed record ComplexityBudgetDimension
+{
+    public required string Name { get; init; }
+
+    public required string MetricLabel { get; init; }
+
+    public required double Actual { get; init; }
+
+    public required double Target { get; init; }
+
+    public required string ActualDisplay { get; init; }
+
+    public required string TargetDisplay { get; init; }
+
+    public required double UsageFraction { get; init; }
+
+    public required bool IsWithinBudget { get; init; }
+
+    public required string Guidance { get; init; }
+}
+
+internal sealed record ComplexityBudgetResult(
+    IReadOnlyList<ComplexityBudgetDimension> Dimensions,
+    bool OnboardingTimeComputed)
+{
+    public int WithinBudgetCount => Dimensions.Count(static dimension => dimension.IsWithinBudget);
+}
+
 internal static class ComplexityBudgetReportBuilder
 {
     public static string Create(SimplicitySnapshot snapshot, FilterThresholdConfiguration thresholds)
+    {
+        return Render(CreateResult(snapshot, thresholds));
+    }
+
+    public static ComplexityBudgetResult CreateResult(SimplicitySnapshot snapshot, FilterThresholdConfiguration thresholds)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(thresholds);
@@ -51,16 +88,23 @@ internal static class ComplexityBudgetReportBuilder
                 "Move more of the main business flow onto the primary path so teams can trace it faster.")
         ]);
 
-        var withinBudgetCount = dimensions.Count(static dimension => dimension.IsWithinBudget);
+        return new ComplexityBudgetResult(dimensions, snapshot.EstimatedOnboardingTime is not null);
+    }
+
+    public static string Render(ComplexityBudgetResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        var dimensions = result.Dimensions;
         var builder = new StringBuilder();
 
         builder.AppendLine("Complexity Budget");
         builder.AppendLine("-----------------");
-        builder.AppendLine($"Status: {withinBudgetCount}/{dimensions.Count} dimension(s) within budget.");
+        builder.AppendLine($"Status: {result.WithinBudgetCount}/{dimensions.Count} dimension(s) within budget.");
         builder.AppendLine("Bars show configured budget used. Values above 100% are over budget.");
         builder.AppendLine();
 
-        if (snapshot.EstimatedOnboardingTime is null)
+        if (!result.OnboardingTimeComputed)
         {
             builder.AppendLine("Cognitive Load      not scored — onboarding time has not been computed.");
         }
@@ -95,14 +139,18 @@ internal static class ComplexityBudgetReportBuilder
         string guidance)
     {
         var usageFraction = threshold == 0d ? 0d : actual / threshold;
-        return new ComplexityBudgetDimension(
-            name,
-            metricLabel,
-            formatter(actual),
-            $"<= {formatter(threshold)}",
-            usageFraction,
-            actual <= threshold,
-            guidance);
+        return new ComplexityBudgetDimension
+        {
+            Name = name,
+            MetricLabel = metricLabel,
+            Actual = actual,
+            Target = threshold,
+            ActualDisplay = formatter(actual),
+            TargetDisplay = $"<= {formatter(threshold)}",
+            UsageFraction = usageFraction,
+            IsWithinBudget = actual <= threshold,
+            Guidance = guidance
+        };
     }
 
     private static ComplexityBudgetDimension CreateMinimumThresholdDimension(
@@ -119,14 +167,18 @@ internal static class ComplexityBudgetReportBuilder
                 ? double.PositiveInfinity
                 : threshold / actual;
 
-        return new ComplexityBudgetDimension(
-            name,
-            metricLabel,
-            formatter(actual),
-            $">= {formatter(threshold)}",
-            usageFraction,
-            actual >= threshold,
-            guidance);
+        return new ComplexityBudgetDimension
+        {
+            Name = name,
+            MetricLabel = metricLabel,
+            Actual = actual,
+            Target = threshold,
+            ActualDisplay = formatter(actual),
+            TargetDisplay = $">= {formatter(threshold)}",
+            UsageFraction = usageFraction,
+            IsWithinBudget = actual >= threshold,
+            Guidance = guidance
+        };
     }
 
     private static string CreateBar(double usageFraction)
@@ -159,13 +211,4 @@ internal static class ComplexityBudgetReportBuilder
 
         return $"{((usageFraction - 1d) * 100d).ToString("F0", CultureInfo.InvariantCulture)}%";
     }
-
-    private sealed record ComplexityBudgetDimension(
-        string Name,
-        string MetricLabel,
-        string ActualDisplay,
-        string TargetDisplay,
-        double UsageFraction,
-        bool IsWithinBudget,
-        string Guidance);
 }

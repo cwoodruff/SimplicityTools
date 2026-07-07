@@ -12,7 +12,7 @@ dotnet simplicity analyze samples/Sample.Simplified/Sample.Simplified.sln
 
 **Output:**
 ```text
-Warning: simplicity.json was not found in '/Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified'. Using built-in defaults for TCA inputs and filter thresholds.
+Info: using built-in defaults (no simplicity.json found in '/Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified').
 Simplicity Snapshot (2026-05-01)
 ----------------------------------------
 Projects: 2
@@ -32,7 +32,7 @@ Est. onboarding: not computed
 - **Avg complexity:** Average cyclomatic complexity per method (1.4 is healthy; >5 signals refactoring needed).
 - **Est. onboarding:** Estimated onboarding time for a new team member. Shown as `not computed` until the metric is implemented — no verdict is fabricated from it.
 
-Run this first anytime you want to check the current state of your solution.
+Run this first anytime you want to check the current state of your solution. For CI pipelines, `analyze --format json` prints the snapshot envelope JSON (the same schema as `.simplicity-baseline.json`) to stdout with nothing else.
 
 ---
 
@@ -46,7 +46,7 @@ dotnet simplicity baseline samples/Sample.Simplified/Sample.Simplified.sln
 
 **Output:**
 ```text
-Warning: simplicity.json was not found in '/Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified'. Using built-in defaults for TCA inputs and filter thresholds.
+Info: using built-in defaults (no simplicity.json found in '/Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified').
 Simplicity Snapshot (2026-05-01)
 ----------------------------------------
 Projects: 2
@@ -59,6 +59,7 @@ Avg complexity: 1.4
 Est. onboarding: not computed
 
 Baseline written to /Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified/.simplicity-baseline.json
+Snapshot saved to /Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified/.simplicity-history
 ```
 
 **What this means:**
@@ -80,11 +81,13 @@ dotnet simplicity report samples/Sample.Simplified/Sample.Simplified.sln
 
 **Output:**
 ```text
-Warning: simplicity.json was not found in '/Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified'. Using built-in defaults for TCA inputs and filter thresholds.
-Report generated to ./simplicity-report/index.html
+Info: using built-in defaults (no simplicity.json found in '/Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified').
+Report generated to /Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified/simplicity-report/index.html
+Snapshot saved to /Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified/.simplicity-history
 ```
 
 **What this means:**
+- The report is written to `<solution-directory>/simplicity-report` by default; pass `--output <directory>` to send it somewhere else. The full path is printed either way.
 - Opens in any browser (no external dependencies).
 - Includes metric cards, filter verdicts, complexity breakdown by project, and TCA estimate.
 - Share with stakeholders to justify refactoring investment.
@@ -103,7 +106,7 @@ dotnet simplicity diff samples/Sample.Simplified/Sample.Simplified.sln
 
 **Output:**
 ```text
-Warning: simplicity.json was not found in '/Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified'. Using built-in defaults for TCA inputs and filter thresholds.
+Info: using built-in defaults (no simplicity.json found in '/Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified').
 Simplicity Diff
 ---------------
 Baseline file: /Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified/.simplicity-baseline.json
@@ -125,7 +128,7 @@ Metric delta
 Filter score delta
 - TwoAmTest: 1.00 -> 1.00 (0.00)
 - HalfRule: 1.00 -> 1.00 (0.00)
-- PrimaryPathFirst: 0.79 -> 0.79 (0.00)
+- PrimaryPathFirst: 0.81 -> 0.81 (0.00)
 
 Regression status: no regressions detected.
 ```
@@ -134,7 +137,7 @@ Regression status: no regressions detected.
 - Compares every metric from your baseline to today.
 - Shows deltas (→) so you see exactly what changed.
 - Zero delta in this case = clean sprint (no regression).
-- **Use in CI:** Add `--fail-on-regression` to fail the build if complexity grew.
+- **Use in CI:** Add `--fail-on-regression` to fail the build if complexity grew, and `--format json` to get a machine-readable `{ baseline, current, regressions, hasRegression }` object on stdout.
 
 Run this in pull request CI to prevent complexity creep.
 
@@ -150,10 +153,10 @@ dotnet simplicity budget samples/Sample.Simplified/Sample.Simplified.sln
 
 **Output:**
 ```text
-Warning: simplicity.json was not found in '/Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified'. Using built-in defaults for TCA inputs and filter thresholds.
+Info: using built-in defaults (no simplicity.json found in '/Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified').
 Complexity Budget
 -----------------
-Status: 3/4 dimension(s) within budget.
+Status: 2/3 dimension(s) within budget.
 Bars show configured budget used. Values above 100% are over budget.
 
 Cognitive Load      not scored — onboarding time has not been computed.
@@ -161,10 +164,10 @@ Operational Surface [----------]     0%  WITHIN BUDGET
   Premature abstraction ratio: 0.00 (target <= 0.25)
 Change Safety       [###-------]    27%  WITHIN BUDGET
   Average method complexity: 1.35 (target <= 5.00)
-Discoverability     [##########]   276%  OVER BUDGET
-  Primary path ratio: 0.22 (target >= 0.60)
+Discoverability     [##########]   228%  OVER BUDGET
+  Primary path ratio: 0.26 (target >= 0.60)
 
-Next move: Discoverability is 176% over budget. Move more of the main business flow onto the primary path so teams can trace it faster.
+Next move: Discoverability is 128% over budget. Move more of the main business flow onto the primary path so teams can trace it faster.
 ```
 
 **What this means:**
@@ -176,7 +179,7 @@ Next move: Discoverability is 176% over budget. Move more of the main business f
 - **Change Safety:** Are methods too complex to safely refactor?
 - **Discoverability:** Can a new team member trace the business flow?
 
-In this example, the solution is doing well on three fronts but the "Discoverability" dimension is over budget because only 22% of code sits on the primary business path; the team should aim for ≥ 60%.
+In this example, the solution is doing well on the scored dimensions except "Discoverability", which is over budget because only 26% of code sits on the primary business path; the team should aim for ≥ 60%. Add `--format json` to get the dimensions as a machine-readable array for CI dashboards.
 
 Run this during sprint planning and code review to make trade-off decisions: "Can we ship this feature *and* keep complexity in budget?"
 
@@ -195,7 +198,7 @@ dotnet simplicity watch samples/Sample.Simplified/Sample.Simplified.sln
 Watching /Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified/Sample.Simplified.sln
 Press Ctrl+C to stop.
 
-Warning: simplicity.json was not found in '/Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified'. Using built-in defaults for TCA inputs and filter thresholds.
+Info: using built-in defaults (no simplicity.json found in '/Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified').
 Initial snapshot
 ----------------
 Simplicity Snapshot (2026-05-01)
@@ -237,8 +240,10 @@ Use `watch` during refactoring sessions to see your improvements in real time.
 
 All commands above work **with zero configuration**. SimplicityTools:
 - Uses sensible built-in defaults for TCA inputs and filter thresholds.
-- Issues warnings, not errors, when config is missing.
+- Prints an informational note (not an error) once per run when `simplicity.json` is missing.
 - Teaches by default: output always includes "Next move" guidance.
+
+Run `dotnet simplicity --help` (or `dotnet simplicity <command> --help`) for the full option list, exit codes, and file locations, and `dotnet simplicity --version` to print the tool version.
 
 To customize budget thresholds or TCA inputs, add a `simplicity.json` file to your solution root (optional). See [simplicity-schema.json](simplicity-schema.json) for details.
 

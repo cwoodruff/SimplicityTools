@@ -547,7 +547,7 @@ public sealed class AnalyzeCommandTests
             Assert.Contains("HalfRule", output);
             Assert.Contains("PrimaryPathFirst", output);
             Assert.Equal(1, CountOccurrences(output, "Updated snapshot"));
-            Assert.Equal(1, CountOccurrences(error, "Warning: simplicity.json was not found"));
+            Assert.Equal(1, CountOccurrences(error, "Info: using built-in defaults (no simplicity.json found"));
         }
         finally
         {
@@ -602,8 +602,10 @@ public sealed class AnalyzeCommandTests
                 Assert.Equal(0, result.ExitCode);
                 AssertMissingConfigWarning(result.StandardError, Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!);
 
-                var reportPath = Path.Combine(workspace, "simplicity-report", "index.html");
+                // The report now defaults to <solution-directory>/simplicity-report, not the CWD.
+                var reportPath = Path.Combine(Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!, "simplicity-report", "index.html");
                 Assert.True(File.Exists(reportPath), $"Report file not found at {reportPath}");
+                Assert.Contains($"Report generated to {reportPath}", result.StandardOutput);
 
                 var htmlContent = await File.ReadAllTextAsync(reportPath);
 
@@ -629,6 +631,7 @@ public sealed class AnalyzeCommandTests
             {
                 DeleteDirectoryIfExists(workspace);
                 DeleteDirectoryIfExists(Path.Combine(Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!, ".simplicity-history"));
+                DeleteDirectoryIfExists(Path.Combine(Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!, "simplicity-report"));
             }
         }
     }
@@ -652,7 +655,7 @@ public sealed class AnalyzeCommandTests
             Assert.Equal(0, result.ExitCode);
             AssertMissingConfigWarning(result.StandardError, Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!);
 
-            var reportPath = Path.Combine(workspace, "simplicity-report", "index.html");
+            var reportPath = Path.Combine(Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!, "simplicity-report", "index.html");
             var htmlContent = await File.ReadAllTextAsync(reportPath);
 
             Assert.Contains(sample.TotalProjects.ToString(CultureInfo.InvariantCulture), htmlContent);
@@ -666,6 +669,7 @@ public sealed class AnalyzeCommandTests
         {
             DeleteDirectoryIfExists(workspace);
             DeleteDirectoryIfExists(Path.Combine(Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!, ".simplicity-history"));
+            DeleteDirectoryIfExists(Path.Combine(Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!, "simplicity-report"));
         }
     }
 
@@ -995,7 +999,7 @@ public sealed class AnalyzeCommandTests
     private static void AssertMissingConfigWarning(string standardError, string expectedDirectory)
     {
         var normalized = NormalizeLineEndings(standardError).Trim();
-        Assert.Equal($"Warning: simplicity.json was not found in '{expectedDirectory}'. Using built-in defaults for TCA inputs and filter thresholds.", normalized);
+        Assert.Equal($"Info: using built-in defaults (no simplicity.json found in '{expectedDirectory}').", normalized);
     }
 
     private static string CreateSampleWorkspace(string sampleDirectoryName)
