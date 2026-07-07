@@ -9,7 +9,6 @@ namespace SimplicityTools.Analyzers;
 
 internal static class PackageReferenceAnalysis
 {
-    private const string ProjectPathOption = "build_property.MSBuildProjectFullPath";
     internal const string PackageIdPropertyName = "PackageId";
 
     public static ImmutableArray<PackageReferenceInfo> CollectPackageReferences(CompilationAnalysisContext context)
@@ -141,21 +140,14 @@ internal static class PackageReferenceAnalysis
 
     private static bool TryGetProjectFileText(AnalyzerOptions options, out string projectPath, out SourceText sourceText)
     {
+        // The project file must be provided as an AdditionalFile (wired up by the packaged
+        // build/buildTransitive props). Analyzers must never perform file I/O themselves.
         var projectFile = options.AdditionalFiles.FirstOrDefault(file =>
             string.Equals(Path.GetExtension(file.Path), ".csproj", StringComparison.OrdinalIgnoreCase));
         if (projectFile is not null)
         {
             projectPath = projectFile.Path;
             sourceText = projectFile.GetText(CancellationToken.None) ?? SourceText.From(string.Empty);
-            return true;
-        }
-
-        if (options.AnalyzerConfigOptionsProvider.GlobalOptions.TryGetValue(ProjectPathOption, out var configuredProjectPath) &&
-            !string.IsNullOrWhiteSpace(configuredProjectPath) &&
-            File.Exists(configuredProjectPath))
-        {
-            projectPath = configuredProjectPath;
-            sourceText = SourceText.From(File.ReadAllText(projectPath));
             return true;
         }
 
@@ -166,7 +158,16 @@ internal static class PackageReferenceAnalysis
 
     private static ImmutableArray<PackageReferenceInfo> ParsePackageReferences(string projectPath, SourceText sourceText)
     {
-        var document = XDocument.Parse(sourceText.ToString(), LoadOptions.SetLineInfo);
+        XDocument document;
+        try
+        {
+            document = XDocument.Parse(sourceText.ToString(), LoadOptions.SetLineInfo);
+        }
+        catch (XmlException)
+        {
+            return [];
+        }
+
         var builder = ImmutableArray.CreateBuilder<PackageReferenceInfo>();
 
         foreach (var element in document.Descendants().Where(static element => element.Name.LocalName == "PackageReference"))

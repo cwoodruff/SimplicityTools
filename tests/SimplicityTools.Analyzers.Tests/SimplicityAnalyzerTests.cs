@@ -254,6 +254,95 @@ public sealed class SimplicityAnalyzerTests
     }
 
     [Fact]
+    public async Task UnusedDependencyAnalyzer_DoesNotCrashOrReportOnMalformedProjectFile()
+    {
+        const string projectPath = "/repo/Demo.csproj";
+        const string projectText = """
+        <Project Sdk="Microsoft.NET.Sdk">
+          <ItemGroup>
+            <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+        </Project>
+        """;
+
+        var diagnostics = await RunAsync(
+            new UnusedDependencyAnalyzer(),
+            [
+                new SourceFile("/repo/Feature.cs", """
+                namespace Demo;
+
+                public static class Feature
+                {
+                    public static string Describe(int count) => count.ToString();
+                }
+                """)
+            ],
+            additionalReferences: [CreateNuGetPackageReference("newtonsoft.json", "Newtonsoft.Json.dll")],
+            additionalFiles: [CreateAdditionalText(projectPath, projectText)]);
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public async Task UnusedDependencyAnalyzer_DoesNotReadProjectFileFromDisk()
+    {
+        var projectPath = Path.Combine(Path.GetTempPath(), $"sf0002-disk-{Guid.NewGuid():N}.csproj");
+        await File.WriteAllTextAsync(projectPath, """
+        <Project Sdk="Microsoft.NET.Sdk">
+          <ItemGroup>
+            <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+          </ItemGroup>
+        </Project>
+        """);
+
+        try
+        {
+            var diagnostics = await RunAsync(
+                new UnusedDependencyAnalyzer(),
+                [
+                    new SourceFile("/repo/Feature.cs", """
+                    namespace Demo;
+
+                    public static class Feature
+                    {
+                        public static string Describe(int count) => count.ToString();
+                    }
+                    """)
+                ],
+                additionalReferences: [CreateNuGetPackageReference("newtonsoft.json", "Newtonsoft.Json.dll")],
+                globalOptions: new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["build_property.MSBuildProjectFullPath"] = projectPath
+                });
+
+            Assert.Empty(diagnostics);
+        }
+        finally
+        {
+            File.Delete(projectPath);
+        }
+    }
+
+    [Fact]
+    public async Task UnusedDependencyAnalyzer_DoesNotReportWithoutAdditionalFiles()
+    {
+        var diagnostics = await RunAsync(
+            new UnusedDependencyAnalyzer(),
+            [
+                new SourceFile("/repo/Feature.cs", """
+                namespace Demo;
+
+                public static class Feature
+                {
+                    public static string Describe(int count) => count.ToString();
+                }
+                """)
+            ],
+            additionalReferences: [CreateNuGetPackageReference("newtonsoft.json", "Newtonsoft.Json.dll")]);
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public async Task UnusedDependencyCodeFixProvider_RemovesPackageReferenceWithPreviewSafeRewrite()
     {
         const string projectPath = "/repo/Demo.csproj";
