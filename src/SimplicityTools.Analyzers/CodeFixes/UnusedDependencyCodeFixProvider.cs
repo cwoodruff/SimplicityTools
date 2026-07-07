@@ -13,6 +13,9 @@ public sealed class UnusedDependencyCodeFixProvider : CodeFixProvider
 {
     public override ImmutableArray<string> FixableDiagnosticIds => [UnusedDependencyAnalyzer.DiagnosticId];
 
+    // The batch fixer merges text changes against the original csproj text, so overlapping
+    // multi-package removals effectively apply one package at a time. This is documented
+    // behavior (docs/using-the-simplicity-tools.md); each removal remains a single click.
     public override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 
     public override async Task RegisterCodeFixesAsync(CodeFixContext context)
