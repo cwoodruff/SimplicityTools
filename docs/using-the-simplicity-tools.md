@@ -411,10 +411,17 @@ Asks whether the solution is understandable and fixable under pressure.
 
 Signals used:
 
-- primary-path file count
+- primary-path files **per project** (target: five)
 - average method complexity
 - abstraction layers per project
 - estimated onboarding time
+
+> **Why per project?** Discoverability asks "can one flow be traced through a handful of files at
+> 2 AM," while `PrimaryPathFirst` rewards putting *most* of the codebase on the primary path. An
+> absolute file cap made those two goals mathematically incompatible for any solution above ~8
+> files — growing the primary path improved one score exactly as it destroyed the other.
+> Normalizing by project count measures navigability of a single flow (which happens within a
+> project boundary) without penalizing healthy concentration at scale.
 
 ### `HalfRule`
 

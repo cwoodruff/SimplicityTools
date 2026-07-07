@@ -42,9 +42,9 @@ internal static class ReportGenerator
         sb.AppendLine("<body>");
         sb.AppendLine(GenerateHeader());
         sb.AppendLine(GenerateExecutiveSummary(snapshot));
-        sb.AppendLine(GenerateFilterVerdicts(snapshot));
+        sb.AppendLine(GenerateFilterVerdicts(snapshot, thresholds));
         sb.AppendLine(GenerateMetricDetail(snapshot));
-        sb.AppendLine(GenerateComplexityBudget(snapshot));
+        sb.AppendLine(GenerateComplexityBudget(snapshot, thresholds));
         sb.AppendLine(GenerateTrendAnalysis(snapshot, historicalSnapshots, thresholds));
         sb.AppendLine(GenerateAppendix(snapshot));
         sb.AppendLine("</body>");
@@ -381,7 +381,7 @@ internal static class ReportGenerator
             """;
     }
 
-    private static string GenerateFilterVerdicts(SimplicitySnapshot snapshot)
+    private static string GenerateFilterVerdicts(SimplicitySnapshot snapshot, FilterThresholds thresholds)
     {
         var prematureAbstractionScore = (snapshot.PrematureAbstractionRatio * 100).ToString("F0", CultureInfo.InvariantCulture);
 
@@ -392,14 +392,14 @@ internal static class ReportGenerator
                 <div class="verdict-title">Primary Path Coverage</div>
                 <div class="verdict-description">
                   {snapshot.PrimaryPathFileCount} of {snapshot.TotalFiles} files ({(snapshot.PrimaryPathRatio * 100):F1}%) are on the primary path.
-                  {(snapshot.PrimaryPathRatio > 0.8 ? "<span class=\"badge badge-good\">✓ Good</span>" : snapshot.PrimaryPathRatio > 0.5 ? "<span class=\"badge badge-warn\">⚠ Review</span>" : "<span class=\"badge badge-critical\">✗ Critical</span>")}
+                  {FormatBadge(SimplicityScoring.GetPrimaryPathBand(snapshot.PrimaryPathRatio, thresholds))}
                 </div>
               </div>
               <div class="verdict">
                 <div class="verdict-title">Abstraction Health</div>
                 <div class="verdict-description">
                   {snapshot.InterfacesWithSingleImplementation} of {snapshot.AbstractionLayerCount} interfaces have a single implementation ({prematureAbstractionScore}% premature abstraction).
-                  {(snapshot.PrematureAbstractionRatio < 0.3 ? "<span class=\"badge badge-good\">✓ Good</span>" : snapshot.PrematureAbstractionRatio < 0.6 ? "<span class=\"badge badge-warn\">⚠ Review</span>" : "<span class=\"badge badge-critical\">✗ Critical</span>")}
+                  {FormatBadge(SimplicityScoring.GetPrematureAbstractionBand(snapshot.PrematureAbstractionRatio, thresholds))}
                 </div>
               </div>
               <div class="verdict">
@@ -491,26 +491,15 @@ internal static class ReportGenerator
             """;
     }
 
-    private static string GenerateComplexityBudget(SimplicitySnapshot snapshot)
+    private static string GenerateComplexityBudget(SimplicitySnapshot snapshot, FilterThresholds thresholds)
     {
         var complexity = snapshot.AverageMethodComplexity;
-
-        var complexityStatus = complexity switch
-        {
-            < 3 => ("Excellent", "status-good"),
-            < 5 => ("Good", "status-good"),
-            < 10 => ("Moderate", "status-warn"),
-            _ => ("High", "status-critical")
-        };
+        var complexityBand = SimplicityScoring.GetComplexityBand(complexity, thresholds);
+        var complexityStatus = (complexityBand.Label, ToCssClass(complexityBand.Severity));
 
         // No verdict is rendered for a metric that was never computed.
         var (onboardingValue, onboardingVerdict, onboardingClass) = snapshot.EstimatedOnboardingTime is { } onboardingTime
-            ? onboardingTime.TotalHours switch
-            {
-                < 16 => ($"{onboardingTime.TotalHours:F1}h", "Efficient", "status-good"),
-                < 40 => ($"{onboardingTime.TotalHours:F1}h", "Moderate", "status-warn"),
-                _ => ($"{onboardingTime.TotalHours:F1}h", "Substantial", "status-critical")
-            }
+            ? FormatOnboardingBand(onboardingTime, thresholds)
             : ("Not yet measured", "Metric not computed", string.Empty);
 
         return $"""
@@ -530,7 +519,7 @@ internal static class ReportGenerator
                 </div>
                 <div class="metric-card">
                   <div class="metric-label">Simplicity Score</div>
-                  <div class="metric-value">{CalculateSimplicityScore(snapshot):F0}/100</div>
+                  <div class="metric-value">{SimplicityScoring.CalculateScore(snapshot, thresholds):F0}/100</div>
                   <div class="metric-subvalue">Overall assessment</div>
                 </div>
               </div>
@@ -609,8 +598,33 @@ internal static class ReportGenerator
                 entry.IsCurrent,
                 entry.Snapshot,
                 SnapshotFilterEvaluation.Evaluate(entry.Snapshot, thresholds),
-                CalculateSimplicityScore(entry.Snapshot)))
+                SimplicityScoring.CalculateScore(entry.Snapshot, thresholds)))
             .ToArray();
+    }
+
+    private static string ToCssClass(ScoreBandSeverity severity) => severity switch
+    {
+        ScoreBandSeverity.Good => "status-good",
+        ScoreBandSeverity.Warn => "status-warn",
+        _ => "status-critical"
+    };
+
+    private static string FormatBadge(ScoreBand band)
+    {
+        var (symbol, cssClass) = band.Severity switch
+        {
+            ScoreBandSeverity.Good => ("✓", "badge-good"),
+            ScoreBandSeverity.Warn => ("⚠", "badge-warn"),
+            _ => ("✗", "badge-critical")
+        };
+
+        return $"<span class=\"badge {cssClass}\">{symbol} {band.Label}</span>";
+    }
+
+    private static (string Value, string Verdict, string CssClass) FormatOnboardingBand(TimeSpan onboardingTime, FilterThresholds thresholds)
+    {
+        var band = SimplicityScoring.GetOnboardingBand(onboardingTime.TotalHours, thresholds);
+        return ($"{onboardingTime.TotalHours:F1}h", band.Label, ToCssClass(band.Severity));
     }
 
     private static string GenerateTrendLegend(bool includeOnboarding)
@@ -902,21 +916,6 @@ internal static class ReportGenerator
             """;
     }
 
-    private static double CalculateSimplicityScore(SimplicitySnapshot snapshot)
-    {
-        var score = 100.0;
-
-        score -= snapshot.PrematureAbstractionRatio * 30;
-        score -= Math.Min(snapshot.UnusedDependencyCount * 3, 20);
-
-        var complexityPenalty = Math.Max(0, (snapshot.AverageMethodComplexity - 3) / 10 * 20);
-        score -= complexityPenalty;
-
-        var primaryPathPenalty = Math.Max(0, (0.8 - snapshot.PrimaryPathRatio) / 0.8 * 30);
-        score -= primaryPathPenalty;
-
-        return Math.Max(0, Math.Min(100, score));
-    }
 
     private static string FormatWorseningDelta(int? delta)
     {
