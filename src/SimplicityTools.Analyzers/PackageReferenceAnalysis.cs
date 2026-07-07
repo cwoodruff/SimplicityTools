@@ -11,9 +11,9 @@ internal static class PackageReferenceAnalysis
 {
     internal const string PackageIdPropertyName = "PackageId";
 
-    public static ImmutableArray<PackageReferenceInfo> CollectPackageReferences(CompilationAnalysisContext context)
+    public static ImmutableArray<PackageReferenceInfo> CollectPackageReferences(AnalyzerOptions options)
     {
-        if (TryGetProjectFileText(context.Options, out var projectPath, out var sourceText))
+        if (TryGetProjectFileText(options, out var projectPath, out var sourceText))
         {
             return ParsePackageReferences(projectPath, sourceText);
         }
@@ -54,16 +54,9 @@ internal static class PackageReferenceAnalysis
         return builder.ToImmutable();
     }
 
-    public static ImmutableHashSet<string> CollectUsedPackages(
-        Compilation compilation,
-        ImmutableDictionary<string, ImmutableArray<IAssemblySymbol>> assembliesByPackage,
-        CancellationToken cancellationToken)
+    public static ImmutableDictionary<string, ImmutableArray<string>> BuildPackageIdsByAssemblyIdentity(
+        ImmutableDictionary<string, ImmutableArray<IAssemblySymbol>> assembliesByPackage)
     {
-        if (assembliesByPackage.Count == 0)
-        {
-            return [];
-        }
-
         var packageIdsByAssemblyIdentity = new Dictionary<string, ImmutableArray<string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var pair in assembliesByPackage)
         {
@@ -80,33 +73,31 @@ internal static class PackageReferenceAnalysis
             }
         }
 
-        var usedPackages = ImmutableHashSet.CreateBuilder<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var syntaxTree in compilation.SyntaxTrees)
+        return packageIdsByAssemblyIdentity.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+    }
+
+    public static void CollectUsedPackages(
+        SemanticModel semanticModel,
+        ImmutableDictionary<string, ImmutableArray<string>> packageIdsByAssemblyIdentity,
+        Action<string> onUsedPackage,
+        CancellationToken cancellationToken)
+    {
+        var root = semanticModel.SyntaxTree.GetRoot(cancellationToken);
+        foreach (var node in root.DescendantNodesAndSelf())
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (!AnalyzerSourceFileConventions.IsCountableSourceFile(syntaxTree.FilePath))
+            foreach (var assembly in CollectAssemblies(node, semanticModel, cancellationToken))
             {
-                continue;
-            }
-
-            var semanticModel = compilation.GetSemanticModel(syntaxTree);
-            var root = syntaxTree.GetRoot(cancellationToken);
-            foreach (var node in root.DescendantNodesAndSelf())
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                foreach (var assembly in CollectAssemblies(node, semanticModel, cancellationToken))
+                if (packageIdsByAssemblyIdentity.TryGetValue(assembly.Identity.ToString(), out var packageIds))
                 {
-                    if (packageIdsByAssemblyIdentity.TryGetValue(assembly.Identity.ToString(), out var packageIds))
+                    foreach (var packageId in packageIds)
                     {
-                        usedPackages.UnionWith(packageIds);
+                        onUsedPackage(packageId);
                     }
                 }
             }
         }
-
-        return usedPackages.ToImmutable();
     }
 
     public static bool TryRemovePackageReference(SourceText sourceText, string packageId, TextSpan diagnosticSpan, out SourceText updatedSourceText)
@@ -267,8 +258,9 @@ internal static class PackageReferenceAnalysis
     {
         var seen = new HashSet<IAssemblySymbol>(SymbolEqualityComparer.Default);
 
-        AddSymbolAssemblies(semanticModel.GetSymbolInfo(node, cancellationToken).Symbol, seen);
-        foreach (var candidate in semanticModel.GetSymbolInfo(node, cancellationToken).CandidateSymbols)
+        var symbolInfo = semanticModel.GetSymbolInfo(node, cancellationToken);
+        AddSymbolAssemblies(symbolInfo.Symbol, seen);
+        foreach (var candidate in symbolInfo.CandidateSymbols)
         {
             AddSymbolAssemblies(candidate, seen);
         }

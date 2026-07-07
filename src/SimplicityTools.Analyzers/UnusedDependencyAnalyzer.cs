@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -26,24 +27,49 @@ public sealed class UnusedDependencyAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterCompilationAction(Analyze);
+        context.RegisterCompilationStartAction(static startContext =>
+        {
+            var packageReferences = PackageReferenceAnalysis.CollectPackageReferences(startContext.Options);
+            if (packageReferences.Length == 0)
+            {
+                return;
+            }
+
+            var assembliesByPackage = PackageReferenceAnalysis.MapPackagesToAssemblies(startContext.Compilation);
+            if (assembliesByPackage.Count == 0)
+            {
+                return;
+            }
+
+            var packageIdsByAssemblyIdentity = PackageReferenceAnalysis.BuildPackageIdsByAssemblyIdentity(assembliesByPackage);
+            var usedPackages = new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase);
+
+            startContext.RegisterSemanticModelAction(semanticModelContext =>
+            {
+                var syntaxTree = semanticModelContext.SemanticModel.SyntaxTree;
+                if (!AnalyzerSourceFileConventions.IsCountableSourceFile(syntaxTree.FilePath))
+                {
+                    return;
+                }
+
+                PackageReferenceAnalysis.CollectUsedPackages(
+                    semanticModelContext.SemanticModel,
+                    packageIdsByAssemblyIdentity,
+                    packageId => usedPackages.TryAdd(packageId, 0),
+                    semanticModelContext.CancellationToken);
+            });
+
+            startContext.RegisterCompilationEndAction(endContext =>
+                Report(endContext, packageReferences, assembliesByPackage, usedPackages));
+        });
     }
 
-    private static void Analyze(CompilationAnalysisContext context)
+    private static void Report(
+        CompilationAnalysisContext context,
+        ImmutableArray<PackageReferenceInfo> packageReferences,
+        ImmutableDictionary<string, ImmutableArray<IAssemblySymbol>> assembliesByPackage,
+        ConcurrentDictionary<string, byte> usedPackages)
     {
-        var packageReferences = PackageReferenceAnalysis.CollectPackageReferences(context);
-        if (packageReferences.Length == 0)
-        {
-            return;
-        }
-
-        var assembliesByPackage = PackageReferenceAnalysis.MapPackagesToAssemblies(context.Compilation);
-        if (assembliesByPackage.Count == 0)
-        {
-            return;
-        }
-
-        var usedPackages = PackageReferenceAnalysis.CollectUsedPackages(context.Compilation, assembliesByPackage, context.CancellationToken);
         var excludedPackages = AnalyzerOptionReader.GetNameSet(
             context.Options,
             context.Compilation.SyntaxTrees.FirstOrDefault(),
@@ -52,7 +78,7 @@ public sealed class UnusedDependencyAnalyzer : DiagnosticAnalyzer
         {
             if (excludedPackages.Contains(packageReference.PackageId) ||
                 !assembliesByPackage.ContainsKey(packageReference.NormalizedPackageId) ||
-                usedPackages.Contains(packageReference.NormalizedPackageId))
+                usedPackages.ContainsKey(packageReference.NormalizedPackageId))
             {
                 continue;
             }

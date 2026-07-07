@@ -44,9 +44,17 @@ public sealed class SingleImplementationInterfaceCodeFixProvider : CodeFixProvid
             return;
         }
 
+        // The analyzer passes the single implementation through Diagnostic.Properties so the
+        // code fix never has to re-index the compilation to find it.
+        if (!diagnostic.Properties.TryGetValue(SingleImplementationInterfaceAnalyzer.ImplementationIdPropertyName, out var implementationId) ||
+            implementationId is null ||
+            string.IsNullOrWhiteSpace(implementationId))
+        {
+            return;
+        }
+
         var compilation = semanticModel.Compilation;
-        var concreteType = SingleImplementationInterfaceAnalysis.FindConcreteImplementation(compilation, interfaceSymbol, context.CancellationToken);
-        if (concreteType is null)
+        if (DocumentationCommentId.GetFirstSymbolForDeclarationId(implementationId, compilation) is not INamedTypeSymbol concreteType)
         {
             return;
         }
@@ -169,14 +177,15 @@ public sealed class SingleImplementationInterfaceCodeFixProvider : CodeFixProvid
     {
         public override SyntaxNode? VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
         {
-            if (MatchesSymbol(semanticModel.GetDeclaredSymbol(node, cancellationToken)))
+            var declaredSymbol = semanticModel.GetDeclaredSymbol(node, cancellationToken);
+            if (MatchesSymbol(declaredSymbol))
             {
                 return null;
             }
 
             var rewrittenNode = (InterfaceDeclarationSyntax)base.VisitInterfaceDeclaration(node)!;
             if (!DirectlyInheritsInterface(node) ||
-                semanticModel.GetDeclaredSymbol(node, cancellationToken) is not INamedTypeSymbol dependentInterfaceSymbol)
+                declaredSymbol is not INamedTypeSymbol dependentInterfaceSymbol)
             {
                 return rewrittenNode;
             }

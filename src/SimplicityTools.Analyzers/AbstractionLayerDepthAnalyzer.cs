@@ -1,7 +1,9 @@
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace SimplicityTools.Analyzers;
 
@@ -29,26 +31,97 @@ public sealed class AbstractionLayerDepthAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterCompilationAction(Analyze);
+        context.RegisterCompilationStartAction(static startContext =>
+        {
+            var methodDeclarations = new ConcurrentDictionary<IMethodSymbol, MethodDeclarationSyntax>(SymbolEqualityComparer.Default);
+            var invocationTargets = new ConcurrentDictionary<IMethodSymbol, ConcurrentDictionary<IMethodSymbol, byte>>(SymbolEqualityComparer.Default);
+
+            startContext.RegisterSymbolAction(
+                symbolContext => CollectMethodDeclaration(symbolContext, methodDeclarations),
+                SymbolKind.Method);
+            startContext.RegisterOperationAction(
+                operationContext => CollectInvocation(operationContext, invocationTargets),
+                OperationKind.Invocation);
+            startContext.RegisterCompilationEndAction(
+                endContext => Report(endContext, methodDeclarations, invocationTargets));
+        });
     }
 
-    private static void Analyze(CompilationAnalysisContext context)
+    private static void CollectMethodDeclaration(
+        SymbolAnalysisContext context,
+        ConcurrentDictionary<IMethodSymbol, MethodDeclarationSyntax> methodDeclarations)
     {
-        var sourceIndex = SourceSymbolIndex.Create(context.Compilation, context.CancellationToken);
-        if (sourceIndex.Methods.IsDefaultOrEmpty)
+        if (context.Symbol is not IMethodSymbol method || method.MethodKind != MethodKind.Ordinary)
         {
             return;
         }
 
-        var sourceMethods = sourceIndex.Methods.ToImmutableHashSet<IMethodSymbol>(SymbolEqualityComparer.Default);
+        MethodDeclarationSyntax? declaration = null;
+        foreach (var syntaxReference in method.DeclaringSyntaxReferences)
+        {
+            if (AnalyzerSourceFileConventions.IsCountableSourceFile(syntaxReference.SyntaxTree.FilePath) &&
+                syntaxReference.GetSyntax(context.CancellationToken) is MethodDeclarationSyntax candidate)
+            {
+                declaration = candidate;
+            }
+        }
+
+        if (declaration is not null)
+        {
+            methodDeclarations[method.OriginalDefinition] = declaration;
+        }
+    }
+
+    private static void CollectInvocation(
+        OperationAnalysisContext context,
+        ConcurrentDictionary<IMethodSymbol, ConcurrentDictionary<IMethodSymbol, byte>> invocationTargets)
+    {
+        if (!AnalyzerSourceFileConventions.IsCountableSourceFile(context.Operation.Syntax.SyntaxTree.FilePath))
+        {
+            return;
+        }
+
+        // Attribute invocations inside lambdas and local functions to the enclosing ordinary
+        // method, matching the previous per-declaration syntax walk.
+        var containingSymbol = context.ContainingSymbol;
+        while (containingSymbol is IMethodSymbol nested &&
+               nested.MethodKind is MethodKind.LocalFunction or MethodKind.AnonymousFunction)
+        {
+            containingSymbol = nested.ContainingSymbol;
+        }
+
+        if (containingSymbol is not IMethodSymbol caller ||
+            caller.MethodKind != MethodKind.Ordinary ||
+            ((IInvocationOperation)context.Operation).TargetMethod is not { } invokedMethod)
+        {
+            return;
+        }
+
+        var target = (invokedMethod.ReducedFrom ?? invokedMethod).OriginalDefinition;
+        invocationTargets
+            .GetOrAdd(caller.OriginalDefinition, static _ => new ConcurrentDictionary<IMethodSymbol, byte>(SymbolEqualityComparer.Default))
+            .TryAdd(target, 0);
+    }
+
+    private static void Report(
+        CompilationAnalysisContext context,
+        ConcurrentDictionary<IMethodSymbol, MethodDeclarationSyntax> methodDeclarations,
+        ConcurrentDictionary<IMethodSymbol, ConcurrentDictionary<IMethodSymbol, byte>> invocationTargets)
+    {
+        if (methodDeclarations.IsEmpty)
+        {
+            return;
+        }
+
+        var sourceMethods = methodDeclarations.Keys.ToImmutableHashSet<IMethodSymbol>(SymbolEqualityComparer.Default);
         var uniqueDispatchTargets = BuildUniqueDispatchTargets(sourceMethods);
-        var callGraph = BuildCallGraph(context.Compilation, sourceIndex, sourceMethods, uniqueDispatchTargets, context.CancellationToken);
+        var callGraph = BuildCallGraph(sourceMethods, uniqueDispatchTargets, invocationTargets, context.CancellationToken);
         var memo = new Dictionary<IMethodSymbol, int>(SymbolEqualityComparer.Default);
 
         foreach (var method in sourceMethods)
         {
             var depth = ComputeDepth(method, callGraph, memo, [], context.CancellationToken);
-            if (!sourceIndex.TryGetMethodDeclaration(method, out var declaration))
+            if (!methodDeclarations.TryGetValue(method, out var declaration))
             {
                 continue;
             }
@@ -106,10 +179,9 @@ public sealed class AbstractionLayerDepthAnalyzer : DiagnosticAnalyzer
     }
 
     private static ImmutableDictionary<IMethodSymbol, ImmutableArray<IMethodSymbol>> BuildCallGraph(
-        Compilation compilation,
-        SourceSymbolIndex sourceIndex,
         ImmutableHashSet<IMethodSymbol> sourceMethods,
         ImmutableDictionary<IMethodSymbol, IMethodSymbol> uniqueDispatchTargets,
+        ConcurrentDictionary<IMethodSymbol, ConcurrentDictionary<IMethodSymbol, byte>> invocationTargets,
         CancellationToken cancellationToken)
     {
         var builder = ImmutableDictionary.CreateBuilder<IMethodSymbol, ImmutableArray<IMethodSymbol>>(SymbolEqualityComparer.Default);
@@ -118,32 +190,21 @@ public sealed class AbstractionLayerDepthAnalyzer : DiagnosticAnalyzer
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (!sourceIndex.TryGetMethodDeclaration(method, out var declaration))
-            {
-                continue;
-            }
-
-            var semanticModel = compilation.GetSemanticModel(declaration.SyntaxTree);
             var callees = new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default);
-            foreach (var invocation in declaration.DescendantNodes().OfType<InvocationExpressionSyntax>())
+            if (invocationTargets.TryGetValue(method, out var targets))
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (semanticModel.GetSymbolInfo(invocation, cancellationToken).Symbol is not IMethodSymbol invokedMethod)
+                foreach (var target in targets.Keys)
                 {
-                    continue;
-                }
+                    if (sourceMethods.Contains(target))
+                    {
+                        callees.Add(target);
+                        continue;
+                    }
 
-                var target = (invokedMethod.ReducedFrom ?? invokedMethod).OriginalDefinition;
-                if (sourceMethods.Contains(target))
-                {
-                    callees.Add(target);
-                    continue;
-                }
-
-                if (uniqueDispatchTargets.TryGetValue(target, out var uniqueDispatchTarget))
-                {
-                    callees.Add(uniqueDispatchTarget);
+                    if (uniqueDispatchTargets.TryGetValue(target, out var uniqueDispatchTarget))
+                    {
+                        callees.Add(uniqueDispatchTarget);
+                    }
                 }
             }
 

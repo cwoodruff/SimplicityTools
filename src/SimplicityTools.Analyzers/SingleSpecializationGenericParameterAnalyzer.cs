@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -26,20 +27,65 @@ public sealed class SingleSpecializationGenericParameterAnalyzer : DiagnosticAna
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterCompilationAction(Analyze);
+        context.RegisterCompilationStartAction(static startContext =>
+        {
+            var genericDefinitions = new ConcurrentDictionary<ISymbol, ImmutableArray<ITypeParameterSymbol>>(SymbolEqualityComparer.Default);
+            var specializations = new ConcurrentDictionary<ISymbol, ConcurrentDictionary<int, ConcurrentDictionary<ITypeSymbol, byte>>>(SymbolEqualityComparer.Default);
+
+            startContext.RegisterSymbolAction(
+                symbolContext => CollectGenericDefinition(symbolContext.Symbol, genericDefinitions),
+                SymbolKind.NamedType,
+                SymbolKind.Method);
+            startContext.RegisterSemanticModelAction(semanticModelContext =>
+            {
+                var syntaxTree = semanticModelContext.SemanticModel.SyntaxTree;
+                if (!AnalyzerSourceFileConventions.IsCountableSourceFile(syntaxTree.FilePath))
+                {
+                    return;
+                }
+
+                CollectSpecializations(semanticModelContext.SemanticModel, specializations, semanticModelContext.CancellationToken);
+            });
+            startContext.RegisterCompilationEndAction(
+                endContext => Report(endContext, genericDefinitions, specializations));
+        });
     }
 
-    private static void Analyze(CompilationAnalysisContext context)
+    private static void CollectGenericDefinition(
+        ISymbol symbol,
+        ConcurrentDictionary<ISymbol, ImmutableArray<ITypeParameterSymbol>> genericDefinitions)
     {
-        var genericDefinitions = CollectGenericDefinitions(context.Compilation, context.CancellationToken);
-        if (genericDefinitions.Count == 0)
+        // Mirrors the previous SourceSymbolIndex population: named types declared by a
+        // BaseTypeDeclarationSyntax (which excludes delegates) and ordinary methods, both in
+        // countable source files.
+        switch (symbol)
         {
-            return;
+            case INamedTypeSymbol namedType when namedType.Arity > 0 &&
+                                                 namedType.TypeKind != TypeKind.Delegate &&
+                                                 IsDeclaredInCountableFile(namedType):
+                genericDefinitions.TryAdd(namedType, [.. namedType.TypeParameters]);
+                break;
+            case IMethodSymbol method when method.Arity > 0 &&
+                                           method.MethodKind == MethodKind.Ordinary &&
+                                           IsDeclaredInCountableFile(method):
+                genericDefinitions.TryAdd(method, [.. method.TypeParameters]);
+                break;
         }
+    }
 
-        var specializations = CollectSpecializations(context.Compilation, genericDefinitions, context.CancellationToken);
+    private static bool IsDeclaredInCountableFile(ISymbol symbol)
+        => symbol.DeclaringSyntaxReferences.Any(static reference =>
+            AnalyzerSourceFileConventions.IsCountableSourceFile(reference.SyntaxTree.FilePath));
+
+    private static void Report(
+        CompilationAnalysisContext context,
+        ConcurrentDictionary<ISymbol, ImmutableArray<ITypeParameterSymbol>> genericDefinitions,
+        ConcurrentDictionary<ISymbol, ConcurrentDictionary<int, ConcurrentDictionary<ITypeSymbol, byte>>> specializations)
+    {
         foreach (var pair in genericDefinitions)
         {
+            context.CancellationToken.ThrowIfCancellationRequested();
+
             var owner = pair.Key;
             var typeParameters = pair.Value;
             if (!specializations.TryGetValue(owner, out var specializedTypesByParameter))
@@ -64,7 +110,7 @@ public sealed class SingleSpecializationGenericParameterAnalyzer : DiagnosticAna
                     continue;
                 }
 
-                var specializedType = specializedTypes.Single();
+                var specializedType = specializedTypes.Keys.Single();
                 context.ReportDiagnostic(Diagnostic.Create(
                     Rule,
                     typeParameters[index].Locations[0],
@@ -75,80 +121,32 @@ public sealed class SingleSpecializationGenericParameterAnalyzer : DiagnosticAna
         }
     }
 
-    private static ImmutableDictionary<ISymbol, ImmutableArray<ITypeParameterSymbol>> CollectGenericDefinitions(
-        Compilation compilation,
+    private static void CollectSpecializations(
+        SemanticModel semanticModel,
+        ConcurrentDictionary<ISymbol, ConcurrentDictionary<int, ConcurrentDictionary<ITypeSymbol, byte>>> specializations,
         CancellationToken cancellationToken)
     {
-        var builder = ImmutableDictionary.CreateBuilder<ISymbol, ImmutableArray<ITypeParameterSymbol>>(SymbolEqualityComparer.Default);
-        var sourceIndex = SourceSymbolIndex.Create(compilation, cancellationToken);
-
-        foreach (var namedType in sourceIndex.NamedTypes.Where(static type => type.Arity > 0))
-        {
-            builder[namedType] = [.. namedType.TypeParameters];
-        }
-
-        foreach (var method in sourceIndex.Methods.Where(static method => method.Arity > 0))
-        {
-            builder[method] = [.. method.TypeParameters];
-        }
-
-        return builder.ToImmutable();
-    }
-
-    private static ImmutableDictionary<ISymbol, ImmutableDictionary<int, ImmutableHashSet<ITypeSymbol>>> CollectSpecializations(
-        Compilation compilation,
-        ImmutableDictionary<ISymbol, ImmutableArray<ITypeParameterSymbol>> genericDefinitions,
-        CancellationToken cancellationToken)
-    {
-        var builders = new Dictionary<ISymbol, Dictionary<int, HashSet<ITypeSymbol>>>(SymbolEqualityComparer.Default);
-
-        foreach (var syntaxTree in compilation.SyntaxTrees)
+        var root = semanticModel.SyntaxTree.GetRoot(cancellationToken);
+        foreach (var node in root.DescendantNodesAndSelf())
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (!AnalyzerSourceFileConventions.IsCountableSourceFile(syntaxTree.FilePath))
-            {
-                continue;
-            }
-
-            var semanticModel = compilation.GetSemanticModel(syntaxTree);
-            var root = syntaxTree.GetRoot(cancellationToken);
-            foreach (var node in root.DescendantNodesAndSelf())
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                RecordTypeSpecialization(semanticModel.GetSymbolInfo(node, cancellationToken).Symbol, genericDefinitions, builders);
-                RecordTypeSpecialization(semanticModel.GetTypeInfo(node, cancellationToken).Type, genericDefinitions, builders);
-            }
+            RecordTypeSpecialization(semanticModel.GetSymbolInfo(node, cancellationToken).Symbol, specializations);
+            RecordTypeSpecialization(semanticModel.GetTypeInfo(node, cancellationToken).Type, specializations);
         }
-
-        var result = ImmutableDictionary.CreateBuilder<ISymbol, ImmutableDictionary<int, ImmutableHashSet<ITypeSymbol>>>(SymbolEqualityComparer.Default);
-        foreach (var pair in builders)
-        {
-            var parameterMap = ImmutableDictionary.CreateBuilder<int, ImmutableHashSet<ITypeSymbol>>();
-            foreach (var entry in pair.Value)
-            {
-                parameterMap[entry.Key] = ImmutableHashSet.CreateRange<ITypeSymbol>(SymbolEqualityComparer.Default, entry.Value);
-            }
-
-            result[pair.Key] = parameterMap.ToImmutable();
-        }
-
-        return result.ToImmutable();
     }
 
     private static void RecordTypeSpecialization(
         object? symbolOrType,
-        ImmutableDictionary<ISymbol, ImmutableArray<ITypeParameterSymbol>> genericDefinitions,
-        IDictionary<ISymbol, Dictionary<int, HashSet<ITypeSymbol>>> builders)
+        ConcurrentDictionary<ISymbol, ConcurrentDictionary<int, ConcurrentDictionary<ITypeSymbol, byte>>> specializations)
     {
         switch (symbolOrType)
         {
-            case INamedTypeSymbol namedType:
-                RecordConstructedSymbol(namedType.OriginalDefinition, namedType.TypeArguments, genericDefinitions, builders);
+            case INamedTypeSymbol namedType when namedType.Arity > 0:
+                RecordConstructedSymbol(namedType.OriginalDefinition, namedType.TypeArguments, specializations);
                 break;
             case IMethodSymbol method when method.IsGenericMethod:
-                RecordConstructedSymbol(method.OriginalDefinition, method.TypeArguments, genericDefinitions, builders);
+                RecordConstructedSymbol(method.OriginalDefinition, method.TypeArguments, specializations);
                 break;
         }
     }
@@ -156,15 +154,24 @@ public sealed class SingleSpecializationGenericParameterAnalyzer : DiagnosticAna
     private static void RecordConstructedSymbol(
         ISymbol originalDefinition,
         ImmutableArray<ITypeSymbol> typeArguments,
-        ImmutableDictionary<ISymbol, ImmutableArray<ITypeParameterSymbol>> genericDefinitions,
-        IDictionary<ISymbol, Dictionary<int, HashSet<ITypeSymbol>>> builders)
+        ConcurrentDictionary<ISymbol, ConcurrentDictionary<int, ConcurrentDictionary<ITypeSymbol, byte>>> specializations)
     {
-        if (!genericDefinitions.TryGetValue(originalDefinition, out var typeParameters))
+        // Symbol actions may not have populated the definitions map yet, so record any
+        // source-declared generic definition and intersect with the collected definitions when
+        // reporting at compilation end.
+        if (!originalDefinition.Locations.Any(static location => location.IsInSource))
         {
             return;
         }
 
-        for (var index = 0; index < Math.Min(typeParameters.Length, typeArguments.Length); index++)
+        var typeParameterCount = originalDefinition switch
+        {
+            INamedTypeSymbol namedType => namedType.TypeParameters.Length,
+            IMethodSymbol method => method.TypeParameters.Length,
+            _ => 0
+        };
+
+        for (var index = 0; index < Math.Min(typeParameterCount, typeArguments.Length); index++)
         {
             var typeArgument = typeArguments[index];
             if (typeArgument.TypeKind == TypeKind.TypeParameter)
@@ -172,19 +179,10 @@ public sealed class SingleSpecializationGenericParameterAnalyzer : DiagnosticAna
                 continue;
             }
 
-            if (!builders.TryGetValue(originalDefinition, out var parameterMap))
-            {
-                parameterMap = [];
-                builders[originalDefinition] = parameterMap;
-            }
-
-            if (!parameterMap.TryGetValue(index, out var specializedTypes))
-            {
-                specializedTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
-                parameterMap[index] = specializedTypes;
-            }
-
-            specializedTypes.Add(typeArgument);
+            specializations
+                .GetOrAdd(originalDefinition, static _ => new ConcurrentDictionary<int, ConcurrentDictionary<ITypeSymbol, byte>>())
+                .GetOrAdd(index, static _ => new ConcurrentDictionary<ITypeSymbol, byte>(SymbolEqualityComparer.Default))
+                .TryAdd(typeArgument, 0);
         }
     }
 }
