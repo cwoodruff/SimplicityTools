@@ -42,7 +42,7 @@ public sealed record SimplicitySnapshot(
     public double PrematureAbstractionRatio =>
         AbstractionLayerCount > 0
             ? (double)InterfacesWithSingleImplementation / AbstractionLayerCount
-            : 0;
+            : InterfacesWithSingleImplementation > 0 ? 1.0 : 0.0;
 
     /// <summary>
     /// Formats the snapshot as the compact summary used by the CLI.
@@ -75,9 +75,8 @@ public sealed record SimplicitySnapshot(
     /// <summary>
     /// Creates an empty snapshot placeholder.
     /// </summary>
-    /// <param name="solutionName">Unused compatibility parameter retained for migration callers.</param>
     /// <returns>An empty snapshot with zeroed metrics and a current timestamp.</returns>
-    public static SimplicitySnapshot Empty(string solutionName) =>
+    public static SimplicitySnapshot Empty() =>
         new(
             0,
             0,
