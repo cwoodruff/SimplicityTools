@@ -7,11 +7,6 @@ internal static class BaselineSnapshotFile
 {
     private const string FileName = ".simplicity-baseline.json";
 
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
-    {
-        WriteIndented = true
-    };
-
     public static string GetPath(string solutionPath)
     {
         ArgumentNullException.ThrowIfNull(solutionPath);
@@ -28,8 +23,7 @@ internal static class BaselineSnapshotFile
         ArgumentNullException.ThrowIfNull(snapshot);
 
         var baselinePath = GetPath(solutionPath);
-        var json = JsonSerializer.Serialize(snapshot, SerializerOptions);
-        await File.WriteAllTextAsync(baselinePath, json, cancellationToken).ConfigureAwait(false);
+        await File.WriteAllTextAsync(baselinePath, SnapshotEnvelope.Serialize(snapshot), cancellationToken).ConfigureAwait(false);
         return baselinePath;
     }
 
@@ -46,9 +40,8 @@ internal static class BaselineSnapshotFile
 
         try
         {
-            await using var stream = File.OpenRead(baselinePath);
-            return await JsonSerializer.DeserializeAsync<SimplicitySnapshot>(stream, SerializerOptions, cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException($"Baseline file '{baselinePath}' did not contain a valid snapshot.");
+            var json = await File.ReadAllTextAsync(baselinePath, cancellationToken).ConfigureAwait(false);
+            return SnapshotEnvelope.Deserialize(json, $"Baseline file '{baselinePath}'");
         }
         catch (JsonException exception)
         {

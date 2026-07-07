@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json.Serialization;
 
 namespace SimplicityTools.Metrics;
 
@@ -30,12 +31,14 @@ public sealed record SimplicitySnapshot(
     /// <summary>
     /// Gets the fraction of counted files that belong to the primary path.
     /// </summary>
+    [JsonIgnore]
     public double PrimaryPathRatio =>
         TotalFiles > 0 ? (double)PrimaryPathFileCount / TotalFiles : 0;
 
     /// <summary>
     /// Gets the fraction of abstraction layers represented by single-implementation interfaces.
     /// </summary>
+    [JsonIgnore]
     public double PrematureAbstractionRatio =>
         AbstractionLayerCount > 0
             ? (double)InterfacesWithSingleImplementation / AbstractionLayerCount

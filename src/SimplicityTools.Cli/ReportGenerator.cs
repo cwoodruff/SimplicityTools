@@ -13,7 +13,7 @@ internal static class ReportGenerator
     private const string ComplexityColor = "#FFB74D";
     private const string OnboardingColor = "#AB47BC";
 
-    public static async Task GenerateHtmlReportAsync(SimplicitySnapshot snapshot, string solutionPath, string outputDirectory)
+    public static async Task GenerateHtmlReportAsync(SimplicitySnapshot snapshot, string solutionPath, string outputDirectory, TextWriter? diagnosticsWriter = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(solutionPath);
@@ -21,7 +21,7 @@ internal static class ReportGenerator
 
         Directory.CreateDirectory(outputDirectory);
         var reportPath = Path.Combine(outputDirectory, "index.html");
-        var historicalSnapshots = await SnapshotHistory.ReadAsync(solutionPath).ConfigureAwait(false);
+        var historicalSnapshots = await SnapshotHistory.ReadAsync(solutionPath, diagnosticsWriter ?? TextWriter.Null).ConfigureAwait(false);
 
         var html = GenerateHtmlContent(snapshot, historicalSnapshots);
         await File.WriteAllTextAsync(reportPath, html, Encoding.UTF8).ConfigureAwait(false);
@@ -585,7 +585,7 @@ internal static class ReportGenerator
               <div class="verdict">
                 <div class="verdict-title">What to do next</div>
                 <div class="verdict-description">
-                  Keep serializing snapshots into <code>.simplicity-history/</code>. Once the folder has at least two saved runs, this section will render an inline SVG trend chart, historical filter scores, and complexity deltas automatically.
+                  Each <code>report</code> or <code>baseline</code> run saves a snapshot into <code>.simplicity-history/</code> automatically. Run the report again after your next change and this section will render an inline SVG trend chart, historical filter scores, and complexity deltas.
                 </div>
               </div>
             </div>
@@ -594,20 +594,22 @@ internal static class ReportGenerator
 
     private static IReadOnlyList<TrendPoint> BuildTrendPoints(SimplicitySnapshot currentSnapshot, IReadOnlyList<SimplicitySnapshot> historicalSnapshots)
     {
-        var snapshots = historicalSnapshots.ToList();
-        if (!snapshots.Any(snapshot => snapshot.CollectedAt == currentSnapshot.CollectedAt))
-        {
-            snapshots.Add(currentSnapshot);
-        }
+        // The current run is identified by instance, not by timestamp-tick equality: a history
+        // entry written for this run is replaced by the in-memory snapshot so exactly one point
+        // is marked current.
+        var snapshots = historicalSnapshots
+            .Where(snapshot => !ReferenceEquals(snapshot, currentSnapshot) && snapshot != currentSnapshot)
+            .Select(snapshot => (Snapshot: snapshot, IsCurrent: false))
+            .Append((Snapshot: currentSnapshot, IsCurrent: true));
 
         return snapshots
-            .OrderBy(static snapshot => snapshot.CollectedAt)
-            .Select(snapshot => new TrendPoint(
-                FormatChartDate(snapshot.CollectedAt),
-                snapshot.CollectedAt == currentSnapshot.CollectedAt,
-                snapshot,
-                SnapshotFilterEvaluation.Evaluate(snapshot),
-                CalculateSimplicityScore(snapshot)))
+            .OrderBy(static entry => entry.Snapshot.CollectedAt)
+            .Select(entry => new TrendPoint(
+                FormatChartDate(entry.Snapshot.CollectedAt),
+                entry.IsCurrent,
+                entry.Snapshot,
+                SnapshotFilterEvaluation.Evaluate(entry.Snapshot),
+                CalculateSimplicityScore(entry.Snapshot)))
             .ToArray();
     }
 
