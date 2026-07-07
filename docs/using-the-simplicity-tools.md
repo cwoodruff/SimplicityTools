@@ -675,7 +675,7 @@ Each verdict includes:
 
 **Package:** `SimplicityTools.Tca` on [NuGet.org](https://www.nuget.org/packages/SimplicityTools.Tca/)
 
-**Purpose:** Estimate the annual business cost of complexity in your solution. Quantifies impact on team velocity, incidents, and retention.
+**Purpose:** Estimate the annual cost of complexity *in excess of* the Simplicity-First targets. A codebase that meets every target reports $0 architecture-attributed cost; only the portion of each metric beyond its target is charged.
 
 **Install:**
 
@@ -699,33 +699,55 @@ var estimate = TcaEstimate.Create(snapshot, verdicts);
 Console.WriteLine(estimate.ToExecutiveSummary());
 ```
 
-This outputs:
+For a sample snapshot (6 projects, 4 unused dependencies, average complexity 7.5, 60h onboarding, 25% premature abstraction) this outputs:
 
 ```text
 Total Cost of Architecture (Annual Estimate)
 ============================================
-Infrastructure:   $10,000 to $15,000
-Operational:      $20,000 to $35,000
-Coordination:     $15,000 to $20,000
-Cognitive:        $8,000 to $12,000
-Opportunity:      $5,000 to $10,000
+Architecture excess over simplicity targets:
+Infrastructure:   $2,016 - $3,744
+Operational:      $10,080 - $18,720
+Coordination:     $100,800 - $187,200
+Cognitive:        $85,050 - $157,950
+Opportunity:      $92,120 - $171,080
 --------------------------------------------
-TOTAL:            $58,000 to $92,000 per year
+TOTAL EXCESS:     $290,066 - $538,694 per year
+Baseline operating cost at target: $158,400 per year (not attributed to architecture)
 ```
 
-**Cost model:**
+The sample above is the actual output of `TcaEstimate.Create` with default inputs and evaluator-produced verdicts (the CLI does not surface TCA output yet; the `tca` section of `simplicity.json` is validated but reserved).
 
-The TCA (Total Cost of Architecture) breaks down complexity cost into five dimensions:
+**The excess-over-target model:**
 
-1. **Infrastructure cost** — Accumulated overhead in build time, CI/CD complexity, and platform management
-2. **Operational cost** — Incident response time and on-call burden due to code complexity
-3. **Coordination cost** — Cross-team communication overhead scaling with project count
-4. **Cognitive cost** — Onboarding time and retention risk from excessive complexity
-5. **Opportunity cost** — Engineering effort diverted from feature delivery due to low code health
+Every dimension computes an excess factor `max(0, (metric - target) / target)`, capped at `TcaInputs.MaxExcessFactor` (default 3.0) so no dimension scales without bound. A metric exactly at its target contributes $0. The spend a solution would still incur at target — infrastructure for its projects plus coordination for up to the baseline project count — is reported separately as `BaselineOperatingCostPerYear` and is never attributed to architecture.
+
+1. **Infrastructure** — Charges the per-project platform budget (`MonthlyInfrastructureCostPerProjectUsd`) scaled by unused dependencies: each dead dependency adds `InfrastructureExcessPerUnusedDependency` (5%) of the baseline. Zero unused dependencies means zero infrastructure excess. This models restore/scan/upgrade churn from dead dependencies only — it does not measure build time or CI/CD pipeline complexity.
+2. **Operational** — Charges the incident bill (on-call rate x monthly incidents x 12 x `IncidentCostMultiplier`) scaled by how far average method complexity exceeds `TargetAverageMethodComplexity` (5). At complexity 5 or below, no incident cost is attributed to architecture.
+3. **Coordination** — Charges `MonthlyCoordinationCostPerProjectUsd` for each project beyond `BaselineProjectCount` (3), capped at `MaxExcessFactor` times the baseline. Coordination for the first three projects is baseline operating cost.
+4. **Cognitive** — Charges attrition-weighted payroll scaled by how far estimated onboarding time exceeds `TargetOnboardingHours` (40), inflated by `PrematureAbstractionUpliftFactor` per unit of premature-abstraction ratio. When onboarding time has not been measured (`EstimatedOnboardingTime` is null), the dimension reports $0 excess and a note says it was not measured — the model never fabricates a cost.
+5. **Opportunity** — Charges `PayrollOpportunityFactor` (40%) of annual payroll scaled by the shortfall of the composite filter score below a perfect 1.0. Perfect filter scores mean zero opportunity cost.
+
+All figures are order-of-magnitude estimates, not measurements. Each dimension is reported as a range (`RangeLowMultiplier` / `RangeHighMultiplier`, default +/-30%). Non-finite metrics (NaN/Infinity) contribute zero excess and add an explanatory note; negative metrics and inputs are clamped to zero so no dimension can produce negative dollars.
+
+**Model constants (all configurable on `TcaInputs`):**
+
+| Property | Default | Rationale |
+| --- | --- | --- |
+| `MonthlyInfrastructureCostPerProjectUsd` | `200m` | Rough per-project platform spend (build agents, hosting, tooling seats). A placeholder, not a benchmark — replace with your actual spend. |
+| `InfrastructureExcessPerUnusedDependency` | `0.05m` | Each unused dependency wastes ~5% of a project's platform budget on restore, scanning, and upgrade churn. |
+| `IncidentCostMultiplier` | `4m` | Each on-call hour consumes roughly three more engineer-hours in interruptions, context switching, and follow-up. |
+| `MonthlyCoordinationCostPerProjectUsd` | `4000m` | A few engineer-days of cross-team coordination per project per month at typical loaded rates. |
+| `BaselineProjectCount` | `3` | Projects up to this count incur normal coordination; only projects beyond it are charged to architecture. |
+| `PrematureAbstractionUpliftFactor` | `0.5m` | A fully premature abstraction layer inflates onboarding cost by 50% (newcomers chase indirection). |
+| `PayrollOpportunityFactor` | `0.4m` | At most ~40% of engineering time is discretionary feature work that complexity can crowd out. |
+| `RangeLowMultiplier` / `RangeHighMultiplier` | `0.7m` / `1.3m` | These are order-of-magnitude estimates; every dimension is reported +/-30%. |
+| `MaxExcessFactor` | `3.0m` | Caps every excess factor; beyond 3x its at-target reference cost the linear model stops being credible. |
+| `TargetAverageMethodComplexity` | `5m` | Matches the TwoAmTest diagnosability target. |
+| `TargetOnboardingHours` | `40m` | One working week; matches the TwoAmTest cognitive-load target. |
 
 **Using custom inputs:**
 
-By default, `TcaEstimate` uses sensible built-in inputs. Override them if needed:
+The team-shaped assumptions are positional constructor parameters; the model constants are init-only properties:
 
 ```csharp
 var customInputs = new TcaInputs(
@@ -733,19 +755,23 @@ var customInputs = new TcaInputs(
     AverageEngineerMonthlySalaryUsd: 18000m,
     EstimatedMonthlyIncidentCount: 3,
     OnCallHourlyRateUsd: 175m,
-    AttritionCoefficientPercent: 12m
-);
+    AttritionCoefficientPercent: 12m)
+{
+    MonthlyInfrastructureCostPerProjectUsd = 350m,
+    MaxExcessFactor = 2.0m
+};
 
 var estimate = TcaEstimate.Create(snapshot, verdicts, customInputs);
 ```
 
 **Configuration via simplicity.json:**
 
-The CLI validates and uses `tca` settings from `simplicity.json`. Library consumers typically pass inputs directly to `TcaEstimate.Create()`.
+The CLI validates `tca` settings from `simplicity.json` but does not surface a TCA report yet. Library consumers pass inputs directly to `TcaEstimate.Create()`.
 
-**When to use:** Justify refactoring investment to leadership, quantify the business case for code simplification, or track cost trends over time.
+**When to use:** Justify refactoring investment to leadership, quantify the business case for code simplification, or track cost trends over time. Present the numbers as directional estimates with your own `TcaInputs` calibrated to your organization.
 
 ---
+
 
 ### Using SimplicityTools.Analyzers
 
