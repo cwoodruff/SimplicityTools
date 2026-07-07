@@ -31,13 +31,19 @@ jobs:
       - name: Build solution
         run: dotnet build SimplicityTools.sln --configuration Release --no-restore --verbosity minimal
 
+      # Test projects run one at a time: some tests (Tca package validation,
+      # CLI BuildCliAsync) invoke dotnet build/pack against the shared bin/
+      # outputs and race with parallel test hosts (MSB4018 on deps.json).
       - name: Test solution
-        run: >
-          dotnet test SimplicityTools.sln
-          --configuration Release
-          --no-build
-          --verbosity minimal
-          --filter "FullyQualifiedName!~SimplicityTools.Cli.Tests"
+        run: |
+          for project in \
+            tests/SimplicityTools.Metrics.Tests \
+            tests/SimplicityTools.Filters.Tests \
+            tests/SimplicityTools.Tca.Tests \
+            tests/SimplicityTools.Analyzers.Tests \
+            samples/Sample.Simplified/Sample.Simplified.Tests; do
+            dotnet test "$project" --configuration Release --no-build --verbosity minimal
+          done
 
       - name: Test CLI commands
         run: >
