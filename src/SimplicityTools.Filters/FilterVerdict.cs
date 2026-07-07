@@ -15,6 +15,6 @@ public sealed record FilterVerdict(
     bool Passes,
     double Score,
     string Summary,
-    FilterSubScore[] SubScores,
-    string[] Violations,
-    string[] Recommendations);
+    IReadOnlyList<FilterSubScore> SubScores,
+    IReadOnlyList<string> Violations,
+    IReadOnlyList<string> Recommendations);
