@@ -15,17 +15,19 @@ public sealed class FilterScoringGuardTests
         int abstractionLayerCount = 0,
         int interfacesWithSingleImplementation = 0,
         double averageMethodComplexity = 1) =>
-        new(
-            totalProjects,
-            totalFiles,
-            0,
-            abstractionLayerCount,
-            0,
-            0,
-            interfacesWithSingleImplementation,
-            averageMethodComplexity,
-            null,
-            DateTimeOffset.UnixEpoch);
+        new()
+        {
+            TotalProjects = totalProjects,
+            TotalFiles = totalFiles,
+            PrimaryPathFileCount = 0,
+            AbstractionLayerCount = abstractionLayerCount,
+            ExternalDependencyCount = 0,
+            UnusedDependencyCount = 0,
+            InterfacesWithSingleImplementation = interfacesWithSingleImplementation,
+            AverageMethodComplexity = averageMethodComplexity,
+            EstimatedOnboardingTime = null,
+            CollectedAt = DateTimeOffset.UnixEpoch
+        };
 
     [Fact]
     public void EmptySnapshot_FailsEveryFilter_WithExplicitViolation()

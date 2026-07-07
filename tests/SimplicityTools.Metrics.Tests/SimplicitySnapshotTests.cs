@@ -8,42 +8,32 @@ namespace SimplicityTools.Metrics.Tests;
 
 public sealed class SimplicitySnapshotTests
 {
-    private static readonly Type[] ExpectedConstructorTypes =
+    private static readonly string[] MeasuredPropertyNames =
     [
-        typeof(int),
-        typeof(int),
-        typeof(int),
-        typeof(int),
-        typeof(int),
-        typeof(int),
-        typeof(int),
-        typeof(double),
-        typeof(TimeSpan?),
-        typeof(DateTimeOffset)
+        "TotalProjects",
+        "TotalFiles",
+        "PrimaryPathFileCount",
+        "AbstractionLayerCount",
+        "ExternalDependencyCount",
+        "UnusedDependencyCount",
+        "InterfacesWithSingleImplementation",
+        "AverageMethodComplexity",
+        "EstimatedOnboardingTime",
+        "CollectedAt"
     ];
 
     [Fact]
-    public void PublicContract_HasExpectedConstructorAndMembers()
+    public void PublicContract_UsesRequiredInitProperties_NotAPositionalConstructor()
     {
         var snapshotType = typeof(SimplicitySnapshot);
 
         Assert.True(snapshotType.IsSealed);
 
-        var constructor = snapshotType.GetConstructor(ExpectedConstructorTypes);
-        Assert.NotNull(constructor);
-
-        Assert.Collection(
-            constructor!.GetParameters(),
-            parameter => AssertParameter(parameter, "TotalProjects", typeof(int)),
-            parameter => AssertParameter(parameter, "TotalFiles", typeof(int)),
-            parameter => AssertParameter(parameter, "PrimaryPathFileCount", typeof(int)),
-            parameter => AssertParameter(parameter, "AbstractionLayerCount", typeof(int)),
-            parameter => AssertParameter(parameter, "ExternalDependencyCount", typeof(int)),
-            parameter => AssertParameter(parameter, "UnusedDependencyCount", typeof(int)),
-            parameter => AssertParameter(parameter, "InterfacesWithSingleImplementation", typeof(int)),
-            parameter => AssertParameter(parameter, "AverageMethodComplexity", typeof(double)),
-            parameter => AssertParameter(parameter, "EstimatedOnboardingTime", typeof(TimeSpan?)),
-            parameter => AssertParameter(parameter, "CollectedAt", typeof(DateTimeOffset)));
+        // The 0.4.x positional 10-parameter constructor is gone; the only public constructor is
+        // the parameterless one, and every measured value is a required init property.
+        var publicConstructors = snapshotType.GetConstructors(BindingFlags.Instance | BindingFlags.Public);
+        var constructor = Assert.Single(publicConstructors);
+        Assert.Empty(constructor.GetParameters());
 
         var publicProperties = snapshotType
             .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
@@ -66,18 +56,18 @@ public sealed class SimplicitySnapshotTests
             ],
             publicProperties.Keys.OrderBy(name => name, StringComparer.Ordinal));
 
-        AssertProperty<int>(publicProperties, "TotalProjects", initOnly: true);
-        AssertProperty<int>(publicProperties, "TotalFiles", initOnly: true);
-        AssertProperty<int>(publicProperties, "PrimaryPathFileCount", initOnly: true);
-        AssertProperty<int>(publicProperties, "AbstractionLayerCount", initOnly: true);
-        AssertProperty<int>(publicProperties, "ExternalDependencyCount", initOnly: true);
-        AssertProperty<int>(publicProperties, "UnusedDependencyCount", initOnly: true);
-        AssertProperty<int>(publicProperties, "InterfacesWithSingleImplementation", initOnly: true);
-        AssertProperty<double>(publicProperties, "AverageMethodComplexity", initOnly: true);
-        AssertProperty<TimeSpan?>(publicProperties, "EstimatedOnboardingTime", initOnly: true);
-        AssertProperty<DateTimeOffset>(publicProperties, "CollectedAt", initOnly: true);
-        AssertProperty<double>(publicProperties, "PrimaryPathRatio", initOnly: false);
-        AssertProperty<double>(publicProperties, "PrematureAbstractionRatio", initOnly: false);
+        AssertRequiredInitProperty<int>(publicProperties, "TotalProjects");
+        AssertRequiredInitProperty<int>(publicProperties, "TotalFiles");
+        AssertRequiredInitProperty<int>(publicProperties, "PrimaryPathFileCount");
+        AssertRequiredInitProperty<int>(publicProperties, "AbstractionLayerCount");
+        AssertRequiredInitProperty<int>(publicProperties, "ExternalDependencyCount");
+        AssertRequiredInitProperty<int>(publicProperties, "UnusedDependencyCount");
+        AssertRequiredInitProperty<int>(publicProperties, "InterfacesWithSingleImplementation");
+        AssertRequiredInitProperty<double>(publicProperties, "AverageMethodComplexity");
+        AssertRequiredInitProperty<TimeSpan?>(publicProperties, "EstimatedOnboardingTime");
+        AssertRequiredInitProperty<DateTimeOffset>(publicProperties, "CollectedAt");
+        AssertComputedProperty<double>(publicProperties, "PrimaryPathRatio");
+        AssertComputedProperty<double>(publicProperties, "PrematureAbstractionRatio");
 
         var toSummary = snapshotType.GetMethod("ToSummary", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
         Assert.NotNull(toSummary);
@@ -86,37 +76,54 @@ public sealed class SimplicitySnapshotTests
     }
 
     [Fact]
+    public void PublicContract_EveryMeasuredPropertyIsRequired()
+    {
+        foreach (var propertyName in MeasuredPropertyNames)
+        {
+            var property = typeof(SimplicitySnapshot).GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public);
+            Assert.NotNull(property);
+            Assert.True(
+                property!.GetCustomAttribute<RequiredMemberAttribute>() is not null,
+                $"Expected '{propertyName}' to be a required member.");
+        }
+    }
+
+    [Fact]
     public void DerivedRatios_FollowSpecAndGuardAgainstZero()
     {
-        var populatedSnapshot = CreateSnapshot(
-            totalProjects: 3,
-            totalFiles: 40,
-            primaryPathFileCount: 28,
-            abstractionLayerCount: 8,
-            externalDependencyCount: 9,
-            unusedDependencyCount: 2,
-            interfacesWithSingleImplementation: 2,
-            averageMethodComplexity: 3.0,
-            estimatedOnboardingTime: TimeSpan.FromHours(31),
-            collectedAt: new DateTimeOffset(2026, 4, 29, 12, 0, 0, TimeSpan.Zero));
+        var populatedSnapshot = new SimplicitySnapshot
+        {
+            TotalProjects = 3,
+            TotalFiles = 40,
+            PrimaryPathFileCount = 28,
+            AbstractionLayerCount = 8,
+            ExternalDependencyCount = 9,
+            UnusedDependencyCount = 2,
+            InterfacesWithSingleImplementation = 2,
+            AverageMethodComplexity = 3.0,
+            EstimatedOnboardingTime = TimeSpan.FromHours(31),
+            CollectedAt = new DateTimeOffset(2026, 4, 29, 12, 0, 0, TimeSpan.Zero)
+        };
 
-        Assert.Equal(0.7, GetProperty<double>(populatedSnapshot, "PrimaryPathRatio"));
-        Assert.Equal(0.25, GetProperty<double>(populatedSnapshot, "PrematureAbstractionRatio"));
+        Assert.Equal(0.7, populatedSnapshot.PrimaryPathRatio);
+        Assert.Equal(0.25, populatedSnapshot.PrematureAbstractionRatio);
 
-        var emptySnapshot = CreateSnapshot(
-            totalProjects: 0,
-            totalFiles: 0,
-            primaryPathFileCount: 0,
-            abstractionLayerCount: 0,
-            externalDependencyCount: 0,
-            unusedDependencyCount: 0,
-            interfacesWithSingleImplementation: 0,
-            averageMethodComplexity: 0,
-            estimatedOnboardingTime: TimeSpan.Zero,
-            collectedAt: DateTimeOffset.UnixEpoch);
+        var emptySnapshot = new SimplicitySnapshot
+        {
+            TotalProjects = 0,
+            TotalFiles = 0,
+            PrimaryPathFileCount = 0,
+            AbstractionLayerCount = 0,
+            ExternalDependencyCount = 0,
+            UnusedDependencyCount = 0,
+            InterfacesWithSingleImplementation = 0,
+            AverageMethodComplexity = 0,
+            EstimatedOnboardingTime = TimeSpan.Zero,
+            CollectedAt = DateTimeOffset.UnixEpoch
+        };
 
-        Assert.Equal(0d, GetProperty<double>(emptySnapshot, "PrimaryPathRatio"));
-        Assert.Equal(0d, GetProperty<double>(emptySnapshot, "PrematureAbstractionRatio"));
+        Assert.Equal(0d, emptySnapshot.PrimaryPathRatio);
+        Assert.Equal(0d, emptySnapshot.PrematureAbstractionRatio);
     }
 
     [Fact]
@@ -124,17 +131,19 @@ public sealed class SimplicitySnapshotTests
     {
         using var _ = new CultureScope("fr-FR");
 
-        var snapshot = CreateSnapshot(
-            totalProjects: 3,
-            totalFiles: 40,
-            primaryPathFileCount: 28,
-            abstractionLayerCount: 6,
-            externalDependencyCount: 9,
-            unusedDependencyCount: 2,
-            interfacesWithSingleImplementation: 1,
-            averageMethodComplexity: 3.0,
-            estimatedOnboardingTime: TimeSpan.FromHours(31),
-            collectedAt: new DateTimeOffset(2026, 4, 29, 15, 45, 0, TimeSpan.FromHours(-4)));
+        var snapshot = new SimplicitySnapshot
+        {
+            TotalProjects = 3,
+            TotalFiles = 40,
+            PrimaryPathFileCount = 28,
+            AbstractionLayerCount = 6,
+            ExternalDependencyCount = 9,
+            UnusedDependencyCount = 2,
+            InterfacesWithSingleImplementation = 1,
+            AverageMethodComplexity = 3.0,
+            EstimatedOnboardingTime = TimeSpan.FromHours(31),
+            CollectedAt = new DateTimeOffset(2026, 4, 29, 15, 45, 0, TimeSpan.FromHours(-4))
+        };
 
         var expected = string.Join(
             Environment.NewLine,
@@ -151,96 +160,50 @@ public sealed class SimplicitySnapshotTests
                 "Est. onboarding: 31h"
             ]);
 
-        Assert.Equal(expected, InvokeToSummary(snapshot));
+        Assert.Equal(expected, snapshot.ToSummary());
     }
 
     [Fact]
     public void ToSummary_AnnouncesUncomputedOnboardingTime()
     {
-        var snapshot = CreateSnapshot(
-            totalProjects: 3,
-            totalFiles: 40,
-            primaryPathFileCount: 28,
-            abstractionLayerCount: 6,
-            externalDependencyCount: 9,
-            unusedDependencyCount: 2,
-            interfacesWithSingleImplementation: 1,
-            averageMethodComplexity: 3.0,
-            estimatedOnboardingTime: null,
-            collectedAt: new DateTimeOffset(2026, 4, 29, 15, 45, 0, TimeSpan.FromHours(-4)));
+        var snapshot = new SimplicitySnapshot
+        {
+            TotalProjects = 3,
+            TotalFiles = 40,
+            PrimaryPathFileCount = 28,
+            AbstractionLayerCount = 6,
+            ExternalDependencyCount = 9,
+            UnusedDependencyCount = 2,
+            InterfacesWithSingleImplementation = 1,
+            AverageMethodComplexity = 3.0,
+            EstimatedOnboardingTime = null,
+            CollectedAt = new DateTimeOffset(2026, 4, 29, 15, 45, 0, TimeSpan.FromHours(-4))
+        };
 
-        Assert.EndsWith("Est. onboarding: not computed", InvokeToSummary(snapshot), StringComparison.Ordinal);
+        Assert.EndsWith("Est. onboarding: not computed", snapshot.ToSummary(), StringComparison.Ordinal);
     }
 
-    private static void AssertParameter(ParameterInfo parameter, string expectedName, Type expectedType)
-    {
-        Assert.Equal(expectedName, parameter.Name);
-        Assert.Equal(expectedType, parameter.ParameterType);
-    }
-
-    private static void AssertProperty<T>(
+    private static void AssertRequiredInitProperty<T>(
         IReadOnlyDictionary<string, PropertyInfo> publicProperties,
-        string propertyName,
-        bool initOnly)
+        string propertyName)
     {
         Assert.True(publicProperties.TryGetValue(propertyName, out var property), $"Expected public property '{propertyName}'.");
         Assert.Equal(typeof(T), property!.PropertyType);
+        Assert.True(
+            IsInitOnly(property),
+            $"Expected '{propertyName}' to remain immutable via an init-only setter.");
+        Assert.True(
+            property.GetCustomAttribute<RequiredMemberAttribute>() is not null,
+            $"Expected '{propertyName}' to be a required member.");
+    }
 
-        if (initOnly)
-        {
-            Assert.True(
-                IsInitOnly(property),
-                $"Expected '{propertyName}' to remain immutable via an init-only setter.");
-            return;
-        }
-
+    private static void AssertComputedProperty<T>(
+        IReadOnlyDictionary<string, PropertyInfo> publicProperties,
+        string propertyName)
+    {
+        Assert.True(publicProperties.TryGetValue(propertyName, out var property), $"Expected public property '{propertyName}'.");
+        Assert.Equal(typeof(T), property!.PropertyType);
         Assert.Null(property.SetMethod);
-    }
-
-    private static object CreateSnapshot(
-        int totalProjects,
-        int totalFiles,
-        int primaryPathFileCount,
-        int abstractionLayerCount,
-        int externalDependencyCount,
-        int unusedDependencyCount,
-        int interfacesWithSingleImplementation,
-        double averageMethodComplexity,
-        TimeSpan? estimatedOnboardingTime,
-        DateTimeOffset collectedAt)
-    {
-        var constructor = typeof(SimplicitySnapshot).GetConstructor(ExpectedConstructorTypes);
-        Assert.NotNull(constructor);
-
-        return constructor!.Invoke(
-        [
-            totalProjects,
-            totalFiles,
-            primaryPathFileCount,
-            abstractionLayerCount,
-            externalDependencyCount,
-            unusedDependencyCount,
-            interfacesWithSingleImplementation,
-            averageMethodComplexity,
-            estimatedOnboardingTime!,
-            collectedAt
-        ]);
-    }
-
-    private static T GetProperty<T>(object instance, string propertyName)
-    {
-        var property = typeof(SimplicitySnapshot).GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public);
-        Assert.NotNull(property);
-
-        return Assert.IsType<T>(property!.GetValue(instance));
-    }
-
-    private static string InvokeToSummary(object snapshot)
-    {
-        var toSummary = typeof(SimplicitySnapshot).GetMethod("ToSummary", BindingFlags.Instance | BindingFlags.Public);
-        Assert.NotNull(toSummary);
-
-        return Assert.IsType<string>(toSummary!.Invoke(snapshot, null));
     }
 
     private static bool IsInitOnly(PropertyInfo property)

@@ -23,14 +23,16 @@ public sealed class TcaPackageValidationTests
             Assert.Contains("lib/net10.0/SimplicityTools.Tca.xml", entries);
 
             var libraryAssets = entries
-                .Where(static entry => entry.StartsWith("lib/net10.0/", StringComparison.Ordinal))
+                .Where(static entry => entry.StartsWith("lib/", StringComparison.Ordinal))
                 .OrderBy(static entry => entry, StringComparer.Ordinal)
                 .ToArray();
 
             Assert.Equal(
                 [
                     "lib/net10.0/SimplicityTools.Tca.dll",
-                    "lib/net10.0/SimplicityTools.Tca.xml"
+                    "lib/net10.0/SimplicityTools.Tca.xml",
+                    "lib/net8.0/SimplicityTools.Tca.dll",
+                    "lib/net8.0/SimplicityTools.Tca.xml"
                 ],
                 libraryAssets);
 
@@ -41,29 +43,38 @@ public sealed class TcaPackageValidationTests
             var nuspec = XDocument.Load(nuspecStream);
             var ns = nuspec.Root!.Name.Namespace;
             var metadata = nuspec.Root.Element(ns + "metadata");
-            var dependencies = metadata?
+            var dependencyGroups = metadata?
                 .Element(ns + "dependencies")?
                 .Elements(ns + "group")
-                .SelectMany(static group => group.Elements())
+                .OrderBy(static group => group.Attribute("targetFramework")?.Value, StringComparer.Ordinal)
                 .ToArray();
 
-            Assert.NotNull(dependencies);
+            Assert.NotNull(dependencyGroups);
 
+            // One dependency group per shipped target framework, each declaring both library dependencies.
             Assert.Collection(
-                dependencies!
-                    .OrderBy(static dependency => dependency.Attribute("id")?.Value, StringComparer.Ordinal),
-                dependency =>
-                {
-                    Assert.Equal(ns + "dependency", dependency.Name);
-                    Assert.Equal("SimplicityTools.Filters", dependency.Attribute("id")?.Value);
-                    Assert.Equal(validation.Version, dependency.Attribute("version")?.Value);
-                },
-                dependency =>
-                {
-                    Assert.Equal(ns + "dependency", dependency.Name);
-                    Assert.Equal("SimplicityTools.Metrics", dependency.Attribute("id")?.Value);
-                    Assert.Equal(validation.Version, dependency.Attribute("version")?.Value);
-                });
+                dependencyGroups!,
+                group => Assert.Equal("net10.0", group.Attribute("targetFramework")?.Value),
+                group => Assert.Equal("net8.0", group.Attribute("targetFramework")?.Value));
+
+            foreach (var group in dependencyGroups!)
+            {
+                Assert.Collection(
+                    group.Elements()
+                        .OrderBy(static dependency => dependency.Attribute("id")?.Value, StringComparer.Ordinal),
+                    dependency =>
+                    {
+                        Assert.Equal(ns + "dependency", dependency.Name);
+                        Assert.Equal("SimplicityTools.Filters", dependency.Attribute("id")?.Value);
+                        Assert.Equal(validation.Version, dependency.Attribute("version")?.Value);
+                    },
+                    dependency =>
+                    {
+                        Assert.Equal(ns + "dependency", dependency.Name);
+                        Assert.Equal("SimplicityTools.Metrics", dependency.Attribute("id")?.Value);
+                        Assert.Equal(validation.Version, dependency.Attribute("version")?.Value);
+                    });
+            }
         }
 
         var consumerDirectory = Path.Combine(validation.WorkingDirectory, "consumer");
@@ -98,17 +109,19 @@ public sealed class TcaPackageValidationTests
             {
                 public static void Main()
                 {
-                    var snapshot = new SimplicitySnapshot(
-                        TotalProjects: 3,
-                        TotalFiles: 18,
-                        PrimaryPathFileCount: 9,
-                        AbstractionLayerCount: 2,
-                        ExternalDependencyCount: 2,
-                        UnusedDependencyCount: 0,
-                        InterfacesWithSingleImplementation: 1,
-                        AverageMethodComplexity: 2.5,
-                        EstimatedOnboardingTime: TimeSpan.FromHours(10),
-                        CollectedAt: DateTimeOffset.Parse("2026-04-30T19:09:43.583-04:00"));
+                    var snapshot = new SimplicitySnapshot
+                    {
+                        TotalProjects = 3,
+                        TotalFiles = 18,
+                        PrimaryPathFileCount = 9,
+                        AbstractionLayerCount = 2,
+                        ExternalDependencyCount = 2,
+                        UnusedDependencyCount = 0,
+                        InterfacesWithSingleImplementation = 1,
+                        AverageMethodComplexity = 2.5,
+                        EstimatedOnboardingTime = TimeSpan.FromHours(10),
+                        CollectedAt = DateTimeOffset.Parse("2026-04-30T19:09:43.583-04:00")
+                    };
 
                     var verdicts = new[]
                     {

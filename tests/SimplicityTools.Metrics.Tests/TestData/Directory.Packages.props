@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    The fixture projects under TestData are test data: SimplicityCollector restores and loads
+    them standalone during Metrics tests. They must keep their inline PackageReference Version
+    attributes, so central package management from the repo-root Directory.Packages.props is
+    switched off at this boundary (NuGet picks the nearest Directory.Packages.props walking up).
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

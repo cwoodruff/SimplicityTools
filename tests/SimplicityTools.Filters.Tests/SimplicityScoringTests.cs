@@ -13,17 +13,19 @@ public sealed class SimplicityScoringTests
         int unusedDependencyCount = 0,
         int interfacesWithSingleImplementation = 0,
         double averageMethodComplexity = 2.0) =>
-        new(
-            TotalProjects: 4,
-            TotalFiles: totalFiles,
-            PrimaryPathFileCount: primaryPathFileCount,
-            AbstractionLayerCount: abstractionLayerCount,
-            ExternalDependencyCount: unusedDependencyCount,
-            UnusedDependencyCount: unusedDependencyCount,
-            InterfacesWithSingleImplementation: interfacesWithSingleImplementation,
-            AverageMethodComplexity: averageMethodComplexity,
-            EstimatedOnboardingTime: null,
-            CollectedAt: DateTimeOffset.UnixEpoch);
+        new()
+        {
+            TotalProjects = 4,
+            TotalFiles = totalFiles,
+            PrimaryPathFileCount = primaryPathFileCount,
+            AbstractionLayerCount = abstractionLayerCount,
+            ExternalDependencyCount = unusedDependencyCount,
+            UnusedDependencyCount = unusedDependencyCount,
+            InterfacesWithSingleImplementation = interfacesWithSingleImplementation,
+            AverageMethodComplexity = averageMethodComplexity,
+            EstimatedOnboardingTime = null,
+            CollectedAt = DateTimeOffset.UnixEpoch
+        };
 
     [Fact]
     public void CalculateScore_WithDefaultThresholds_MatchesLegacyFormula()

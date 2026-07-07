@@ -270,30 +270,34 @@ public sealed class TcaEstimateTests
     }
 
     private static SimplicitySnapshot CreateSnapshot() =>
-        new(
-            TotalProjects: 6,
-            TotalFiles: 100,
-            PrimaryPathFileCount: 40,
-            AbstractionLayerCount: 12,
-            ExternalDependencyCount: 20,
-            UnusedDependencyCount: 4,
-            InterfacesWithSingleImplementation: 3,
-            AverageMethodComplexity: 7.5,
-            EstimatedOnboardingTime: TimeSpan.FromHours(60),
-            CollectedAt: DateTimeOffset.Parse("2026-04-29T21:22:50.867-04:00"));
+        new()
+        {
+            TotalProjects = 6,
+            TotalFiles = 100,
+            PrimaryPathFileCount = 40,
+            AbstractionLayerCount = 12,
+            ExternalDependencyCount = 20,
+            UnusedDependencyCount = 4,
+            InterfacesWithSingleImplementation = 3,
+            AverageMethodComplexity = 7.5,
+            EstimatedOnboardingTime = TimeSpan.FromHours(60),
+            CollectedAt = DateTimeOffset.Parse("2026-04-29T21:22:50.867-04:00")
+        };
 
     private static SimplicitySnapshot CreateAtTargetSnapshot() =>
-        new(
-            TotalProjects: 3,
-            TotalFiles: 100,
-            PrimaryPathFileCount: 60,
-            AbstractionLayerCount: 4,
-            ExternalDependencyCount: 10,
-            UnusedDependencyCount: 0,
-            InterfacesWithSingleImplementation: 0,
-            AverageMethodComplexity: 5.0,
-            EstimatedOnboardingTime: TimeSpan.FromHours(40),
-            CollectedAt: DateTimeOffset.Parse("2026-04-29T21:22:50.867-04:00"));
+        new()
+        {
+            TotalProjects = 3,
+            TotalFiles = 100,
+            PrimaryPathFileCount = 60,
+            AbstractionLayerCount = 4,
+            ExternalDependencyCount = 10,
+            UnusedDependencyCount = 0,
+            InterfacesWithSingleImplementation = 0,
+            AverageMethodComplexity = 5.0,
+            EstimatedOnboardingTime = TimeSpan.FromHours(40),
+            CollectedAt = DateTimeOffset.Parse("2026-04-29T21:22:50.867-04:00")
+        };
 
     private static FilterVerdict[] CreateFilterVerdicts() =>
         [

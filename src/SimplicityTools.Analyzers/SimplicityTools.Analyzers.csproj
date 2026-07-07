@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0">
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -31,7 +31,7 @@
       can load the shipped assemblies (CS9057). The dependency stays PrivateAssets-only; the
       package declares no NuGet dependencies.
     -->
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.4.0">
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="4.4.0">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
