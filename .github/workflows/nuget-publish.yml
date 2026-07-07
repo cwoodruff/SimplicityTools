@@ -30,6 +30,10 @@ on:
 permissions:
   contents: read
 
+# Serialize publish runs; never cancel an in-progress push to NuGet.org.
+concurrency:
+  group: nuget-publish
+
 env:
   DOTNET_NOLOGO: true
   PACKAGE_OUTPUT_DIR: artifacts/packages
@@ -42,23 +46,26 @@ jobs:
       pack_version: ${{ steps.release.outputs.pack_version }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
       - name: Set up .NET 10 SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: '10.0.x'
 
       - name: Resolve release shape
         id: release
         shell: bash
+        env:
+          REQUESTED_GROUP: ${{ github.event.inputs.release_group || 'validation' }}
+          REQUESTED_VERSION: ${{ github.event.inputs.version || '' }}
         run: |
           ref_type="${GITHUB_REF_TYPE:-branch}"
           ref_name="${GITHUB_REF_NAME}"
-          requested_group="${{ github.event.inputs.release_group || 'validation' }}"
-          requested_version="${{ github.event.inputs.version || '' }}"
+          requested_group="$REQUESTED_GROUP"
+          requested_version="$REQUESTED_VERSION"
           semver_pattern='^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z]+)*$'
           canonical_version="$(python3 - <<'PY'
           import sys
@@ -404,7 +411,7 @@ jobs:
           PY
 
       - name: Upload package artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: nuget-packages-${{ steps.release.outputs.release_group }}-${{ steps.release.outputs.pack_version }}
           path: artifacts/packages/*
@@ -414,11 +421,12 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     needs: validate
     runs-on: ubuntu-latest
+    environment: nuget
     permissions:
       contents: read
     steps:
       - name: Download packaged artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: nuget-packages-${{ needs.validate.outputs.release_group }}-${{ needs.validate.outputs.pack_version }}
           path: artifacts/packages
@@ -520,7 +528,7 @@ jobs:
           PY
 
       - name: Set up .NET 10 SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: '10.0.x'
 
