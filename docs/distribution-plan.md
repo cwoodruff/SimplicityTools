@@ -65,11 +65,11 @@ Smoke test: build a scratch project that references it and confirm an `SF000x` w
 2. Confirm `SimplicityToolsReleaseVersion` is `0.5.0`.
 3. (Optional) Run the `validation` workflow dispatch; confirm artifacts build.
 4. Push **prerelease** tags, libraries first (dependency root):
-   `git tag libraries/v0.4.0-preview.1 && git push origin libraries/v0.4.0-preview.1`
-   then `analyzers/v0.4.0-preview.1`, then `cli/v0.4.0-preview.1`.
+   `git tag libraries/v0.5.0-preview.1 && git push origin libraries/v0.5.0-preview.1`
+   then `analyzers/v0.5.0-preview.1`, then `cli/v0.5.0-preview.1`.
 5. After each publish, verify on NuGet.org and run the matching section 3 smoke test.
 6. When prerelease is validated, push **stable** tags in the same order:
-   `libraries/v0.4.0` -> `analyzers/v0.4.0` -> `cli/v0.4.0`.
+   `libraries/v0.5.0` -> `analyzers/v0.5.0` -> `cli/v0.5.0`.
 7. Re-run all three smoke tests against the stable packages.
 8. Announce (README badges go live automatically; update CHANGELOG).
 
