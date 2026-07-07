@@ -12,7 +12,7 @@ internal sealed class WatchCommandRunner
     private readonly string _solutionDirectory;
     private readonly TextWriter _outputWriter;
     private readonly TextWriter _errorWriter;
-    private readonly Func<string, Task<SimplicitySnapshot>> _collectSnapshotAsync;
+    private readonly Func<string, CancellationToken, Task<SimplicitySnapshot>> _collectSnapshotAsync;
     private readonly WatchChangeDebouncer _debouncer;
     private readonly CancellationTokenSource _shutdownSource = new();
     private readonly SemaphoreSlim _analysisGate = new(1, 1);
@@ -25,7 +25,7 @@ internal sealed class WatchCommandRunner
         TextWriter outputWriter,
         TextWriter errorWriter,
         TimeSpan? debounceDelay = null,
-        Func<string, Task<SimplicitySnapshot>>? collectSnapshotAsync = null)
+        Func<string, CancellationToken, Task<SimplicitySnapshot>>? collectSnapshotAsync = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(solutionPath);
         ArgumentNullException.ThrowIfNull(outputWriter);
@@ -44,7 +44,7 @@ internal sealed class WatchCommandRunner
         _collectSnapshotAsync = collectSnapshotAsync ?? CreateCollectorAsync;
         _debouncer = new WatchChangeDebouncer(
             debounceDelay ?? DefaultDebounceDelay,
-            change => AnalyzeAndWriteAsync("Updated snapshot", change, CancellationToken.None),
+            change => AnalyzeAndWriteAsync("Updated snapshot", change, _shutdownSource.Token),
             _shutdownSource.Token);
     }
 
@@ -82,8 +82,14 @@ internal sealed class WatchCommandRunner
         finally
         {
             _shutdownSource.Cancel();
-            _watcher.Dispose();
+            _watcher?.Dispose();
             _debouncer.Dispose();
+
+            // An in-flight debounced analysis observes the shutdown token above; wait for it to
+            // drain before disposing the gate it still holds.
+            await _analysisGate.WaitAsync().ConfigureAwait(false);
+            _analysisGate.Release();
+
             _analysisGate.Dispose();
             _shutdownSource.Dispose();
         }
@@ -97,6 +103,9 @@ internal sealed class WatchCommandRunner
         {
             IncludeSubdirectories = true,
             Filter = "*",
+            // The 8 KB default overflows quickly when watching a whole tree; overflowed events
+            // are lost silently.
+            InternalBufferSize = 64 * 1024,
             NotifyFilter =
                 NotifyFilters.FileName |
                 NotifyFilters.DirectoryName |
@@ -105,10 +114,10 @@ internal sealed class WatchCommandRunner
         };
     }
 
-    private static Task<SimplicitySnapshot> CreateCollectorAsync(string solutionPath)
+    private Task<SimplicitySnapshot> CreateCollectorAsync(string solutionPath, CancellationToken cancellationToken)
     {
-        var collector = new SimplicityCollector();
-        return collector.CollectAsync(solutionPath);
+        var collector = new SimplicityCollector(message => _errorWriter.WriteLine(message));
+        return collector.CollectAsync(solutionPath, cancellationToken);
     }
 
     private void OnChanged(object sender, FileSystemEventArgs eventArgs)
@@ -134,8 +143,38 @@ internal sealed class WatchCommandRunner
     private void OnWatcherError(object sender, ErrorEventArgs eventArgs)
     {
         var message = eventArgs.GetException().Message;
-        _errorWriter.WriteLine($"Watch update failed: {message}");
+        _errorWriter.WriteLine($"File watcher error: {message}. Re-arming the watcher and re-analyzing to catch up on lost events.");
+
+        if (_shutdownSource.IsCancellationRequested)
+        {
+            return;
+        }
+
+        try
+        {
+            var failedWatcher = Interlocked.Exchange(ref _watcher, null);
+            failedWatcher?.Dispose();
+
+            var replacement = CreateWatcher(_solutionDirectory);
+            replacement.Changed += OnChanged;
+            replacement.Created += OnChanged;
+            replacement.Deleted += OnChanged;
+            replacement.Renamed += OnRenamed;
+            replacement.Error += OnWatcherError;
+            replacement.EnableRaisingEvents = true;
+            _watcher = replacement;
+        }
+        catch (Exception exception)
+        {
+            _errorWriter.WriteLine($"Could not re-arm the file watcher: {exception.Message}");
+        }
+
+        // Events were lost while the watcher was down, so a full re-analysis is forced rather
+        // than trusting the next incremental notification.
+        _debouncer.Signal(new WatchChangeNotification(WatcherChangeTypes.All, _solutionDirectory, PreviousFullPath: null));
     }
+
+    internal void SimulateWatcherError(ErrorEventArgs eventArgs) => OnWatcherError(this, eventArgs);
 
     private async Task AnalyzeAndWriteAsync(string heading, WatchChangeNotification? change, CancellationToken cancellationToken)
     {
@@ -144,7 +183,7 @@ internal sealed class WatchCommandRunner
         try
         {
             var configuration = LoadConfiguration();
-            var snapshot = await _collectSnapshotAsync(_solutionPath).ConfigureAwait(false);
+            var snapshot = await _collectSnapshotAsync(_solutionPath, cancellationToken).ConfigureAwait(false);
 
             _outputWriter.WriteLine(heading);
             _outputWriter.WriteLine(new string('-', heading.Length));
@@ -211,17 +250,22 @@ internal sealed class WatchCommandRunner
 
 internal sealed class WatchChangeDebouncer : IDisposable
 {
+    private static readonly TimeSpan DefaultMaxLatency = TimeSpan.FromSeconds(5);
+
     private readonly TimeSpan _delay;
+    private readonly TimeSpan _maxLatency;
     private readonly Func<WatchChangeNotification, Task> _callbackAsync;
     private readonly CancellationToken _shutdownToken;
     private readonly object _syncLock = new();
 
     private CancellationTokenSource? _pendingSignalSource;
+    private DateTime? _firstPostponedSignalUtc;
 
     public WatchChangeDebouncer(
         TimeSpan delay,
         Func<WatchChangeNotification, Task> callbackAsync,
-        CancellationToken shutdownToken)
+        CancellationToken shutdownToken,
+        TimeSpan? maxLatency = null)
     {
         if (delay <= TimeSpan.Zero)
         {
@@ -231,6 +275,12 @@ internal sealed class WatchChangeDebouncer : IDisposable
         ArgumentNullException.ThrowIfNull(callbackAsync);
 
         _delay = delay;
+        _maxLatency = maxLatency ?? DefaultMaxLatency;
+        if (_maxLatency < _delay)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxLatency), "Max latency must be at least the debounce delay.");
+        }
+
         _callbackAsync = callbackAsync;
         _shutdownToken = shutdownToken;
     }
@@ -244,12 +294,30 @@ internal sealed class WatchChangeDebouncer : IDisposable
             _pendingSignalSource = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken);
             var signalToken = _pendingSignalSource.Token;
 
+            // Trailing-edge debounce with a latency cap: continuous churn keeps postponing the
+            // trailing delay, so once the first postponed signal is older than the cap the
+            // callback force-fires instead of being postponed again.
+            _firstPostponedSignalUtc ??= DateTime.UtcNow;
+            var remainingBeforeForcedFire = _firstPostponedSignalUtc.Value + _maxLatency - DateTime.UtcNow;
+            var delay = remainingBeforeForcedFire < _delay
+                ? (remainingBeforeForcedFire > TimeSpan.Zero ? remainingBeforeForcedFire : TimeSpan.Zero)
+                : _delay;
+
             _ = Task.Run(
                 async () =>
                 {
                     try
                     {
-                        await Task.Delay(_delay, signalToken).ConfigureAwait(false);
+                        if (delay > TimeSpan.Zero)
+                        {
+                            await Task.Delay(delay, signalToken).ConfigureAwait(false);
+                        }
+
+                        lock (_syncLock)
+                        {
+                            _firstPostponedSignalUtc = null;
+                        }
+
                         await _callbackAsync(change).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException) when (signalToken.IsCancellationRequested)
