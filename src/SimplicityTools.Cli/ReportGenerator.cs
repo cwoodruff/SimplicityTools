@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Text;
 using SimplicityTools.Filters;
 using SimplicityTools.Metrics;
@@ -7,6 +8,12 @@ namespace SimplicityTools.Cli;
 
 internal static class ReportGenerator
 {
+    /// <summary>
+    /// Every dynamic string that reaches markup goes through this wrapper so report content can
+    /// never break out of its element. Numeric interpolations may stay raw.
+    /// </summary>
+    internal static string Html(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
+
     private const string BrandBackgroundColor = "#0D0D0D";
     private const string BrandAccentColor = "#E31B23";
     private const string PrimaryPathColor = "#4DD0E1";
@@ -357,7 +364,7 @@ internal static class ReportGenerator
         return $"""
             <div class="container section">
               <h2>Executive Summary</h2>
-              <p>This report provides a comprehensive analysis of your solution's complexity profile as of <span class="highlight">{collectedDate}</span>.</p>
+              <p>This report provides a comprehensive analysis of your solution's complexity profile as of <span class="highlight">{Html(collectedDate)}</span>.</p>
               <div class="metric-grid">
                 <div class="metric-card">
                   <div class="metric-label">Total Projects</div>
@@ -374,7 +381,7 @@ internal static class ReportGenerator
                 </div>
                 <div class="metric-card">
                   <div class="metric-label">Estimated Onboarding</div>
-                  <div class="metric-value">{onboardingDisplay}</div>
+                  <div class="metric-value">{Html(onboardingDisplay)}</div>
                 </div>
               </div>
             </div>
@@ -510,12 +517,12 @@ internal static class ReportGenerator
                 <div class="metric-card">
                   <div class="metric-label">Method Complexity</div>
                   <div class="metric-value {complexityStatus.Item2}">{complexity:F2}</div>
-                  <div class="metric-subvalue">{complexityStatus.Item1}</div>
+                  <div class="metric-subvalue">{Html(complexityStatus.Item1)}</div>
                 </div>
                 <div class="metric-card">
                   <div class="metric-label">Onboarding Time</div>
-                  <div class="metric-value {onboardingClass}">{onboardingValue}</div>
-                  <div class="metric-subvalue">{onboardingVerdict}</div>
+                  <div class="metric-value {onboardingClass}">{Html(onboardingValue)}</div>
+                  <div class="metric-subvalue">{Html(onboardingVerdict)}</div>
                 </div>
                 <div class="metric-card">
                   <div class="metric-label">Simplicity Score</div>
@@ -618,7 +625,7 @@ internal static class ReportGenerator
             _ => ("✗", "badge-critical")
         };
 
-        return $"<span class=\"badge {cssClass}\">{symbol} {band.Label}</span>";
+        return $"<span class=\"badge {cssClass}\">{symbol} {Html(band.Label)}</span>";
     }
 
     private static (string Value, string Verdict, string CssClass) FormatOnboardingBand(TimeSpan onboardingTime, FilterThresholds thresholds)
@@ -711,7 +718,7 @@ internal static class ReportGenerator
         var (min, max) = GetTrendAxisRange(metric, values);
         var bottom = top + height;
 
-        builder.AppendLine($"<text class=\"chart-series-label\" x=\"16\" y=\"{FormatNumber(top + 14d)}\" fill=\"{metric.Color}\" font-size=\"12\" font-weight=\"600\">{metric.Title}</text>");
+        builder.AppendLine($"<text class=\"chart-series-label\" x=\"16\" y=\"{FormatNumber(top + 14d)}\" fill=\"{metric.Color}\" font-size=\"12\" font-weight=\"600\">{Html(metric.Title)}</text>");
         builder.AppendLine($"<rect x=\"{FormatNumber(left)}\" y=\"{FormatNumber(top)}\" width=\"{FormatNumber(width)}\" height=\"{FormatNumber(height)}\" fill=\"rgba(255,255,255,0.02)\" rx=\"8\" />");
 
         for (var tickIndex = 0; tickIndex <= 4; tickIndex++)
@@ -794,7 +801,7 @@ internal static class ReportGenerator
         for (var index = 0; index < trendPoints.Count; index++)
         {
             var x = GetXPosition(trendPoints.Count, index, left, width);
-            builder.AppendLine($"<text class=\"chart-point-label\" x=\"{FormatNumber(x)}\" y=\"{FormatNumber(bottom + 18d)}\" fill=\"#b6b6b6\" font-size=\"11\" text-anchor=\"middle\">{trendPoints[index].Label}</text>");
+            builder.AppendLine($"<text class=\"chart-point-label\" x=\"{FormatNumber(x)}\" y=\"{FormatNumber(bottom + 18d)}\" fill=\"#b6b6b6\" font-size=\"11\" text-anchor=\"middle\">{Html(trendPoints[index].Label)}</text>");
         }
     }
 
@@ -816,7 +823,7 @@ internal static class ReportGenerator
         foreach (var trendPoint in trendPoints)
         {
             builder.AppendLine("    <tr>");
-            builder.AppendLine($"      <td>{FormatTableDate(trendPoint.Snapshot.CollectedAt)}{(trendPoint.IsCurrent ? " <span class=\"badge badge-critical current-run\">Current report</span>" : string.Empty)}</td>");
+            builder.AppendLine($"      <td>{Html(FormatTableDate(trendPoint.Snapshot.CollectedAt))}{(trendPoint.IsCurrent ? " <span class=\"badge badge-critical current-run\">Current report</span>" : string.Empty)}</td>");
 
             foreach (var filter in SnapshotFilterEvaluation.GetFilterOrder())
             {
@@ -859,7 +866,7 @@ internal static class ReportGenerator
         foreach (var trendPoint in trendPoints)
         {
             builder.AppendLine("    <tr>");
-            builder.AppendLine($"      <td>{FormatTableDate(trendPoint.Snapshot.CollectedAt)}{(trendPoint.IsCurrent ? " <span class=\"badge badge-critical current-run\">Current report</span>" : string.Empty)}</td>");
+            builder.AppendLine($"      <td>{Html(FormatTableDate(trendPoint.Snapshot.CollectedAt))}{(trendPoint.IsCurrent ? " <span class=\"badge badge-critical current-run\">Current report</span>" : string.Empty)}</td>");
             builder.AppendLine($"      <td class=\"highlight\">{trendPoint.Snapshot.AverageMethodComplexity:F2}</td>");
             builder.AppendLine($"      <td>{FormatWorseningDelta(previous is null ? null : trendPoint.Snapshot.AverageMethodComplexity - previous.Snapshot.AverageMethodComplexity, "F2")}</td>");
             builder.AppendLine($"      <td class=\"highlight\">{(trendPoint.Snapshot.EstimatedOnboardingTime is { } rowOnboarding ? $"{rowOnboarding.TotalHours:F1}h" : "—")}</td>");
@@ -894,7 +901,7 @@ internal static class ReportGenerator
                   </tr>
                   <tr>
                     <td><strong>Snapshot Collected</strong></td>
-                    <td>{collectedDate}</td>
+                    <td>{Html(collectedDate)}</td>
                   </tr>
                   <tr>
                     <td><strong>Simplicity Toolkit</strong></td>

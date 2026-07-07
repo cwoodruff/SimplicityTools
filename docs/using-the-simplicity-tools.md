@@ -57,8 +57,10 @@ The CLI project is packed as the `SimplicityTools.Cli` .NET tool with `ToolComma
 In practice, the command surface in this repo is documented as:
 
 ```bash
-dotnet simplicity <command> <solution.sln>
+dotnet simplicity <command> <solution.sln> [options]
 ```
+
+Options can appear anywhere in the argument list. `dotnet simplicity --help` prints the command list, exit codes (0 success; 1 error or regression with `--fail-on-regression`), and the files the tool reads/writes; `dotnet simplicity <command> --help` prints per-command options; `dotnet simplicity --version` prints the informational tool version.
 
 If you are running from source instead of an installed tool, use:
 
@@ -90,13 +92,13 @@ Avg complexity: ...
 Est. onboarding: ...h
 ```
 
-If there is no configuration file beside the solution, the tool warns once per run:
+If there is no configuration file beside the solution, the tool prints an informational note (at most once per run):
 
 ```text
-Warning: simplicity.json was not found in '<solution-directory>'. Using built-in defaults for TCA inputs and filter thresholds.
+Info: using built-in defaults (no simplicity.json found in '<solution-directory>').
 ```
 
-That warning is expected. Missing config is not an error.
+That note is expected. Missing config is not an error.
 
 ## Configuration: `simplicity.json`
 
@@ -183,6 +185,8 @@ dotnet simplicity analyze path/to/YourSolution.sln
 
 Use this when you want a quick read of solution shape without producing files.
 
+For CI, `analyze --format json` writes the snapshot envelope JSON — the same versioned schema used by `.simplicity-baseline.json` and `.simplicity-history/` files — to stdout with nothing else (informational notes and collector diagnostics stay on stderr).
+
 What it measures:
 
 - total projects
@@ -211,7 +215,7 @@ dotnet simplicity report path/to/YourSolution.sln
 Output:
 
 ```text
-./simplicity-report/index.html
+<solution-directory>/simplicity-report/index.html
 ```
 
 What the report contains right now:
@@ -225,14 +229,15 @@ What the report contains right now:
 
 Useful details:
 
-- The report is fully self-contained: inline styles, no external scripts, no external assets.
-- The output path is always `./simplicity-report/index.html` relative to the current working directory.
+- The report is fully self-contained: inline styles, no external scripts, no external assets. All dynamic text is HTML-encoded.
+- The report defaults to `<solution-directory>/simplicity-report/`; pass `--output <directory>` to write it elsewhere.
 - The watch command ignores the `simplicity-report` directory so report generation does not create watch loops.
 
-Expected success message:
+Expected success message (the full path is always printed):
 
 ```text
-Report generated to ./simplicity-report/index.html
+Report generated to <solution-directory>/simplicity-report/index.html
+Snapshot saved to <solution-directory>/.simplicity-history
 ```
 
 ### Trend history in reports
@@ -303,6 +308,14 @@ Optional CI gate:
 dotnet simplicity diff path/to/YourSolution.sln --fail-on-regression
 ```
 
+Machine-readable output for CI:
+
+```bash
+dotnet simplicity diff path/to/YourSolution.sln --format json
+```
+
+The JSON object has the shape `{ "baseline": <snapshot>, "current": <snapshot>, "regressions": ["..."], "hasRegression": bool }`, where each snapshot uses the same camelCase schema as the baseline file. Exit codes are unchanged by `--format`.
+
 What it prints:
 
 - baseline file path
@@ -366,6 +379,14 @@ Status: ...
 Bars show configured budget used. Values above 100% are over budget.
 ```
 
+Machine-readable output for CI:
+
+```bash
+dotnet simplicity budget path/to/YourSolution.sln --format json
+```
+
+The JSON object contains a `dimensions` array (`name`, `metricLabel`, `actual`, `target`, `usageFraction`, `withinBudget`), the `withinBudgetCount`/`overBudgetCount` status counts, and a `notScored` array listing dimensions that could not be scored (currently Cognitive Load when onboarding time is not computed).
+
 This command is the quickest way to show whether a team’s current thresholds are realistic.
 
 Important current behavior: the collector currently emits `0h` for `EstimatedOnboardingTime`, so the Cognitive Load line will read `0.0h` unless that metric is supplied by another snapshot source in your own code.
@@ -397,7 +418,7 @@ The watcher ignores these paths to avoid self-triggering noise:
 Config behavior in watch mode:
 
 - `simplicity.json` is reloaded on every pass
-- missing-config warnings are suppressed after the first warning until the file appears again
+- the missing-config informational note is suppressed after the first pass until the file appears again
 
 This is the right command for refactoring sessions where you want immediate “did this get simpler?” feedback.
 

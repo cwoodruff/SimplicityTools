@@ -8,63 +8,97 @@ internal static class CommandLineEntryPoint
 {
     public static async Task<int> RunAsync(string[] args)
     {
+        var verbose = args.Any(static arg => string.Equals(arg, "--verbose", StringComparison.OrdinalIgnoreCase));
+
         try
         {
-            if (args.Length == 0 || IsHelpToken(args[0]))
-            {
-                WriteUsage(Console.Out);
-                return 0;
-            }
-
-            if (Commands.TryGetValue(args[0], out var command))
-            {
-                return await command(args[1..]).ConfigureAwait(false);
-            }
-
-            Console.Error.WriteLine($"Unknown command '{args[0]}'.");
-            WriteUsage(Console.Error);
-            return 1;
+            return await DispatchAsync(args).ConfigureAwait(false);
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine(exception.Message);
-            return 1;
+            return CliErrorReporter.Report(exception, verbose, Console.Error);
         }
     }
 
-    private static readonly Dictionary<string, Func<string[], Task<int>>> Commands =
+    private static async Task<int> DispatchAsync(string[] args)
+    {
+        if (args.Length == 0 || IsRootHelpToken(args[0]))
+        {
+            CliHelp.WriteRootUsage(Console.Out);
+            return 0;
+        }
+
+        if (string.Equals(args[0], "--version", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine(CliHelp.GetInformationalVersion());
+            return 0;
+        }
+
+        if (!Commands.TryGetValue(args[0], out var command))
+        {
+            Console.Error.WriteLine($"Unknown command '{args[0]}'.");
+            CliHelp.WriteRootUsage(Console.Error);
+            return 1;
+        }
+
+        return await RunParsedCommandAsync(command.Definition, args[1..], command.Handler).ConfigureAwait(false);
+    }
+
+    private static readonly Dictionary<string, (CliCommandDefinition Definition, Func<CommandArguments, Task<int>> Handler)> Commands =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            ["analyze"] = RunAnalyzeAsync,
-            ["report"] = RunReportAsync,
-            ["baseline"] = RunBaselineAsync,
-            ["diff"] = RunDiffAsync,
-            ["budget"] = RunBudgetAsync,
-            ["watch"] = RunWatchAsync
+            [CliCommands.Analyze.Name] = (CliCommands.Analyze, RunAnalyzeAsync),
+            [CliCommands.Report.Name] = (CliCommands.Report, RunReportAsync),
+            [CliCommands.Baseline.Name] = (CliCommands.Baseline, RunBaselineAsync),
+            [CliCommands.Diff.Name] = (CliCommands.Diff, RunDiffAsync),
+            [CliCommands.Budget.Name] = (CliCommands.Budget, RunBudgetAsync),
+            [CliCommands.Watch.Name] = (CliCommands.Watch, RunWatchAsync)
         };
 
-    private static bool IsHelpToken(string arg)
+    private static bool IsRootHelpToken(string arg)
     {
-        return string.Equals(arg, "--help", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(arg, "-h", StringComparison.Ordinal) ||
+        return CommandArgumentParser.IsHelpToken(arg) ||
                string.Equals(arg, "help", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static Task<int> RunAnalyzeAsync(string[] args)
+    private static async Task<int> RunParsedCommandAsync(
+        CliCommandDefinition definition,
+        string[] args,
+        Func<CommandArguments, Task<int>> handler)
     {
-        return RunWithSnapshotAsync(args, static (snapshot, _, _) =>
+        var parseResult = CommandArgumentParser.Parse(definition, args);
+
+        if (parseResult.ShowHelp)
         {
-            Console.WriteLine(snapshot.ToSummary());
+            CliHelp.WriteCommandHelp(definition, Console.Out);
+            return 0;
+        }
+
+        if (parseResult.Error is not null)
+        {
+            Console.Error.WriteLine(parseResult.Error);
+            CliHelp.WriteCommandHelp(definition, Console.Error);
+            return 1;
+        }
+
+        return await handler(parseResult.Arguments!).ConfigureAwait(false);
+    }
+
+    private static Task<int> RunAnalyzeAsync(CommandArguments arguments)
+    {
+        return RunWithSnapshotAsync(arguments, (snapshot, _, _) =>
+        {
+            Console.WriteLine(arguments.WantsJson ? SnapshotEnvelope.Serialize(snapshot) : snapshot.ToSummary());
             return Task.FromResult(0);
         });
     }
 
-    private static Task<int> RunReportAsync(string[] args)
+    private static Task<int> RunReportAsync(CommandArguments arguments)
     {
-        return RunWithSnapshotAsync(args, static async (snapshot, configuration, solutionPath) =>
+        return RunWithSnapshotAsync(arguments, async (snapshot, configuration, solutionPath) =>
         {
             await SnapshotHistory.AppendAsync(solutionPath, snapshot).ConfigureAwait(false);
-            var outputDirectory = "./simplicity-report";
+            var outputDirectory = ResolveReportDirectory(arguments, solutionPath);
             await ReportGenerator.GenerateHtmlReportAsync(
                 snapshot,
                 solutionPath,
@@ -77,9 +111,21 @@ internal static class CommandLineEntryPoint
         });
     }
 
-    private static Task<int> RunBaselineAsync(string[] args)
+    private static string ResolveReportDirectory(CommandArguments arguments, string solutionPath)
     {
-        return RunWithSnapshotAsync(args, static async (snapshot, _, solutionPath) =>
+        if (arguments.GetValue("--output") is { } outputDirectory)
+        {
+            return Path.GetFullPath(outputDirectory);
+        }
+
+        var solutionDirectory = Path.GetDirectoryName(Path.GetFullPath(solutionPath))
+            ?? throw new InvalidOperationException($"Could not determine the directory for '{solutionPath}'.");
+        return Path.Combine(solutionDirectory, "simplicity-report");
+    }
+
+    private static Task<int> RunBaselineAsync(CommandArguments arguments)
+    {
+        return RunWithSnapshotAsync(arguments, static async (snapshot, _, solutionPath) =>
         {
             var baselinePath = await BaselineSnapshotFile.WriteAsync(solutionPath, snapshot).ConfigureAwait(false);
             await SnapshotHistory.AppendAsync(solutionPath, snapshot).ConfigureAwait(false);
@@ -92,61 +138,44 @@ internal static class CommandLineEntryPoint
         });
     }
 
-    private static async Task<int> RunDiffAsync(string[] args)
+    private static Task<int> RunDiffAsync(CommandArguments arguments)
     {
-        if (args.Length is < 1 or > 2)
-        {
-            WriteUsage();
-            return 1;
-        }
+        var failOnRegression = arguments.HasFlag("--fail-on-regression");
 
-        var failOnRegression = false;
-        if (args.Length == 2)
-        {
-            if (!string.Equals(args[1], "--fail-on-regression", StringComparison.OrdinalIgnoreCase))
-            {
-                WriteUsage();
-                return 1;
-            }
-
-            failOnRegression = true;
-        }
-
-        return await RunWithSnapshotAsync([args[0]], async (currentSnapshot, configuration, solutionPath) =>
+        return RunWithSnapshotAsync(arguments, async (currentSnapshot, configuration, solutionPath) =>
         {
             var baselinePath = BaselineSnapshotFile.GetPath(solutionPath);
             var baselineSnapshot = await BaselineSnapshotFile.ReadAsync(solutionPath).ConfigureAwait(false);
-            var report = SnapshotDiffReportBuilder.Create(
-                baselinePath,
-                baselineSnapshot,
-                currentSnapshot,
-                configuration.Filters.ToFilterThresholds());
+            var thresholds = configuration.Filters.ToFilterThresholds();
+            var result = SnapshotDiffReportBuilder.CreateResult(baselineSnapshot, currentSnapshot, thresholds);
 
-            Console.WriteLine(report.Content);
-            return failOnRegression && report.HasRegression ? 1 : 0;
-        }).ConfigureAwait(false);
+            Console.WriteLine(arguments.WantsJson
+                ? CliJsonOutput.SerializeDiff(result)
+                : SnapshotDiffReportBuilder.Render(baselinePath, result, thresholds).Content);
+
+            return failOnRegression && result.HasRegression ? 1 : 0;
+        });
     }
 
-    private static Task<int> RunBudgetAsync(string[] args)
+    private static Task<int> RunBudgetAsync(CommandArguments arguments)
     {
-        return RunWithSnapshotAsync(args, static (snapshot, configuration, _) =>
+        return RunWithSnapshotAsync(arguments, (snapshot, configuration, _) =>
         {
-            Console.WriteLine(ComplexityBudgetReportBuilder.Create(snapshot, configuration.Filters));
+            var result = ComplexityBudgetReportBuilder.CreateResult(snapshot, configuration.Filters);
+            Console.WriteLine(arguments.WantsJson
+                ? CliJsonOutput.SerializeBudget(result)
+                : ComplexityBudgetReportBuilder.Render(result));
             return Task.FromResult(0);
         });
     }
 
     private static async Task<int> RunWithSnapshotAsync(
-        string[] args,
+        CommandArguments arguments,
         Func<SimplicitySnapshot, SimplicityConfiguration, string, Task<int>> action)
     {
-        if (args.Length != 1)
-        {
-            WriteUsage();
-            return 1;
-        }
+        var solutionPath = arguments.SolutionPath;
+        EnsureSolutionFileExists(solutionPath);
 
-        var solutionPath = args[0];
         using var cancellationSource = new CancellationTokenSource();
         ConsoleCancelEventHandler cancelHandler = (_, eventArgs) =>
         {
@@ -168,14 +197,17 @@ internal static class CommandLineEntryPoint
         }
     }
 
-    private static async Task<int> RunWatchAsync(string[] args)
+    private static void EnsureSolutionFileExists(string solutionPath)
     {
-        if (args.Length != 1)
+        if (!File.Exists(solutionPath))
         {
-            WriteUsage();
-            return 1;
+            var fullPath = Path.GetFullPath(solutionPath);
+            throw new FileNotFoundException($"Solution file was not found at '{fullPath}'.", fullPath);
         }
+    }
 
+    private static async Task<int> RunWatchAsync(CommandArguments arguments)
+    {
         using var cancellationTokenSource = new CancellationTokenSource();
         ConsoleCancelEventHandler? cancelHandler = null;
         cancelHandler = static (_, eventArgs) =>
@@ -188,25 +220,12 @@ internal static class CommandLineEntryPoint
 
         try
         {
-            var runner = new WatchCommandRunner(args[0], Console.Out, Console.Error);
+            var runner = new WatchCommandRunner(arguments.SolutionPath, Console.Out, Console.Error);
             return await runner.RunAsync(cancellationTokenSource.Token).ConfigureAwait(false);
         }
         finally
         {
             Console.CancelKeyPress -= cancelHandler;
         }
-    }
-
-    private static void WriteUsage() => WriteUsage(Console.Out);
-
-    private static void WriteUsage(TextWriter writer)
-    {
-        writer.WriteLine("Usage:");
-        writer.WriteLine("  dotnet simplicity analyze <solution.sln>");
-        writer.WriteLine("  dotnet simplicity report <solution.sln>");
-        writer.WriteLine("  dotnet simplicity baseline <solution.sln>");
-        writer.WriteLine("  dotnet simplicity diff <solution.sln> [--fail-on-regression]");
-        writer.WriteLine("  dotnet simplicity budget <solution.sln>");
-        writer.WriteLine("  dotnet simplicity watch <solution.sln>");
     }
 }

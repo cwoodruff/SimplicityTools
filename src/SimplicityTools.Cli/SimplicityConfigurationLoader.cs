@@ -18,7 +18,7 @@ internal static class SimplicityConfigurationLoader
         {
             if (warnWhenMissing)
             {
-                warningWriter.WriteLine($"Warning: {ConfigFileName} was not found in '{solutionDirectory}'. Using built-in defaults for TCA inputs and filter thresholds.");
+                warningWriter.WriteLine($"Info: using built-in defaults (no {ConfigFileName} found in '{solutionDirectory}').");
             }
 
             return SimplicityConfiguration.Defaults;
