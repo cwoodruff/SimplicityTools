@@ -68,6 +68,20 @@ public sealed class SimplicityCollectorTests
     }
 
     [Fact]
+    public async Task CollectAsync_CountsEachMetricOnce_ForMultiTargetedProjects()
+    {
+        var collector = new SimplicityCollector();
+
+        var snapshot = await collector.CollectAsync(GetFixturePath("MultiTargetFixture", "MultiTargetFixture.sln"));
+
+        Assert.Equal(1, snapshot.TotalProjects);
+        Assert.Equal(2, snapshot.TotalFiles);
+        Assert.Equal(1, snapshot.AbstractionLayerCount);
+        Assert.Equal(1, snapshot.InterfacesWithSingleImplementation);
+        Assert.Equal(3d, snapshot.AverageMethodComplexity);
+    }
+
+    [Fact]
     public async Task CollectAsync_ReportsWorkspaceDiagnostics_WhenAProjectFailsToLoad()
     {
         var diagnostics = new List<string>();

@@ -11,7 +11,7 @@ internal sealed class HeuristicCollectionPass
         ArgumentNullException.ThrowIfNull(solution);
 
         var documents = new List<DocumentHeuristicInfo>();
-        foreach (var project in solution.Projects.Where(ShouldAnalyzeProject))
+        foreach (var project in SemanticCollectionPass.SelectOneTargetFrameworkPerProject(solution.Projects.Where(ShouldAnalyzeProject)))
         {
             cancellationToken.ThrowIfCancellationRequested();
 

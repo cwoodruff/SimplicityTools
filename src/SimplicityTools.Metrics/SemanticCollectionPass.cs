@@ -10,13 +10,16 @@ internal sealed class SemanticCollectionPass
     {
         ArgumentNullException.ThrowIfNull(solution);
 
-        var abstractionLayers = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
-        var implementationMap = new Dictionary<INamedTypeSymbol, HashSet<INamedTypeSymbol>>(SymbolEqualityComparer.Default);
+        // Keys are compilation-independent identities (assembly + fully-qualified name) so the
+        // same interface or implementation seen from sibling-TFM compilations counts once and
+        // cross-project matches survive metadata-reference fallback.
+        var abstractionLayers = new HashSet<string>(StringComparer.Ordinal);
+        var implementationMap = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
         var methodComplexities = new List<int>();
         var declaredPackages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var usedPackages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var project in solution.Projects.Where(ShouldAnalyzeProject))
+        foreach (var project in SelectOneTargetFrameworkPerProject(solution.Projects.Where(ShouldAnalyzeProject)))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -36,11 +39,11 @@ internal sealed class SemanticCollectionPass
                     continue;
                 }
 
-                var originalDefinition = type.OriginalDefinition;
+                var typeIdentity = GetSymbolIdentity(type);
                 if (type.TypeKind == TypeKind.Interface)
                 {
-                    abstractionLayers.Add(originalDefinition);
-                    implementationMap.TryAdd(originalDefinition, []);
+                    abstractionLayers.Add(typeIdentity);
+                    implementationMap.TryAdd(typeIdentity, []);
                     continue;
                 }
 
@@ -51,14 +54,14 @@ internal sealed class SemanticCollectionPass
 
                 foreach (var implementedInterface in type.AllInterfaces)
                 {
-                    var interfaceDefinition = implementedInterface.OriginalDefinition;
-                    if (!implementationMap.TryGetValue(interfaceDefinition, out var implementations))
+                    var interfaceIdentity = GetSymbolIdentity(implementedInterface);
+                    if (!implementationMap.TryGetValue(interfaceIdentity, out var implementations))
                     {
                         implementations = [];
-                        implementationMap.Add(interfaceDefinition, implementations);
+                        implementationMap.Add(interfaceIdentity, implementations);
                     }
 
-                    implementations.Add(originalDefinition);
+                    implementations.Add(typeIdentity);
                 }
             }
 
@@ -72,7 +75,7 @@ internal sealed class SemanticCollectionPass
 
         return new SemanticMetrics(
             abstractionLayers.Count,
-            abstractionLayers.Count(interfaceType => implementationMap.TryGetValue(interfaceType, out var implementations) && implementations.Count == 1),
+            abstractionLayers.Count(interfaceIdentity => implementationMap.TryGetValue(interfaceIdentity, out var implementations) && implementations.Count == 1),
             methodComplexities.Count > 0 ? methodComplexities.Average() : 0d,
             declaredPackages.Count,
             declaredPackages.Count(packageId => !usedPackages.Contains(packageId)));
@@ -81,6 +84,24 @@ internal sealed class SemanticCollectionPass
     private static bool ShouldAnalyzeProject(Project project)
     {
         return !SourceFileConventions.IsTestProject(project.FilePath, project.Name);
+    }
+
+    /// <summary>
+    /// A multi-targeted project appears in the workspace once per target framework; analyzing
+    /// every instance double-counts each metric, so only the first instance is analyzed.
+    /// </summary>
+    internal static IEnumerable<Project> SelectOneTargetFrameworkPerProject(IEnumerable<Project> projects)
+    {
+        return projects
+            .GroupBy(project => project.FilePath ?? project.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First());
+    }
+
+    private static string GetSymbolIdentity(INamedTypeSymbol type)
+    {
+        var definition = type.OriginalDefinition;
+        var assemblyName = definition.ContainingAssembly?.Identity.Name ?? string.Empty;
+        return $"{assemblyName}|{definition.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}";
     }
 
     private static bool ShouldAnalyzeSyntaxTree(SyntaxTree syntaxTree)
