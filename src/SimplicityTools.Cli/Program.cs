@@ -75,9 +75,11 @@ internal static class CommandLineEntryPoint
         _ = SimplicityConfigurationLoader.LoadForSolution(args[0], Console.Error);
         var collector = new SimplicityCollector();
         var snapshot = await collector.CollectAsync(args[0]).ConfigureAwait(false);
+        await SnapshotHistory.AppendAsync(args[0], snapshot).ConfigureAwait(false);
         var outputDirectory = "./simplicity-report";
-        await ReportGenerator.GenerateHtmlReportAsync(snapshot, args[0], outputDirectory).ConfigureAwait(false);
+        await ReportGenerator.GenerateHtmlReportAsync(snapshot, args[0], outputDirectory, Console.Error).ConfigureAwait(false);
         Console.WriteLine($"Report generated to {Path.Combine(outputDirectory, "index.html")}");
+        Console.WriteLine($"Snapshot saved to {SnapshotHistory.GetDirectoryPath(args[0])}");
         return 0;
     }
 
@@ -93,10 +95,12 @@ internal static class CommandLineEntryPoint
         var collector = new SimplicityCollector();
         var snapshot = await collector.CollectAsync(args[0]).ConfigureAwait(false);
         var baselinePath = await BaselineSnapshotFile.WriteAsync(args[0], snapshot).ConfigureAwait(false);
+        await SnapshotHistory.AppendAsync(args[0], snapshot).ConfigureAwait(false);
 
         Console.WriteLine(snapshot.ToSummary());
         Console.WriteLine();
         Console.WriteLine($"Baseline written to {baselinePath}");
+        Console.WriteLine($"Snapshot saved to {SnapshotHistory.GetDirectoryPath(args[0])}");
         return 0;
     }
 
