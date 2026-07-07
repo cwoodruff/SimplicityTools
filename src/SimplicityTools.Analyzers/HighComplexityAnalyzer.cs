@@ -8,14 +8,14 @@ namespace SimplicityTools.Analyzers;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class HighComplexityAnalyzer : DiagnosticAnalyzer
 {
-    private const int ComplexityThreshold = 10;
+    internal const int DefaultComplexityThreshold = 10;
 
     public const string DiagnosticId = "SF0003";
 
     public static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticId,
         title: "Method is too complex for fast understanding",
-        messageFormat: "Method {0} has cyclomatic complexity {1}, which exceeds the limit of 10",
+        messageFormat: "Method {0} has cyclomatic complexity {1}, which exceeds the limit of {2}",
         category: AnalyzerCategories.TwoAmTest,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
@@ -43,8 +43,17 @@ public sealed class HighComplexityAnalyzer : DiagnosticAnalyzer
         foreach (var syntaxReference in method.DeclaringSyntaxReferences)
         {
             if (syntaxReference.GetSyntax(context.CancellationToken) is not MethodDeclarationSyntax declaration ||
-                !CyclomaticComplexityCalculator.TryCalculate(declaration, out var complexity) ||
-                complexity <= ComplexityThreshold)
+                !CyclomaticComplexityCalculator.TryCalculate(declaration, out var complexity))
+            {
+                continue;
+            }
+
+            var threshold = AnalyzerOptionReader.GetThreshold(
+                context.Options,
+                declaration.SyntaxTree,
+                AnalyzerOptionReader.ComplexityThresholdKey,
+                DefaultComplexityThreshold);
+            if (complexity <= threshold)
             {
                 continue;
             }
@@ -53,7 +62,8 @@ public sealed class HighComplexityAnalyzer : DiagnosticAnalyzer
                 Rule,
                 declaration.Identifier.GetLocation(),
                 method.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
-                complexity));
+                complexity,
+                threshold));
             break;
         }
     }

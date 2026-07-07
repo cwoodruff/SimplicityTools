@@ -14,7 +14,7 @@ public sealed class SingleSpecializationGenericParameterAnalyzer : DiagnosticAna
         title: "Generic parameter has only one specialization",
         messageFormat: "Generic parameter {0} on {1} is only specialized as {2}. Remove the generic parameter or use the concrete type directly.",
         category: AnalyzerCategories.HalfRule,
-        defaultSeverity: DiagnosticSeverity.Warning,
+        defaultSeverity: DiagnosticSeverity.Info,
         isEnabledByDefault: true,
         helpLinkUri: "https://simplicitytools.dev/analyzers/sf0006/",
         description: "A generic parameter that is only ever bound to one concrete type is indirection without flexibility.",
@@ -43,6 +43,16 @@ public sealed class SingleSpecializationGenericParameterAnalyzer : DiagnosticAna
             var owner = pair.Key;
             var typeParameters = pair.Value;
             if (!specializations.TryGetValue(owner, out var specializedTypesByParameter))
+            {
+                continue;
+            }
+
+            if (SymbolVisibility.IsExternallyVisible(owner) &&
+                !AnalyzerOptionReader.GetFlag(
+                    context.Options,
+                    AnalyzerOptionReader.GetDeclaringTree(owner),
+                    AnalyzerOptionReader.IncludePublicApiKey,
+                    defaultValue: false))
             {
                 continue;
             }

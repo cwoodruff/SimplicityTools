@@ -14,7 +14,7 @@ public sealed class UnusedDependencyAnalyzer : DiagnosticAnalyzer
         title: "Package reference has no symbol usage",
         messageFormat: "PackageReference {0} has no detected symbol usage in C# source. Remove the dependency or justify it with source usage.",
         category: AnalyzerCategories.HalfRule,
-        defaultSeverity: DiagnosticSeverity.Warning,
+        defaultSeverity: DiagnosticSeverity.Info,
         isEnabledByDefault: true,
         helpLinkUri: "https://simplicitytools.dev/analyzers/sf0002/",
         description: "Package references that contribute no used symbols add restore time and maintenance overhead without value.",
@@ -44,9 +44,14 @@ public sealed class UnusedDependencyAnalyzer : DiagnosticAnalyzer
         }
 
         var usedPackages = PackageReferenceAnalysis.CollectUsedPackages(context.Compilation, assembliesByPackage, context.CancellationToken);
+        var excludedPackages = AnalyzerOptionReader.GetNameSet(
+            context.Options,
+            context.Compilation.SyntaxTrees.FirstOrDefault(),
+            AnalyzerOptionReader.ExcludedPackagesKey);
         foreach (var packageReference in packageReferences)
         {
-            if (!assembliesByPackage.ContainsKey(packageReference.NormalizedPackageId) ||
+            if (excludedPackages.Contains(packageReference.PackageId) ||
+                !assembliesByPackage.ContainsKey(packageReference.NormalizedPackageId) ||
                 usedPackages.Contains(packageReference.NormalizedPackageId))
             {
                 continue;

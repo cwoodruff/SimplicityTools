@@ -31,7 +31,12 @@ public sealed class NonPrimaryPathOverReferencedAnalyzer : DiagnosticAnalyzer
 
     private static void Analyze(CompilationAnalysisContext context)
     {
-        var documentInfoByPath = CollectDocumentInfo(context.Compilation, context.CancellationToken);
+        var conventionFolders = AnalyzerOptionReader.GetNameList(
+            context.Options,
+            context.Compilation.SyntaxTrees.FirstOrDefault(),
+            AnalyzerOptionReader.ConventionFoldersKey,
+            PrimaryPathConventions.DefaultConventionalSegments);
+        var documentInfoByPath = CollectDocumentInfo(context.Compilation, conventionFolders, context.CancellationToken);
         if (documentInfoByPath.Count == 0)
         {
             return;
@@ -70,7 +75,10 @@ public sealed class NonPrimaryPathOverReferencedAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    private static ImmutableDictionary<string, DocumentInfo> CollectDocumentInfo(Compilation compilation, CancellationToken cancellationToken)
+    private static ImmutableDictionary<string, DocumentInfo> CollectDocumentInfo(
+        Compilation compilation,
+        ImmutableArray<string> conventionFolders,
+        CancellationToken cancellationToken)
     {
         var sourceIndex = SourceSymbolIndex.Create(compilation, cancellationToken);
         var declaredTypesByFile = new Dictionary<string, HashSet<INamedTypeSymbol>>(StringComparer.OrdinalIgnoreCase);
@@ -133,16 +141,25 @@ public sealed class NonPrimaryPathOverReferencedAnalyzer : DiagnosticAnalyzer
 
             var root = syntaxTree.GetRoot(cancellationToken);
             var semanticModel = compilation.GetSemanticModel(syntaxTree);
-            var location = root.GetLocation();
+            var location = GetReportLocation(root);
             builder[syntaxTree.FilePath] = new DocumentInfo(
                 syntaxTree.FilePath,
                 location,
                 PrimaryPathConventions.IsPrimaryPathAnnotated(root, semanticModel, cancellationToken),
-                PrimaryPathConventions.MatchesPrimaryPathConvention(syntaxTree.FilePath),
+                PrimaryPathConventions.MatchesPrimaryPathConvention(syntaxTree.FilePath, conventionFolders),
                 inboundReferenceCounts[syntaxTree.FilePath]);
         }
 
         return builder.ToImmutable();
+    }
+
+    private static Location GetReportLocation(SyntaxNode root)
+    {
+        var firstTypeDeclaration = root.DescendantNodes()
+            .OfType<Microsoft.CodeAnalysis.CSharp.Syntax.BaseTypeDeclarationSyntax>()
+            .FirstOrDefault();
+
+        return firstTypeDeclaration?.Identifier.GetLocation() ?? root.GetLocation();
     }
 
     private static IEnumerable<INamedTypeSymbol> CollectReferencedTypes(

@@ -1,0 +1,10 @@
+<Project>
+  <!--
+    Expose the consuming project's own project file to the SimplicityTools analyzers
+    as an AdditionalFile so SF0002 (unused package reference) can inspect
+    PackageReference items without performing file I/O inside the analyzer.
+  -->
+  <ItemGroup>
+    <AdditionalFiles Include="$(MSBuildProjectFullPath)" Visible="false" />
+  </ItemGroup>
+</Project>
