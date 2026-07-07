@@ -162,7 +162,7 @@ public sealed class SnapshotPersistenceTests : IDisposable
         }
 
         var files = Directory.GetFiles(SnapshotHistory.GetDirectoryPath(solutionPath), "*.json")
-            .Select(Path.GetFileName)
+            .Select(path => Path.GetFileName(path)!)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
 
