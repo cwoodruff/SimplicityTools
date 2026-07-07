@@ -147,10 +147,25 @@ internal static class CommandLineEntryPoint
         }
 
         var solutionPath = args[0];
-        var configuration = SimplicityConfigurationLoader.LoadForSolution(solutionPath, Console.Error);
-        var collector = new SimplicityCollector(Console.Error.WriteLine);
-        var snapshot = await collector.CollectAsync(solutionPath).ConfigureAwait(false);
-        return await action(snapshot, configuration, solutionPath).ConfigureAwait(false);
+        using var cancellationSource = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancelHandler = (_, eventArgs) =>
+        {
+            eventArgs.Cancel = true;
+            cancellationSource.Cancel();
+        };
+        Console.CancelKeyPress += cancelHandler;
+
+        try
+        {
+            var configuration = SimplicityConfigurationLoader.LoadForSolution(solutionPath, Console.Error);
+            var collector = new SimplicityCollector(Console.Error.WriteLine);
+            var snapshot = await collector.CollectAsync(solutionPath, cancellationSource.Token).ConfigureAwait(false);
+            return await action(snapshot, configuration, solutionPath).ConfigureAwait(false);
+        }
+        finally
+        {
+            Console.CancelKeyPress -= cancelHandler;
+        }
     }
 
     private static async Task<int> RunWatchAsync(string[] args)
