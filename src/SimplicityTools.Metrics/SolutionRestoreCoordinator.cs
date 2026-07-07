@@ -73,6 +73,13 @@ internal static class SolutionRestoreCoordinator
             {
                 return true;
             }
+
+            // An assets file older than its project is stale: the declared packages may have
+            // changed since the last restore.
+            if (File.GetLastWriteTimeUtc(assetsPath) < File.GetLastWriteTimeUtc(projectPath))
+            {
+                return true;
+            }
         }
 
         return false;
