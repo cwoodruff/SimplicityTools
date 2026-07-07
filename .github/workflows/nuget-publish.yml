@@ -350,6 +350,14 @@ jobs:
               </Project>
               """).strip() + "\n", encoding="utf-8")
 
+          # SF0001 defaults to Info severity and skips externally-visible symbols; the packaged
+          # analyzer must still fire when a consumer opts in via .globalconfig.
+          (consumer_root / ".globalconfig").write_text(textwrap.dedent("""
+              is_global = true
+              simplicity_first.include_public_api = true
+              dotnet_diagnostic.SF0001.severity = warning
+              """).strip() + "\n", encoding="utf-8")
+
           (consumer_root / "Feature.cs").write_text(textwrap.dedent("""
               namespace Consumer;
 
