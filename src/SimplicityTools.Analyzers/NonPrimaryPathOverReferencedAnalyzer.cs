@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace SimplicityTools.Analyzers;
@@ -26,25 +28,118 @@ public sealed class NonPrimaryPathOverReferencedAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterCompilationAction(Analyze);
+        context.RegisterCompilationStartAction(static startContext =>
+        {
+            var conventionFolders = AnalyzerOptionReader.GetNameList(
+                startContext.Options,
+                startContext.Compilation.SyntaxTrees.FirstOrDefault(),
+                AnalyzerOptionReader.ConventionFoldersKey,
+                PrimaryPathConventions.DefaultConventionalSegments);
+            var typeFiles = new ConcurrentDictionary<INamedTypeSymbol, string>(SymbolEqualityComparer.Default);
+            var treeInfoByPath = new ConcurrentDictionary<string, TreeInfo>(StringComparer.OrdinalIgnoreCase);
+            var referencedTypeCountsByPath = new ConcurrentDictionary<string, Dictionary<INamedTypeSymbol, int>>(StringComparer.OrdinalIgnoreCase);
+
+            startContext.RegisterSemanticModelAction(semanticModelContext =>
+                CollectTree(semanticModelContext, conventionFolders, typeFiles, treeInfoByPath, referencedTypeCountsByPath));
+            startContext.RegisterCompilationEndAction(endContext =>
+                Report(endContext, typeFiles, treeInfoByPath, referencedTypeCountsByPath));
+        });
     }
 
-    private static void Analyze(CompilationAnalysisContext context)
+    private static void CollectTree(
+        SemanticModelAnalysisContext context,
+        ImmutableArray<string> conventionFolders,
+        ConcurrentDictionary<INamedTypeSymbol, string> typeFiles,
+        ConcurrentDictionary<string, TreeInfo> treeInfoByPath,
+        ConcurrentDictionary<string, Dictionary<INamedTypeSymbol, int>> referencedTypeCountsByPath)
     {
-        var conventionFolders = AnalyzerOptionReader.GetNameList(
-            context.Options,
-            context.Compilation.SyntaxTrees.FirstOrDefault(),
-            AnalyzerOptionReader.ConventionFoldersKey,
-            PrimaryPathConventions.DefaultConventionalSegments);
-        var documentInfoByPath = CollectDocumentInfo(context.Compilation, conventionFolders, context.CancellationToken);
-        if (documentInfoByPath.Count == 0)
+        var semanticModel = context.SemanticModel;
+        var syntaxTree = semanticModel.SyntaxTree;
+        if (!AnalyzerSourceFileConventions.IsCountableSourceFile(syntaxTree.FilePath))
         {
             return;
         }
 
-        var primaryPaths = documentInfoByPath.Values.Any(static info => info.IsAnnotatedPrimaryPath)
-            ? documentInfoByPath.Values.Where(static info => info.IsAnnotatedPrimaryPath).ToArray()
-            : documentInfoByPath.Values.Where(static info => info.MatchesPrimaryPathConvention).ToArray();
+        var cancellationToken = context.CancellationToken;
+        var root = syntaxTree.GetRoot(cancellationToken);
+
+        var declaredAnyType = false;
+        foreach (var typeDeclaration in root.DescendantNodes().OfType<BaseTypeDeclarationSyntax>())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (semanticModel.GetDeclaredSymbol(typeDeclaration, cancellationToken) is INamedTypeSymbol namedType)
+            {
+                typeFiles[namedType.OriginalDefinition] = syntaxTree.FilePath;
+                declaredAnyType = true;
+            }
+        }
+
+        var referencedTypeCounts = new Dictionary<INamedTypeSymbol, int>(SymbolEqualityComparer.Default);
+        foreach (var node in root.DescendantNodesAndSelf())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            foreach (var referencedType in CollectReferencedTypes(node, semanticModel, cancellationToken))
+            {
+                referencedTypeCounts.TryGetValue(referencedType, out var count);
+                referencedTypeCounts[referencedType] = count + 1;
+            }
+        }
+
+        referencedTypeCountsByPath[syntaxTree.FilePath] = referencedTypeCounts;
+
+        if (declaredAnyType)
+        {
+            treeInfoByPath[syntaxTree.FilePath] = new TreeInfo(
+                syntaxTree.FilePath,
+                GetReportLocation(root),
+                PrimaryPathConventions.IsPrimaryPathAnnotated(root, semanticModel, cancellationToken),
+                PrimaryPathConventions.MatchesPrimaryPathConvention(syntaxTree.FilePath, conventionFolders));
+        }
+    }
+
+    private static void Report(
+        CompilationAnalysisContext context,
+        ConcurrentDictionary<INamedTypeSymbol, string> typeFiles,
+        ConcurrentDictionary<string, TreeInfo> treeInfoByPath,
+        ConcurrentDictionary<string, Dictionary<INamedTypeSymbol, int>> referencedTypeCountsByPath)
+    {
+        if (treeInfoByPath.IsEmpty)
+        {
+            return;
+        }
+
+        var inboundReferenceCounts = treeInfoByPath.Keys.ToDictionary(static path => path, static _ => 0, StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in referencedTypeCountsByPath)
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+
+            foreach (var referencedTypeCount in pair.Value)
+            {
+                if (!typeFiles.TryGetValue(referencedTypeCount.Key, out var targetPath) ||
+                    string.Equals(targetPath, pair.Key, StringComparison.OrdinalIgnoreCase) ||
+                    !inboundReferenceCounts.ContainsKey(targetPath))
+                {
+                    continue;
+                }
+
+                inboundReferenceCounts[targetPath] += referencedTypeCount.Value;
+            }
+        }
+
+        var documentInfoByPath = treeInfoByPath.Values
+            .Select(info => new DocumentInfo(
+                info.FilePath,
+                info.Location,
+                info.IsAnnotatedPrimaryPath,
+                info.MatchesPrimaryPathConvention,
+                inboundReferenceCounts[info.FilePath]))
+            .ToArray();
+
+        var primaryPaths = documentInfoByPath.Any(static info => info.IsAnnotatedPrimaryPath)
+            ? documentInfoByPath.Where(static info => info.IsAnnotatedPrimaryPath).ToArray()
+            : documentInfoByPath.Where(static info => info.MatchesPrimaryPathConvention).ToArray();
 
         if (primaryPaths.Length == 0)
         {
@@ -57,7 +152,7 @@ public sealed class NonPrimaryPathOverReferencedAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        foreach (var documentInfo in documentInfoByPath.Values)
+        foreach (var documentInfo in documentInfoByPath)
         {
             var isPrimaryPath = primaryPaths.Contains(documentInfo);
             if (isPrimaryPath ||
@@ -75,88 +170,10 @@ public sealed class NonPrimaryPathOverReferencedAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    private static ImmutableDictionary<string, DocumentInfo> CollectDocumentInfo(
-        Compilation compilation,
-        ImmutableArray<string> conventionFolders,
-        CancellationToken cancellationToken)
-    {
-        var sourceIndex = SourceSymbolIndex.Create(compilation, cancellationToken);
-        var declaredTypesByFile = new Dictionary<string, HashSet<INamedTypeSymbol>>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var namedType in sourceIndex.NamedTypes)
-        {
-            if (!sourceIndex.TryGetFilePath(namedType, out var filePath))
-            {
-                continue;
-            }
-
-            if (!declaredTypesByFile.TryGetValue(filePath, out var declaredTypes))
-            {
-                declaredTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
-                declaredTypesByFile[filePath] = declaredTypes;
-            }
-
-            declaredTypes.Add(namedType);
-        }
-
-        var inboundReferenceCounts = declaredTypesByFile.Keys.ToDictionary(path => path, _ => 0, StringComparer.OrdinalIgnoreCase);
-        foreach (var syntaxTree in compilation.SyntaxTrees)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (!AnalyzerSourceFileConventions.IsCountableSourceFile(syntaxTree.FilePath))
-            {
-                continue;
-            }
-
-            var semanticModel = compilation.GetSemanticModel(syntaxTree);
-            var root = syntaxTree.GetRoot(cancellationToken);
-            foreach (var node in root.DescendantNodesAndSelf())
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                foreach (var referencedType in CollectReferencedTypes(node, semanticModel, cancellationToken))
-                {
-                    if (!sourceIndex.TryGetFilePath(referencedType, out var targetPath) ||
-                        string.Equals(targetPath, syntaxTree.FilePath, StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    inboundReferenceCounts[targetPath]++;
-                }
-            }
-        }
-
-        var builder = ImmutableDictionary.CreateBuilder<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
-        foreach (var syntaxTree in compilation.SyntaxTrees)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (!AnalyzerSourceFileConventions.IsCountableSourceFile(syntaxTree.FilePath) ||
-                !declaredTypesByFile.ContainsKey(syntaxTree.FilePath))
-            {
-                continue;
-            }
-
-            var root = syntaxTree.GetRoot(cancellationToken);
-            var semanticModel = compilation.GetSemanticModel(syntaxTree);
-            var location = GetReportLocation(root);
-            builder[syntaxTree.FilePath] = new DocumentInfo(
-                syntaxTree.FilePath,
-                location,
-                PrimaryPathConventions.IsPrimaryPathAnnotated(root, semanticModel, cancellationToken),
-                PrimaryPathConventions.MatchesPrimaryPathConvention(syntaxTree.FilePath, conventionFolders),
-                inboundReferenceCounts[syntaxTree.FilePath]);
-        }
-
-        return builder.ToImmutable();
-    }
-
     private static Location GetReportLocation(SyntaxNode root)
     {
         var firstTypeDeclaration = root.DescendantNodes()
-            .OfType<Microsoft.CodeAnalysis.CSharp.Syntax.BaseTypeDeclarationSyntax>()
+            .OfType<BaseTypeDeclarationSyntax>()
             .FirstOrDefault();
 
         return firstTypeDeclaration?.Identifier.GetLocation() ?? root.GetLocation();
@@ -169,8 +186,9 @@ public sealed class NonPrimaryPathOverReferencedAnalyzer : DiagnosticAnalyzer
     {
         var symbols = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
 
-        AddNamedType(semanticModel.GetSymbolInfo(node, cancellationToken).Symbol, symbols);
-        foreach (var candidate in semanticModel.GetSymbolInfo(node, cancellationToken).CandidateSymbols)
+        var symbolInfo = semanticModel.GetSymbolInfo(node, cancellationToken);
+        AddNamedType(symbolInfo.Symbol, symbols);
+        foreach (var candidate in symbolInfo.CandidateSymbols)
         {
             AddNamedType(candidate, symbols);
         }
@@ -199,6 +217,12 @@ public sealed class NonPrimaryPathOverReferencedAnalyzer : DiagnosticAnalyzer
                 return;
         }
     }
+
+    private sealed record TreeInfo(
+        string FilePath,
+        Location Location,
+        bool IsAnnotatedPrimaryPath,
+        bool MatchesPrimaryPathConvention);
 
     private sealed record DocumentInfo(
         string FilePath,

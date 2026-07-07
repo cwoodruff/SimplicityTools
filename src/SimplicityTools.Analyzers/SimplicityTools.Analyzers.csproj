@@ -11,8 +11,20 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <EnforceExtendedAnalyzerRules>false</EnforceExtendedAnalyzerRules>
-    <NoWarn>$(NoWarn);RS1030;RS1038;RS1041;RS2008</NoWarn>
+    <!--
+      RS1038: the code fix providers ship in this same assembly and need
+      Microsoft.CodeAnalysis.Workspaces. Command-line compilations load the analyzers fine because
+      the workspaces types are only touched from the code-fix paths, which never run there.
+      Removing this suppression would require splitting the package into separate analyzer and
+      code-fix assemblies.
+    -->
+    <NoWarn>$(NoWarn);RS1038</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0">
