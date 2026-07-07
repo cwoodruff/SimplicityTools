@@ -15,10 +15,14 @@ public sealed class CyclomaticComplexityAnalyzerTests
     [InlineData("void M(bool left, bool right) { _ = left && right; }", 2)]
     [InlineData("void M(bool left, bool right) { _ = left || right; }", 2)]
     [InlineData("int M(bool flag) => flag ? 1 : 0;", 2)]
-    [InlineData("int M(int value) { return value switch { 1 => 1, 2 => 2, _ => 0 }; }", 4)]
+    [InlineData("int M(int value) { return value switch { 1 => 1, 2 => 2, _ => 0 }; }", 3)]
     [InlineData("string M(string? value) { return value ?? \"fallback\"; }", 2)]
     [InlineData("string M(Node? node) { return node?.Name ?? \"missing\"; }", 3)]
-    public void Calculate_FollowsMcCabeRules(string memberDeclaration, int expectedComplexity)
+    [InlineData("void M(ref string? value) { value ??= \"fallback\"; }", 2)]
+    [InlineData("bool M(int value) => value is > 0 and < 10;", 2)]
+    [InlineData("bool M(object value) => value is int or string;", 2)]
+    [InlineData("int M(object value) { switch (value) { case int number: return number; default: return 0; } }", 2)]
+    public void Calculate_FollowsDocumentedCountingRules(string memberDeclaration, int expectedComplexity)
     {
         var declaration = ParseMethod(memberDeclaration);
 

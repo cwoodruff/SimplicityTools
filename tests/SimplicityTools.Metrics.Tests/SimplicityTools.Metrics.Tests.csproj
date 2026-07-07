@@ -28,4 +28,9 @@
     <Compile Remove="TestData\**\*.cs" />
     <None Include="TestData\**\*" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shared with SimplicityTools.Analyzers.Tests so both complexity implementations are proven identical. -->
+    <Compile Include="..\Shared\ComplexityCountingTestCases.cs" Link="ComplexityCountingTestCases.cs" />
+  </ItemGroup>
 </Project>
