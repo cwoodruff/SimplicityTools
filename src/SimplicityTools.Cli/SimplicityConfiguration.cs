@@ -1,3 +1,5 @@
+using SimplicityTools.Filters;
+
 namespace SimplicityTools.Cli;
 
 internal sealed record SimplicityConfiguration(
@@ -31,4 +33,12 @@ internal sealed record FilterThresholdConfiguration(
     double PrematureAbstractionRatioTarget,
     double MaxMethodComplexity,
     double MaxOnboardingHours,
-    double PassingScore);
+    double PassingScore)
+{
+    public FilterThresholds ToFilterThresholds() => new(
+        PrimaryPathRatioTarget,
+        PrematureAbstractionRatioTarget,
+        MaxMethodComplexity,
+        MaxOnboardingHours,
+        PassingScore);
+}

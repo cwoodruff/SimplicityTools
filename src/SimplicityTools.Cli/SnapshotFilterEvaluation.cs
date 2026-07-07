@@ -14,15 +14,19 @@ internal static class SnapshotFilterEvaluation
 
     public static IReadOnlyList<FilterName> GetFilterOrder() => OrderedFilters;
 
-    public static IReadOnlyDictionary<FilterName, FilterVerdict> Evaluate(SimplicitySnapshot snapshot)
+    public static IReadOnlyDictionary<FilterName, FilterVerdict> Evaluate(SimplicitySnapshot snapshot) =>
+        Evaluate(snapshot, FilterThresholds.Default);
+
+    public static IReadOnlyDictionary<FilterName, FilterVerdict> Evaluate(SimplicitySnapshot snapshot, FilterThresholds thresholds)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(thresholds);
 
         return new Dictionary<FilterName, FilterVerdict>
         {
-            [FilterName.TwoAmTest] = TwoAmTestEvaluator.Evaluate(snapshot),
-            [FilterName.HalfRule] = HalfRuleEvaluator.Evaluate(snapshot),
-            [FilterName.PrimaryPathFirst] = PrimaryPathFirstEvaluator.Evaluate(snapshot)
+            [FilterName.TwoAmTest] = TwoAmTestEvaluator.Evaluate(snapshot, thresholds),
+            [FilterName.HalfRule] = HalfRuleEvaluator.Evaluate(snapshot, thresholds),
+            [FilterName.PrimaryPathFirst] = PrimaryPathFirstEvaluator.Evaluate(snapshot, thresholds)
         };
     }
 }

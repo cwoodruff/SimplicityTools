@@ -131,7 +131,7 @@ Current full configuration shape, including built-in defaults:
 
 #### `tca`
 
-These values affect TCA calculations in `SimplicityTools.Tca`:
+These values are validated and reserved for TCA cost estimation with the `SimplicityTools.Tca` library API. No CLI command consumes them yet:
 
 - `teamSize`: size of the engineering team
 - `averageEngineerMonthlySalaryUsd`: monthly salary used in cost estimates
@@ -148,6 +148,8 @@ These values affect pass/fail thresholds and budget output:
 - `maxMethodComplexity`: maximum acceptable average method complexity
 - `maxOnboardingHours`: maximum acceptable onboarding time
 - `passingScore`: pass threshold for filter verdicts
+
+Filter thresholds apply to the filter verdicts shown by `report`, `diff`, and `watch`, and to the `budget` dimensions. The `diff` regression deltas themselves (premature abstraction +0.05, average complexity +0.5, filter score −0.10) are fixed and not configurable.
 
 ### Important configuration behavior
 

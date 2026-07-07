@@ -13,7 +13,7 @@ internal static class ReportGenerator
     private const string ComplexityColor = "#FFB74D";
     private const string OnboardingColor = "#AB47BC";
 
-    public static async Task GenerateHtmlReportAsync(SimplicitySnapshot snapshot, string solutionPath, string outputDirectory, TextWriter? diagnosticsWriter = null)
+    public static async Task GenerateHtmlReportAsync(SimplicitySnapshot snapshot, string solutionPath, string outputDirectory, TextWriter? diagnosticsWriter = null, FilterThresholds? thresholds = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(solutionPath);
@@ -23,11 +23,11 @@ internal static class ReportGenerator
         var reportPath = Path.Combine(outputDirectory, "index.html");
         var historicalSnapshots = await SnapshotHistory.ReadAsync(solutionPath, diagnosticsWriter ?? TextWriter.Null).ConfigureAwait(false);
 
-        var html = GenerateHtmlContent(snapshot, historicalSnapshots);
+        var html = GenerateHtmlContent(snapshot, historicalSnapshots, thresholds ?? FilterThresholds.Default);
         await File.WriteAllTextAsync(reportPath, html, Encoding.UTF8).ConfigureAwait(false);
     }
 
-    private static string GenerateHtmlContent(SimplicitySnapshot snapshot, IReadOnlyList<SimplicitySnapshot> historicalSnapshots)
+    private static string GenerateHtmlContent(SimplicitySnapshot snapshot, IReadOnlyList<SimplicitySnapshot> historicalSnapshots, FilterThresholds thresholds)
     {
         var sb = new StringBuilder();
 
@@ -45,7 +45,7 @@ internal static class ReportGenerator
         sb.AppendLine(GenerateFilterVerdicts(snapshot));
         sb.AppendLine(GenerateMetricDetail(snapshot));
         sb.AppendLine(GenerateComplexityBudget(snapshot));
-        sb.AppendLine(GenerateTrendAnalysis(snapshot, historicalSnapshots));
+        sb.AppendLine(GenerateTrendAnalysis(snapshot, historicalSnapshots, thresholds));
         sb.AppendLine(GenerateAppendix(snapshot));
         sb.AppendLine("</body>");
         sb.AppendLine("</html>");
@@ -538,14 +538,14 @@ internal static class ReportGenerator
             """;
     }
 
-    private static string GenerateTrendAnalysis(SimplicitySnapshot snapshot, IReadOnlyList<SimplicitySnapshot> historicalSnapshots)
+    private static string GenerateTrendAnalysis(SimplicitySnapshot snapshot, IReadOnlyList<SimplicitySnapshot> historicalSnapshots, FilterThresholds thresholds)
     {
         if (historicalSnapshots.Count < 2)
         {
             return GenerateTrendOnRamp(historicalSnapshots.Count);
         }
 
-        var trendPoints = BuildTrendPoints(snapshot, historicalSnapshots);
+        var trendPoints = BuildTrendPoints(snapshot, historicalSnapshots, thresholds);
         var historicalCount = historicalSnapshots.Count;
 
         return $"""
@@ -592,7 +592,7 @@ internal static class ReportGenerator
             """;
     }
 
-    private static IReadOnlyList<TrendPoint> BuildTrendPoints(SimplicitySnapshot currentSnapshot, IReadOnlyList<SimplicitySnapshot> historicalSnapshots)
+    private static IReadOnlyList<TrendPoint> BuildTrendPoints(SimplicitySnapshot currentSnapshot, IReadOnlyList<SimplicitySnapshot> historicalSnapshots, FilterThresholds thresholds)
     {
         // The current run is identified by instance, not by timestamp-tick equality: a history
         // entry written for this run is replaced by the in-memory snapshot so exactly one point
@@ -608,7 +608,7 @@ internal static class ReportGenerator
                 FormatChartDate(entry.Snapshot.CollectedAt),
                 entry.IsCurrent,
                 entry.Snapshot,
-                SnapshotFilterEvaluation.Evaluate(entry.Snapshot),
+                SnapshotFilterEvaluation.Evaluate(entry.Snapshot, thresholds),
                 CalculateSimplicityScore(entry.Snapshot)))
             .ToArray();
     }
