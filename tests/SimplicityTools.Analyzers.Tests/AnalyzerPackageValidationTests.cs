@@ -19,6 +19,8 @@ public sealed class AnalyzerPackageValidationTests
             var entries = archive.Entries.Select(static entry => entry.FullName).ToArray();
 
             Assert.Contains("analyzers/dotnet/cs/SimplicityTools.Analyzers.dll", entries);
+            Assert.Contains("build/SimplicityTools.Analyzers.props", entries);
+            Assert.Contains("buildTransitive/SimplicityTools.Analyzers.props", entries);
             Assert.DoesNotContain(entries, static entry => entry.StartsWith("lib/", StringComparison.Ordinal));
 
             var nuspecEntry = archive.GetEntry("SimplicityTools.Analyzers.nuspec");
@@ -54,6 +56,7 @@ public sealed class AnalyzerPackageValidationTests
               </PropertyGroup>
               <ItemGroup>
                 <PackageReference Include="SimplicityTools.Analyzers" Version="{{validation.Version}}" />
+                <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
               </ItemGroup>
             </Project>
             """);
@@ -88,7 +91,9 @@ public sealed class AnalyzerPackageValidationTests
         Assert.True(
             build.ExitCode == 0,
             $"Downstream consumer build failed.{Environment.NewLine}{build.StandardOutput}{Environment.NewLine}{build.StandardError}");
-        Assert.Contains("warning SF0001", $"{build.StandardOutput}{Environment.NewLine}{build.StandardError}", StringComparison.Ordinal);
+        var buildOutput = $"{build.StandardOutput}{Environment.NewLine}{build.StandardError}";
+        Assert.Contains("warning SF0001", buildOutput, StringComparison.Ordinal);
+        Assert.Contains("warning SF0002", buildOutput, StringComparison.Ordinal);
 
         using var assets = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(consumerDirectory, "obj", "project.assets.json")));
         var targetPackage = assets.RootElement
@@ -107,7 +112,9 @@ public sealed class AnalyzerPackageValidationTests
         var repositoryRoot = GetRepositoryRoot();
         var workingDirectory = Path.Combine(repositoryRoot, "artifacts", "analyzer-package-validation-tests");
         var packageSourceDirectory = Path.Combine(workingDirectory, "packages");
-        var globalPackagesDirectory = Path.Combine(workingDirectory, "global-packages");
+        // The directory must end in a "packages" segment: SF0002 maps assembly reference
+        // paths back to package ids by looking for a "/packages/" marker.
+        var globalPackagesDirectory = Path.Combine(workingDirectory, "nuget", "packages");
         var version = $"0.4.0-packagevalidation.{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
         if (Directory.Exists(workingDirectory))
