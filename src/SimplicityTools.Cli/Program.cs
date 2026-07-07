@@ -9,50 +9,44 @@ internal static class CommandLineEntryPoint
     {
         try
         {
-            if (args.Length == 0)
+            if (args.Length == 0 || IsHelpToken(args[0]))
             {
-                WriteUsage();
+                WriteUsage(Console.Out);
                 return 0;
             }
 
-            if (string.Equals(args[0], "analyze", StringComparison.OrdinalIgnoreCase))
+            if (Commands.TryGetValue(args[0], out var command))
             {
-                return await RunAnalyzeAsync(args[1..]).ConfigureAwait(false);
+                return await command(args[1..]).ConfigureAwait(false);
             }
 
-            if (string.Equals(args[0], "report", StringComparison.OrdinalIgnoreCase))
-            {
-                return await RunReportAsync(args[1..]).ConfigureAwait(false);
-            }
-
-            if (string.Equals(args[0], "baseline", StringComparison.OrdinalIgnoreCase))
-            {
-                return await RunBaselineAsync(args[1..]).ConfigureAwait(false);
-            }
-
-            if (string.Equals(args[0], "diff", StringComparison.OrdinalIgnoreCase))
-            {
-                return await RunDiffAsync(args[1..]).ConfigureAwait(false);
-            }
-
-            if (string.Equals(args[0], "budget", StringComparison.OrdinalIgnoreCase))
-            {
-                return await RunBudgetAsync(args[1..]).ConfigureAwait(false);
-            }
-
-            if (string.Equals(args[0], "watch", StringComparison.OrdinalIgnoreCase))
-            {
-                return await RunWatchAsync(args[1..]).ConfigureAwait(false);
-            }
-
-            WriteUsage();
-            return 0;
+            Console.Error.WriteLine($"Unknown command '{args[0]}'.");
+            WriteUsage(Console.Error);
+            return 1;
         }
         catch (Exception exception)
         {
             Console.Error.WriteLine(exception.Message);
             return 1;
         }
+    }
+
+    private static readonly Dictionary<string, Func<string[], Task<int>>> Commands =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["analyze"] = RunAnalyzeAsync,
+            ["report"] = RunReportAsync,
+            ["baseline"] = RunBaselineAsync,
+            ["diff"] = RunDiffAsync,
+            ["budget"] = RunBudgetAsync,
+            ["watch"] = RunWatchAsync
+        };
+
+    private static bool IsHelpToken(string arg)
+    {
+        return string.Equals(arg, "--help", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(arg, "-h", StringComparison.Ordinal) ||
+               string.Equals(arg, "help", StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task<int> RunAnalyzeAsync(string[] args)
@@ -182,14 +176,16 @@ internal static class CommandLineEntryPoint
         }
     }
 
-    private static void WriteUsage()
+    private static void WriteUsage() => WriteUsage(Console.Out);
+
+    private static void WriteUsage(TextWriter writer)
     {
-        Console.WriteLine("Usage:");
-        Console.WriteLine("  dotnet simplicity analyze <solution.sln>");
-        Console.WriteLine("  dotnet simplicity report <solution.sln>");
-        Console.WriteLine("  dotnet simplicity baseline <solution.sln>");
-        Console.WriteLine("  dotnet simplicity diff <solution.sln> [--fail-on-regression]");
-        Console.WriteLine("  dotnet simplicity budget <solution.sln>");
-        Console.WriteLine("  dotnet simplicity watch <solution.sln>");
+        writer.WriteLine("Usage:");
+        writer.WriteLine("  dotnet simplicity analyze <solution.sln>");
+        writer.WriteLine("  dotnet simplicity report <solution.sln>");
+        writer.WriteLine("  dotnet simplicity baseline <solution.sln>");
+        writer.WriteLine("  dotnet simplicity diff <solution.sln> [--fail-on-regression]");
+        writer.WriteLine("  dotnet simplicity budget <solution.sln>");
+        writer.WriteLine("  dotnet simplicity watch <solution.sln>");
     }
 }

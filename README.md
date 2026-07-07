@@ -243,7 +243,7 @@ SimplicityTools/
 │   ├── SimplicityTools.Analyzers/      # Roslyn diagnostics and code fixes
 │   └── SimplicityTools.Cli/            # dotnet-simplicity command-line tool
 ├── samples/
-│   ├── Sample.Simplified/              # Good-shape reference: 2 projects, 23 files, 1 abstraction layer
+│   ├── Sample.Simplified/              # Good-shape reference: 2 projects, 24 files, 1 abstraction layer
 │   └── Sample.OverEngineered/          # Anti-pattern reference: 12 projects, 62 files, 25 abstraction layers
 ├── docs/
 │   ├── using-the-simplicity-tools.md   # Complete command reference and workflows

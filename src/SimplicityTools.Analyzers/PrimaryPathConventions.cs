@@ -25,7 +25,8 @@ internal static class PrimaryPathConventions
 
     public static bool MatchesPrimaryPathConvention(string? filePath)
     {
-        return !string.IsNullOrWhiteSpace(filePath) &&
+        return filePath is not null &&
+               !string.IsNullOrWhiteSpace(filePath) &&
                ConventionalSegments.Any(segment => AnalyzerSourceFileConventions.ContainsDirectorySegment(filePath, segment));
     }
 }

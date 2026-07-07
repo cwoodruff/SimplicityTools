@@ -30,7 +30,8 @@ internal static class PackageReferenceAnalysis
         foreach (var reference in compilation.References.OfType<PortableExecutableReference>())
         {
             var filePath = reference.FilePath;
-            if (string.IsNullOrWhiteSpace(filePath) ||
+            if (filePath is null ||
+                string.IsNullOrWhiteSpace(filePath) ||
                 !TryGetPackageIdFromPath(filePath, out var packageId) ||
                 compilation.GetAssemblyOrModuleSymbol(reference) is not IAssemblySymbol assembly)
             {
@@ -171,7 +172,7 @@ internal static class PackageReferenceAnalysis
         foreach (var element in document.Descendants().Where(static element => element.Name.LocalName == "PackageReference"))
         {
             var include = element.Attribute("Include")?.Value;
-            if (string.IsNullOrWhiteSpace(include))
+            if (include is null || string.IsNullOrWhiteSpace(include))
             {
                 continue;
             }

@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+      - 'sprint/**'
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore solution
+        run: dotnet restore SimplicityTools.sln --verbosity minimal
+
+      - name: Build solution
+        run: dotnet build SimplicityTools.sln --configuration Release --no-restore --verbosity minimal
+
+      # Test projects run one at a time: some tests (Tca package validation,
+      # CLI BuildCliAsync) invoke dotnet build/pack against the shared bin/
+      # outputs and race with parallel test hosts (MSB4018 on deps.json).
+      - name: Test solution
+        run: |
+          for project in \
+            tests/SimplicityTools.Metrics.Tests \
+            tests/SimplicityTools.Filters.Tests \
+            tests/SimplicityTools.Tca.Tests \
+            tests/SimplicityTools.Analyzers.Tests \
+            samples/Sample.Simplified/Sample.Simplified.Tests; do
+            dotnet test "$project" --configuration Release --no-build --verbosity minimal
+          done
+
+      - name: Test CLI commands
+        run: >
+          dotnet test tests/SimplicityTools.Cli.Tests/SimplicityTools.Cli.Tests.csproj
+          --configuration Release
+          --no-build
+          --verbosity minimal
+          --filter "FullyQualifiedName!~SimplicityTools.Cli.Tests.AnalyzeCommandPerformanceTests"
+
+  # Slow P95 gate runs separately so it is informational, not merge-blocking.
+  performance-gate:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore solution
+        run: dotnet restore SimplicityTools.sln --verbosity minimal
+
+      - name: Build solution
+        run: dotnet build SimplicityTools.sln --configuration Release --no-restore --verbosity minimal
+
+      - name: Run CLI performance gate
+        run: >
+          dotnet test tests/SimplicityTools.Cli.Tests/SimplicityTools.Cli.Tests.csproj
+          --configuration Release
+          --no-build
+          --logger "console;verbosity=detailed"
+          --filter "FullyQualifiedName=SimplicityTools.Cli.Tests.AnalyzeCommandPerformanceTests.AnalyzeCommand_OverEngineeredSample_CompletesWithinExpectedThresholdAtP95"
