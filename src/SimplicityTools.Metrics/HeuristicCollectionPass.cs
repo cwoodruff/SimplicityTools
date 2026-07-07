@@ -1,6 +1,5 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.FindSymbols;
 
 namespace SimplicityTools.Metrics;
 
@@ -11,32 +10,59 @@ internal sealed class HeuristicCollectionPass
         ArgumentNullException.ThrowIfNull(solution);
         ArgumentNullException.ThrowIfNull(projectFilePaths);
 
-        var documents = new List<DocumentHeuristicInfo>();
+        var analyzableDocuments = SelectAnalyzableDocuments(solution, projectFilePaths, cancellationToken);
+
+        // Every analyzable document participates: as a definition site accumulating inbound
+        // references and as a reference site contributing them. One syntax walk per document
+        // replaces the previous per-type SymbolFinder.FindReferencesAsync sweep, which searched
+        // the whole solution once for every named type and was quadratic in practice.
+        var inboundReferenceCounts = analyzableDocuments
+            .ToDictionary(document => document.FilePath!, _ => 0, StringComparer.OrdinalIgnoreCase);
+
+        var documents = new List<DocumentHeuristicInfo>(analyzableDocuments.Count);
+        foreach (var document in analyzableDocuments)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            documents.Add(await AnalyzeDocumentAsync(document, inboundReferenceCounts, cancellationToken).ConfigureAwait(false));
+        }
+
+        return new HeuristicMetrics(CountPrimaryPathFiles(documents, inboundReferenceCounts), documents.Count);
+    }
+
+    private static List<Document> SelectAnalyzableDocuments(
+        Solution solution,
+        IReadOnlySet<string> projectFilePaths,
+        CancellationToken cancellationToken)
+    {
+        var analyzableDocuments = new List<Document>();
         foreach (var project in SemanticCollectionPass.SelectAnalyzableProjects(solution, projectFilePaths))
         {
             cancellationToken.ThrowIfCancellationRequested();
-
-            foreach (var document in project.Documents.Where(ShouldAnalyzeDocument))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                documents.Add(await AnalyzeDocumentAsync(document, solution, cancellationToken).ConfigureAwait(false));
-            }
+            analyzableDocuments.AddRange(project.Documents.Where(ShouldAnalyzeDocument));
         }
 
+        return analyzableDocuments;
+    }
+
+    private static int CountPrimaryPathFiles(
+        IReadOnlyList<DocumentHeuristicInfo> documents,
+        IReadOnlyDictionary<string, int> inboundReferenceCounts)
+    {
         // Annotations and folder conventions both contribute; annotations no longer suppress
         // every other signal. The inbound-reference quartile supplements among the rest.
         var primaryPathFileCount = documents.Count(document => document.HasPrimaryPathAnnotation || document.MatchesPrimaryPathConvention);
         var percentileCandidates = documents
             .Where(document => !document.HasPrimaryPathAnnotation && !document.MatchesPrimaryPathConvention)
+            .Select(document => inboundReferenceCounts[document.FilePath])
             .ToArray();
 
-        var percentileThreshold = GetTopQuartileThreshold(percentileCandidates.Select(document => document.InboundReferenceCount).ToArray());
+        var percentileThreshold = GetTopQuartileThreshold(percentileCandidates);
         if (percentileThreshold is not null)
         {
-            primaryPathFileCount += percentileCandidates.Count(document => document.InboundReferenceCount >= percentileThreshold.Value);
+            primaryPathFileCount += percentileCandidates.Count(count => count >= percentileThreshold.Value);
         }
 
-        return new HeuristicMetrics(primaryPathFileCount, documents.Count);
+        return primaryPathFileCount;
     }
 
     private static bool ShouldAnalyzeDocument(Document document)
@@ -46,7 +72,7 @@ internal sealed class HeuristicCollectionPass
 
     private static async Task<DocumentHeuristicInfo> AnalyzeDocumentAsync(
         Document document,
-        Solution solution,
+        Dictionary<string, int> inboundReferenceCounts,
         CancellationToken cancellationToken)
     {
         var filePath = document.FilePath
@@ -56,18 +82,85 @@ internal sealed class HeuristicCollectionPass
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Could not build a semantic model for '{filePath}'.");
 
-        var hasPrimaryPathAnnotation = HasPrimaryPathAnnotation(syntaxRoot, semanticModel, cancellationToken);
-        var inboundReferenceCount = await CountInboundReferencesAsync(
-                CollectNamedTypes(syntaxRoot, semanticModel),
-                document,
-                solution,
-                cancellationToken)
-            .ConfigureAwait(false);
+        RecordOutboundReferences(syntaxRoot, semanticModel, filePath, inboundReferenceCounts, cancellationToken);
 
         return new DocumentHeuristicInfo(
-            hasPrimaryPathAnnotation,
-            MatchesPrimaryPathConvention(filePath),
-            inboundReferenceCount);
+            filePath,
+            HasPrimaryPathAnnotation(syntaxRoot, semanticModel, cancellationToken),
+            MatchesPrimaryPathConvention(filePath));
+    }
+
+    /// <summary>
+    /// Walks the document once and attributes each resolved named-type reference to the
+    /// analyzable documents that declare the type. Counting individual reference locations
+    /// (not distinct referencing documents) and skipping same-file references preserves the
+    /// semantics of the previous SymbolFinder-based implementation, which also reported
+    /// implicit constructor locations — hence target-typed <c>new(...)</c> participates.
+    /// </summary>
+    private static void RecordOutboundReferences(
+        SyntaxNode syntaxRoot,
+        SemanticModel semanticModel,
+        string referencingFilePath,
+        Dictionary<string, int> inboundReferenceCounts,
+        CancellationToken cancellationToken)
+    {
+        foreach (var node in syntaxRoot.DescendantNodes(descendIntoTrivia: true))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!IsTypeReferenceCandidate(node))
+            {
+                continue;
+            }
+
+            var namedType = ResolveNamedType(semanticModel.GetSymbolInfo(node, cancellationToken).Symbol);
+            if (namedType is null)
+            {
+                continue;
+            }
+
+            RecordReferencedType(namedType, referencingFilePath, inboundReferenceCounts);
+        }
+    }
+
+    private static bool IsTypeReferenceCandidate(SyntaxNode node)
+    {
+        return node switch
+        {
+            SimpleNameSyntax name => !name.IsVar,
+            ImplicitObjectCreationExpressionSyntax => true,
+            _ => false
+        };
+    }
+
+    private static void RecordReferencedType(
+        INamedTypeSymbol namedType,
+        string referencingFilePath,
+        Dictionary<string, int> inboundReferenceCounts)
+    {
+        var definitionFilePaths = namedType.OriginalDefinition.DeclaringSyntaxReferences
+            .Select(reference => reference.SyntaxTree.FilePath)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var definitionFilePath in definitionFilePaths)
+        {
+            if (!string.Equals(definitionFilePath, referencingFilePath, StringComparison.OrdinalIgnoreCase) &&
+                inboundReferenceCounts.TryGetValue(definitionFilePath, out var count))
+            {
+                inboundReferenceCounts[definitionFilePath] = count + 1;
+            }
+        }
+    }
+
+    private static INamedTypeSymbol? ResolveNamedType(ISymbol? symbol)
+    {
+        return symbol switch
+        {
+            IAliasSymbol alias => ResolveNamedType(alias.Target),
+            INamedTypeSymbol namedType => namedType,
+            IMethodSymbol { MethodKind: MethodKind.Constructor } constructor => constructor.ContainingType,
+            _ => null
+        };
     }
 
     private static bool HasPrimaryPathAnnotation(SyntaxNode syntaxRoot, SemanticModel semanticModel, CancellationToken cancellationToken)
@@ -85,55 +178,6 @@ internal sealed class HeuristicCollectionPass
         }
 
         return false;
-    }
-
-    private static IReadOnlyCollection<INamedTypeSymbol> CollectNamedTypes(SyntaxNode syntaxRoot, SemanticModel semanticModel)
-    {
-        var symbols = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
-
-        foreach (var declaration in syntaxRoot.DescendantNodes().OfType<MemberDeclarationSyntax>())
-        {
-            if (semanticModel.GetDeclaredSymbol(declaration) is INamedTypeSymbol symbol)
-            {
-                symbols.Add(symbol);
-            }
-        }
-
-        return symbols;
-    }
-
-    private static async Task<int> CountInboundReferencesAsync(
-        IReadOnlyCollection<INamedTypeSymbol> symbols,
-        Document document,
-        Solution solution,
-        CancellationToken cancellationToken)
-    {
-        var count = 0;
-
-        foreach (var symbol in symbols)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var references = await SymbolFinder.FindReferencesAsync(symbol, solution, cancellationToken).ConfigureAwait(false);
-            foreach (var reference in references)
-            {
-                foreach (var location in reference.Locations)
-                {
-                    var referenceDocument = location.Document;
-                    if (referenceDocument.Id == document.Id ||
-                        string.IsNullOrWhiteSpace(referenceDocument.FilePath) ||
-                        !SourceFileConventions.IsCountableSourceFile(referenceDocument.FilePath) ||
-                        SourceFileConventions.IsTestProject(referenceDocument.Project.FilePath, referenceDocument.Project.Name))
-                    {
-                        continue;
-                    }
-
-                    count++;
-                }
-            }
-        }
-
-        return count;
     }
 
     private static bool MatchesPrimaryPathConvention(string filePath)
@@ -170,7 +214,7 @@ internal sealed class HeuristicCollectionPass
     internal readonly record struct HeuristicMetrics(int PrimaryPathFileCount, int AnalyzedFileCount);
 
     private readonly record struct DocumentHeuristicInfo(
+        string FilePath,
         bool HasPrimaryPathAnnotation,
-        bool MatchesPrimaryPathConvention,
-        int InboundReferenceCount);
+        bool MatchesPrimaryPathConvention);
 }
