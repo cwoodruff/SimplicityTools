@@ -11,17 +11,19 @@ public sealed class JsonOutputTests
         int primaryPathFileCount = 8,
         double averageMethodComplexity = 2.0d)
     {
-        return new SimplicitySnapshot(
-            2,
-            totalFiles,
-            primaryPathFileCount,
-            3,
-            1,
-            0,
-            1,
-            averageMethodComplexity,
-            null,
-            new DateTimeOffset(2026, 07, 01, 0, 0, 0, TimeSpan.Zero));
+        return new SimplicitySnapshot
+        {
+            TotalProjects = 2,
+            TotalFiles = totalFiles,
+            PrimaryPathFileCount = primaryPathFileCount,
+            AbstractionLayerCount = 3,
+            ExternalDependencyCount = 1,
+            UnusedDependencyCount = 0,
+            InterfacesWithSingleImplementation = 1,
+            AverageMethodComplexity = averageMethodComplexity,
+            EstimatedOnboardingTime = null,
+            CollectedAt = new DateTimeOffset(2026, 07, 01, 0, 0, 0, TimeSpan.Zero)
+        };
     }
 
     [Fact]

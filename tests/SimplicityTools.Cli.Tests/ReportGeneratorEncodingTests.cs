@@ -34,17 +34,19 @@ public sealed class ReportGeneratorEncodingTests
             var solutionPath = Path.Combine(workspace, "Encoded.sln");
             await File.WriteAllTextAsync(solutionPath, "Microsoft Visual Studio Solution File, Format Version 12.00");
 
-            var snapshot = new SimplicitySnapshot(
-                1,
-                10,
-                4,
-                2,
-                1,
-                0,
-                1,
-                2.5d,
-                TimeSpan.FromHours(12),
-                new DateTimeOffset(2026, 07, 01, 9, 0, 0, TimeSpan.Zero));
+            var snapshot = new SimplicitySnapshot
+            {
+                TotalProjects = 1,
+                TotalFiles = 10,
+                PrimaryPathFileCount = 4,
+                AbstractionLayerCount = 2,
+                ExternalDependencyCount = 1,
+                UnusedDependencyCount = 0,
+                InterfacesWithSingleImplementation = 1,
+                AverageMethodComplexity = 2.5d,
+                EstimatedOnboardingTime = TimeSpan.FromHours(12),
+                CollectedAt = new DateTimeOffset(2026, 07, 01, 9, 0, 0, TimeSpan.Zero)
+            };
 
             var outputDirectory = Path.Combine(workspace, "simplicity-report");
             await ReportGenerator.GenerateHtmlReportAsync(snapshot, solutionPath, outputDirectory);
