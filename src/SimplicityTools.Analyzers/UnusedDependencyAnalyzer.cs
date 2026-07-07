@@ -21,7 +21,7 @@ public sealed class UnusedDependencyAnalyzer : DiagnosticAnalyzer
         description: "Package references that contribute no used symbols add restore time and maintenance overhead without value.",
         customTags: [WellKnownDiagnosticTags.CompilationEnd]);
 
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
     public override void Initialize(AnalysisContext context)
     {

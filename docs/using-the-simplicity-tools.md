@@ -553,11 +553,20 @@ Rewrites interface references to the single concrete implementation and removes 
 
 Use this when the interface exists only as ceremony.
 
+The fix declines to offer itself when applying it could silently change semantics or break the build:
+
+- Any `nameof(IFoo)` reference to the interface exists anywhere in the solution (removing the interface would either change a string value or stop compiling).
+- The implementation is less accessible than the interface (for example a `public` interface with an `internal` implementation), which would produce CS0050-family errors.
+
+DI-style registrations where the interface and its implementation appear as type arguments of the same generic call (for example `AddScoped<IPricer, DefaultPricer>()`) are still rewritten, but the call site gets a `// TODO: review DI registration` comment so the now-duplicated registration is reviewed by a human.
+
 #### `SF0002`
 
 Removes the targeted `<PackageReference>` from the project file without rewriting unrelated XML.
 
 Use this when the package is referenced but contributes no used symbols.
+
+The code fix operates on the `.csproj` exposed to the analyzers as an `AdditionalFiles` item. The packaged `build`/`buildTransitive` props wire this up automatically for package consumers; if you reference the analyzer assembly directly (for example via a plain `<Analyzer>` or project reference without those props), the SF0002 diagnostic and its code fix will not have the project file available and the fix is not offered. "Fix all" applies one package removal at a time — with several unused packages, apply the fix per diagnostic (each removal is a single click).
 
 ### How to consume the analyzer package
 
@@ -1198,6 +1207,11 @@ Add explicit `[PrimaryPath]` annotations through `SimplicityTools.Metrics`, or m
 ### I expected an analyzer code fix but do not see one
 
 Right now, only `SF0001` and `SF0002` have code fixes in this repository. The other diagnostics are advisory only.
+
+Two additional reasons a fix may be missing:
+
+- `SF0001` deliberately withholds its fix when applying it would be unsafe: a `nameof(IFoo)` reference to the interface exists, or the implementation is less accessible than the interface.
+- `SF0002`'s fix needs the consuming project's `.csproj` exposed as an `AdditionalFiles` item. The NuGet package's bundled props do this automatically; direct `<Analyzer>` or project references without those props leave the fix unavailable.
 
 ## What to do next
 

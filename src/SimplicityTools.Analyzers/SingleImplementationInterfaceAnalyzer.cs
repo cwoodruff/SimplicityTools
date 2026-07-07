@@ -14,7 +14,7 @@ public sealed class SingleImplementationInterfaceAnalyzer : DiagnosticAnalyzer
     /// Diagnostic property key carrying the documentation-comment declaration id of the single
     /// concrete implementation, so the code fix can resolve it without re-indexing the compilation.
     /// </summary>
-    internal const string ImplementationIdPropertyName = "ImplementationId";
+    public const string ImplementationIdPropertyName = "ImplementationId";
 
     public static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticId,
@@ -27,7 +27,7 @@ public sealed class SingleImplementationInterfaceAnalyzer : DiagnosticAnalyzer
         description: "Interfaces with a single concrete implementation add indirection without buying polymorphism.",
         customTags: [WellKnownDiagnosticTags.CompilationEnd]);
 
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
     public override void Initialize(AnalysisContext context)
     {

@@ -25,7 +25,7 @@ public sealed class AbstractionLayerDepthAnalyzer : DiagnosticAnalyzer
         description: "Long source-level call chains hide the primary path behind wrappers and indirection.",
         customTags: [WellKnownDiagnosticTags.CompilationEnd]);
 
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
     public override void Initialize(AnalysisContext context)
     {
@@ -208,7 +208,7 @@ public sealed class AbstractionLayerDepthAnalyzer : DiagnosticAnalyzer
                 }
             }
 
-            builder[method] = [.. callees];
+            builder[method] = ImmutableArray.CreateRange(callees);
         }
 
         return builder.ToImmutable();

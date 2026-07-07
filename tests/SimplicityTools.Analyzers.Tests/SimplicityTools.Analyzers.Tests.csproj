@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SimplicityTools.Analyzers\SimplicityTools.Analyzers.csproj" />
+    <ProjectReference Include="..\..\src\SimplicityTools.Analyzers.CodeFixes\SimplicityTools.Analyzers.CodeFixes.csproj" />
   </ItemGroup>
 
   <ItemGroup>

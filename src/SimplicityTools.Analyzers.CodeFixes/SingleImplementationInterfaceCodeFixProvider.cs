@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Formatting;
+using Microsoft.CodeAnalysis.Simplification;
 
 namespace SimplicityTools.Analyzers.CodeFixes;
 
@@ -13,7 +14,14 @@ namespace SimplicityTools.Analyzers.CodeFixes;
 [Shared]
 public sealed class SingleImplementationInterfaceCodeFixProvider : CodeFixProvider
 {
-    public override ImmutableArray<string> FixableDiagnosticIds => [SingleImplementationInterfaceAnalyzer.DiagnosticId];
+    /// <summary>
+    /// Marks generic names whose type arguments contained both the interface and its single
+    /// implementation (typical DI registrations such as AddScoped&lt;IFoo, Foo&gt;()), so the
+    /// rewritten call site receives a review comment instead of a silent semantic change.
+    /// </summary>
+    private static readonly SyntaxAnnotation DependencyInjectionReviewAnnotation = new("SimplicityTools.SF0001.DependencyInjectionReview");
+
+    public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(SingleImplementationInterfaceAnalyzer.DiagnosticId);
 
     public override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 
@@ -59,18 +67,88 @@ public sealed class SingleImplementationInterfaceCodeFixProvider : CodeFixProvid
             return;
         }
 
+        // Rewriting references to a less accessible implementation produces CS0050-family
+        // errors (public members exposing an internal type), so the fix is not offered.
+        if (SymbolVisibility.IsExternallyVisible(interfaceSymbol) && !SymbolVisibility.IsExternallyVisible(concreteType))
+        {
+            return;
+        }
+
+        if (SymbolIdentity.Create(interfaceSymbol) is not { } interfaceIdentity ||
+            SymbolIdentity.Create(concreteType) is not { } concreteIdentity)
+        {
+            return;
+        }
+
+        // nameof(IFoo) sites would either silently change a string value or stop compiling
+        // once the interface is removed; the fix is not offered while any exist.
+        if (await HasNameofReferenceAsync(context.Document.Project.Solution, interfaceIdentity, interfaceSymbol.Name, context.CancellationToken).ConfigureAwait(false))
+        {
+            return;
+        }
+
         var title = $"Remove interface and use {concreteType.Name}";
         context.RegisterCodeFix(
             CodeAction.Create(
                 title,
-                cancellationToken => ApplyFixAsync(context.Document, interfaceSymbol, concreteType, cancellationToken),
+                cancellationToken => ApplyFixAsync(context.Document, interfaceIdentity, concreteIdentity, concreteType, cancellationToken),
                 equivalenceKey: title),
             diagnostic);
     }
 
+    private static async Task<bool> HasNameofReferenceAsync(
+        Solution solution,
+        SymbolIdentity interfaceIdentity,
+        string interfaceName,
+        CancellationToken cancellationToken)
+    {
+        foreach (var project in solution.Projects.Where(static project => project.Language == LanguageNames.CSharp))
+        {
+            foreach (var document in project.Documents)
+            {
+                var text = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
+                var content = text.ToString();
+                if (!content.Contains("nameof") || !content.Contains(interfaceName))
+                {
+                    continue;
+                }
+
+                var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+                var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
+                if (root is null || semanticModel is null)
+                {
+                    continue;
+                }
+
+                foreach (var invocation in root.DescendantNodes().OfType<InvocationExpressionSyntax>())
+                {
+                    if (invocation.Expression is not IdentifierNameSyntax { Identifier.ValueText: "nameof" } ||
+                        invocation.ArgumentList.Arguments.Count != 1)
+                    {
+                        continue;
+                    }
+
+                    var argument = invocation.ArgumentList.Arguments[0].Expression;
+                    foreach (var name in argument.DescendantNodesAndSelf().OfType<NameSyntax>())
+                    {
+                        var symbolInfo = semanticModel.GetSymbolInfo(name, cancellationToken);
+                        var symbol = symbolInfo.Symbol ?? symbolInfo.CandidateSymbols.FirstOrDefault();
+                        if (interfaceIdentity.Matches(symbol))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
     private static async Task<Solution> ApplyFixAsync(
         Document document,
-        INamedTypeSymbol interfaceSymbol,
+        SymbolIdentity interfaceIdentity,
+        SymbolIdentity concreteIdentity,
         INamedTypeSymbol concreteType,
         CancellationToken cancellationToken)
     {
@@ -80,7 +158,7 @@ public sealed class SingleImplementationInterfaceCodeFixProvider : CodeFixProvid
             ?? throw new InvalidOperationException("Compilation was not available.");
         var interfaceMembers = CreateInterfaceMemberTemplates(
             compilation,
-            interfaceSymbol,
+            interfaceIdentity,
             concreteType,
             cancellationToken);
 
@@ -100,13 +178,14 @@ public sealed class SingleImplementationInterfaceCodeFixProvider : CodeFixProvid
                     continue;
                 }
 
-                var rewriter = new InterfaceRemovalRewriter(semanticModel, interfaceSymbol, concreteType, interfaceMembers, cancellationToken);
+                var rewriter = new InterfaceRemovalRewriter(semanticModel, interfaceIdentity, concreteIdentity, concreteType, interfaceMembers, cancellationToken);
                 var rewrittenRoot = rewriter.Visit(syntaxRoot);
                 if (rewrittenRoot is null || ReferenceEquals(rewrittenRoot, syntaxRoot))
                 {
                     continue;
                 }
 
+                rewrittenRoot = AddDependencyInjectionReviewComments(rewrittenRoot, interfaceIdentity.Name, concreteType.Name);
                 solution = solution.WithDocumentSyntaxRoot(candidateDocument.Id, rewrittenRoot.WithAdditionalAnnotations(Formatter.Annotation));
                 updatedDocumentIds.Add(candidateDocument.Id);
             }
@@ -120,19 +199,54 @@ public sealed class SingleImplementationInterfaceCodeFixProvider : CodeFixProvid
                 continue;
             }
 
-            var formattedDocument = await Formatter.FormatAsync(updatedDocument, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var simplifiedDocument = await Simplifier.ReduceAsync(updatedDocument, Simplifier.Annotation, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var formattedDocument = await Formatter.FormatAsync(simplifiedDocument, cancellationToken: cancellationToken).ConfigureAwait(false);
             solution = formattedDocument.Project.Solution;
         }
 
         return solution;
     }
 
+    private static SyntaxNode AddDependencyInjectionReviewComments(SyntaxNode root, string interfaceName, string concreteTypeName)
+    {
+        var targets = root.GetAnnotatedNodes(DependencyInjectionReviewAnnotation)
+            .Select(static node => (SyntaxNode?)node.FirstAncestorOrSelf<StatementSyntax>() ?? node.FirstAncestorOrSelf<MemberDeclarationSyntax>())
+            .OfType<SyntaxNode>()
+            .Distinct()
+            .ToArray();
+        if (targets.Length == 0)
+        {
+            return root;
+        }
+
+        var comment = SyntaxFactory.Comment($"// TODO: review DI registration: interface '{interfaceName}' was replaced with '{concreteTypeName}'.");
+        return root.ReplaceNodes(targets, (_, current) =>
+        {
+            var leadingTrivia = current.GetLeadingTrivia();
+            var indentation = leadingTrivia.LastOrDefault(static trivia => trivia.IsKind(SyntaxKind.WhitespaceTrivia));
+            var updatedTrivia = leadingTrivia
+                .Add(comment)
+                .Add(SyntaxFactory.ElasticCarriageReturnLineFeed);
+            if (indentation.IsKind(SyntaxKind.WhitespaceTrivia))
+            {
+                updatedTrivia = updatedTrivia.Add(indentation);
+            }
+
+            return current.WithLeadingTrivia(updatedTrivia);
+        });
+    }
+
     private static ImmutableArray<InterfaceMemberTemplate> CreateInterfaceMemberTemplates(
         Compilation compilation,
-        INamedTypeSymbol interfaceSymbol,
+        SymbolIdentity interfaceIdentity,
         INamedTypeSymbol concreteType,
         CancellationToken cancellationToken)
     {
+        if (DocumentationCommentId.GetFirstSymbolForDeclarationId(interfaceIdentity.DeclarationId, compilation) is not INamedTypeSymbol interfaceSymbol)
+        {
+            return ImmutableArray<InterfaceMemberTemplate>.Empty;
+        }
+
         var builder = ImmutableArray.CreateBuilder<InterfaceMemberTemplate>();
         foreach (var member in interfaceSymbol.GetMembers().Where(static member => !member.IsImplicitlyDeclared))
         {
@@ -143,8 +257,12 @@ public sealed class SingleImplementationInterfaceCodeFixProvider : CodeFixProvid
                     continue;
                 }
 
+                // Members can be hoisted into dependent interfaces declared in other files (or
+                // projects), where the source file's using directives are unavailable. Render
+                // every type reference fully qualified and let Simplifier shorten whatever the
+                // destination file can resolve.
                 var semanticModel = compilation.GetSemanticModel(memberSyntax.SyntaxTree);
-                var rewriter = new SymbolReplacementRewriter(semanticModel, interfaceSymbol, concreteType, cancellationToken);
+                var rewriter = new FullyQualifyingMemberRewriter(semanticModel, interfaceIdentity, concreteType, cancellationToken);
                 var rewrittenSyntax = (MemberDeclarationSyntax)(rewriter.Visit(memberSyntax) ?? memberSyntax);
                 builder.Add(new InterfaceMemberTemplate(CreateSignature(member), rewrittenSyntax.WithoutTrivia()));
             }
@@ -168,9 +286,58 @@ public sealed class SingleImplementationInterfaceCodeFixProvider : CodeFixProvid
     private static string CreateTypeSignature(ITypeSymbol type)
         => type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
+    private static NameSyntax CreateConcreteTypeName(INamedTypeSymbol concreteType, NameSyntax original)
+    {
+        // Positions that grammatically require a simple name (the right side of a qualified
+        // name or member access) cannot hold a fully qualified replacement.
+        var requiresSimpleName =
+            (original.Parent is QualifiedNameSyntax qualifiedName && qualifiedName.Right == original) ||
+            (original.Parent is MemberAccessExpressionSyntax memberAccess && memberAccess.Name == original) ||
+            (original.Parent is AliasQualifiedNameSyntax aliasQualifiedName && aliasQualifiedName.Name == original);
+        var replacement = requiresSimpleName
+            ? SyntaxFactory.IdentifierName(concreteType.Name)
+            : SyntaxFactory.ParseName(concreteType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+
+        return replacement
+            .WithTriviaFrom(original)
+            .WithAdditionalAnnotations(Simplifier.Annotation);
+    }
+
+    /// <summary>
+    /// Compilation-independent identity for a named type. Cross-project rewriting sees the
+    /// interface and implementation through other compilations (including retargeted or
+    /// metadata-resolved symbols), where <see cref="SymbolEqualityComparer.Default"/> silently
+    /// fails; the documentation-comment declaration id plus assembly name matches everywhere.
+    /// </summary>
+    private sealed record SymbolIdentity(string DeclarationId, string AssemblyName, string Name)
+    {
+        public static SymbolIdentity? Create(INamedTypeSymbol symbol)
+        {
+            var declarationId = DocumentationCommentId.CreateDeclarationId(symbol.OriginalDefinition);
+            var assemblyName = symbol.ContainingAssembly?.Identity.Name;
+            return declarationId is null || assemblyName is null
+                ? null
+                : new SymbolIdentity(declarationId, assemblyName, symbol.Name);
+        }
+
+        public bool Matches(ISymbol? symbol)
+        {
+            if (symbol is not INamedTypeSymbol namedType)
+            {
+                return false;
+            }
+
+            var definition = namedType.OriginalDefinition;
+            return string.Equals(definition.Name, Name, StringComparison.Ordinal) &&
+                   string.Equals(definition.ContainingAssembly?.Identity.Name, AssemblyName, StringComparison.Ordinal) &&
+                   string.Equals(DocumentationCommentId.CreateDeclarationId(definition), DeclarationId, StringComparison.Ordinal);
+        }
+    }
+
     private sealed class InterfaceRemovalRewriter(
         SemanticModel semanticModel,
-        INamedTypeSymbol interfaceSymbol,
+        SymbolIdentity interfaceIdentity,
+        SymbolIdentity concreteIdentity,
         INamedTypeSymbol concreteType,
         ImmutableArray<InterfaceMemberTemplate> interfaceMembers,
         CancellationToken cancellationToken) : CSharpSyntaxRewriter
@@ -219,7 +386,11 @@ public sealed class SingleImplementationInterfaceCodeFixProvider : CodeFixProvid
             => ReplaceName(node) ?? base.VisitIdentifierName(node)!;
 
         public override SyntaxNode VisitGenericName(GenericNameSyntax node)
-            => ReplaceName(node) ?? base.VisitGenericName(node)!;
+        {
+            var requiresReview = RequiresDependencyInjectionReview(node);
+            var rewrittenNode = ReplaceName(node) ?? base.VisitGenericName(node)!;
+            return requiresReview ? rewrittenNode.WithAdditionalAnnotations(DependencyInjectionReviewAnnotation) : rewrittenNode;
+        }
 
         public override SyntaxNode VisitQualifiedName(QualifiedNameSyntax node)
             => ReplaceName(node) ?? base.VisitQualifiedName(node)!;
@@ -261,21 +432,37 @@ public sealed class SingleImplementationInterfaceCodeFixProvider : CodeFixProvid
         private bool DirectlyInheritsInterface(InterfaceDeclarationSyntax node)
             => node.BaseList?.Types.Any(baseType => MatchesSymbol(semanticModel.GetSymbolInfo(baseType.Type, cancellationToken).Symbol)) == true;
 
-        private NameSyntax? ReplaceName(NameSyntax node)
+        private bool RequiresDependencyInjectionReview(GenericNameSyntax node)
         {
-            if (!MatchesSymbol(semanticModel.GetSymbolInfo(node, cancellationToken).Symbol))
+            if (node.TypeArgumentList.Arguments.Count < 2)
             {
-                return null;
+                return false;
             }
 
-            var replacement = concreteType.ToMinimalDisplayString(semanticModel, node.SpanStart);
-            return SyntaxFactory.ParseName(replacement)
-                .WithTriviaFrom(node);
+            var referencesInterface = false;
+            var referencesImplementation = false;
+            foreach (var typeArgument in node.TypeArgumentList.Arguments)
+            {
+                var symbol = semanticModel.GetSymbolInfo(typeArgument, cancellationToken).Symbol;
+                if (interfaceIdentity.Matches(symbol))
+                {
+                    referencesInterface = true;
+                }
+                else if (concreteIdentity.Matches(symbol))
+                {
+                    referencesImplementation = true;
+                }
+            }
+
+            return referencesInterface && referencesImplementation;
         }
 
-        private bool MatchesSymbol(ISymbol? symbol)
-            => symbol is INamedTypeSymbol namedType &&
-               SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, interfaceSymbol.OriginalDefinition);
+        private NameSyntax? ReplaceName(NameSyntax node)
+            => MatchesSymbol(semanticModel.GetSymbolInfo(node, cancellationToken).Symbol)
+                ? CreateConcreteTypeName(concreteType, node)
+                : null;
+
+        private bool MatchesSymbol(ISymbol? symbol) => interfaceIdentity.Matches(symbol);
 
         private HashSet<string> GetAvailableSignatures(INamedTypeSymbol dependentInterfaceSymbol)
         {
@@ -321,9 +508,9 @@ public sealed class SingleImplementationInterfaceCodeFixProvider : CodeFixProvid
                                       token.IsKind(SyntaxKind.PrivateKeyword));
     }
 
-    private sealed class SymbolReplacementRewriter(
+    private sealed class FullyQualifyingMemberRewriter(
         SemanticModel semanticModel,
-        INamedTypeSymbol interfaceSymbol,
+        SymbolIdentity interfaceIdentity,
         INamedTypeSymbol concreteType,
         CancellationToken cancellationToken) : CSharpSyntaxRewriter
     {
@@ -341,15 +528,55 @@ public sealed class SingleImplementationInterfaceCodeFixProvider : CodeFixProvid
 
         private NameSyntax? ReplaceName(NameSyntax node)
         {
-            if (semanticModel.GetSymbolInfo(node, cancellationToken).Symbol is not INamedTypeSymbol namedType ||
-                !SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, interfaceSymbol.OriginalDefinition))
+            if (node.IsVar)
             {
                 return null;
             }
 
-            var replacement = concreteType.ToMinimalDisplayString(semanticModel, node.SpanStart);
-            return SyntaxFactory.ParseName(replacement)
-                .WithTriviaFrom(node);
+            var symbol = semanticModel.GetSymbolInfo(node, cancellationToken).Symbol;
+            if (symbol is IMethodSymbol { MethodKind: MethodKind.Constructor } attributeConstructor)
+            {
+                symbol = attributeConstructor.ContainingType;
+            }
+
+            if (symbol is not ITypeSymbol type || type is ITypeParameterSymbol or IDynamicTypeSymbol)
+            {
+                return null;
+            }
+
+            if (interfaceIdentity.Matches(type))
+            {
+                return CreateConcreteTypeName(concreteType, node);
+            }
+
+            var mappedType = MapType(type);
+            return SyntaxFactory.ParseName(mappedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                .WithTriviaFrom(node)
+                .WithAdditionalAnnotations(Simplifier.Annotation);
+        }
+
+        private ITypeSymbol MapType(ITypeSymbol type)
+        {
+            if (interfaceIdentity.Matches(type))
+            {
+                return concreteType;
+            }
+
+            switch (type)
+            {
+                case INamedTypeSymbol { IsGenericType: true } namedType:
+                    var mappedArguments = namedType.TypeArguments.Select(MapType).ToArray();
+                    return mappedArguments.Zip(namedType.TypeArguments, static (mapped, original) => ReferenceEquals(mapped, original)).All(static unchanged => unchanged)
+                        ? namedType
+                        : namedType.ConstructedFrom.Construct(mappedArguments);
+                case IArrayTypeSymbol arrayType:
+                    var mappedElement = MapType(arrayType.ElementType);
+                    return ReferenceEquals(mappedElement, arrayType.ElementType)
+                        ? arrayType
+                        : semanticModel.Compilation.CreateArrayTypeSymbol(mappedElement, arrayType.Rank);
+                default:
+                    return type;
+            }
         }
     }
 
