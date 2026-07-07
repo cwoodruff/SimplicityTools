@@ -8,14 +8,14 @@ namespace SimplicityTools.Analyzers;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class AbstractionLayerDepthAnalyzer : DiagnosticAnalyzer
 {
-    private const int LayerThreshold = 8;
+    internal const int DefaultLayerThreshold = 8;
 
     public const string DiagnosticId = "SF0004";
 
     public static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticId,
         title: "Method call chain is too deep",
-        messageFormat: "Method {0} passes through {1} abstraction layers, exceeding the limit of 8",
+        messageFormat: "Method {0} passes through {1} abstraction layers, exceeding the limit of {2}",
         category: AnalyzerCategories.PrimaryPathFirst,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
@@ -48,7 +48,17 @@ public sealed class AbstractionLayerDepthAnalyzer : DiagnosticAnalyzer
         foreach (var method in sourceMethods)
         {
             var depth = ComputeDepth(method, callGraph, memo, [], context.CancellationToken);
-            if (depth <= LayerThreshold || !sourceIndex.TryGetMethodDeclaration(method, out var declaration))
+            if (!sourceIndex.TryGetMethodDeclaration(method, out var declaration))
+            {
+                continue;
+            }
+
+            var threshold = AnalyzerOptionReader.GetThreshold(
+                context.Options,
+                declaration.SyntaxTree,
+                AnalyzerOptionReader.LayerThresholdKey,
+                DefaultLayerThreshold);
+            if (depth <= threshold)
             {
                 continue;
             }
@@ -57,7 +67,8 @@ public sealed class AbstractionLayerDepthAnalyzer : DiagnosticAnalyzer
                 Rule,
                 declaration.Identifier.GetLocation(),
                 method.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
-                depth));
+                depth,
+                threshold));
         }
     }
 
