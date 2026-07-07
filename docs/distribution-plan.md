@@ -12,7 +12,7 @@ SimplicityTools ships five NuGet packages in three independently tagged release 
 | Analyzers | `analyzers/vX.Y.Z` | `SimplicityTools.Analyzers` |
 | CLI | `cli/vX.Y.Z` | `SimplicityTools.Cli` (`dotnet-simplicity` global tool) |
 
-The canonical version baseline is `SimplicityToolsReleaseVersion` in `Directory.Build.props` (currently `0.4.0`).
+The canonical version baseline is `SimplicityToolsReleaseVersion` in `Directory.Build.props` (currently `0.5.0`).
 
 ---
 
@@ -62,7 +62,7 @@ Smoke test: build a scratch project that references it and confirm an `SF000x` w
 ## 4. First-release runbook (ordered)
 
 1. Confirm the section 1 gate is fully GREEN.
-2. Confirm `SimplicityToolsReleaseVersion` is `0.4.0`.
+2. Confirm `SimplicityToolsReleaseVersion` is `0.5.0`.
 3. (Optional) Run the `validation` workflow dispatch; confirm artifacts build.
 4. Push **prerelease** tags, libraries first (dependency root):
    `git tag libraries/v0.4.0-preview.1 && git push origin libraries/v0.4.0-preview.1`
