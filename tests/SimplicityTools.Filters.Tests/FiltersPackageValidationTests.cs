@@ -23,14 +23,16 @@ public sealed class FiltersPackageValidationTests
             Assert.Contains("lib/net10.0/SimplicityTools.Filters.xml", entries);
 
             var libraryAssets = entries
-                .Where(static entry => entry.StartsWith("lib/net10.0/", StringComparison.Ordinal))
+                .Where(static entry => entry.StartsWith("lib/", StringComparison.Ordinal))
                 .OrderBy(static entry => entry, StringComparer.Ordinal)
                 .ToArray();
 
             Assert.Equal(
                 [
                     "lib/net10.0/SimplicityTools.Filters.dll",
-                    "lib/net10.0/SimplicityTools.Filters.xml"
+                    "lib/net10.0/SimplicityTools.Filters.xml",
+                    "lib/net8.0/SimplicityTools.Filters.dll",
+                    "lib/net8.0/SimplicityTools.Filters.xml"
                 ],
                 libraryAssets);
 
@@ -41,20 +43,29 @@ public sealed class FiltersPackageValidationTests
             var nuspec = XDocument.Load(nuspecStream);
             var ns = nuspec.Root!.Name.Namespace;
             var metadata = nuspec.Root.Element(ns + "metadata");
-            var dependencies = metadata?
+            var dependencyGroups = metadata?
                 .Element(ns + "dependencies")?
                 .Elements(ns + "group")
-                .SelectMany(static group => group.Elements())
+                .OrderBy(static group => group.Attribute("targetFramework")?.Value, StringComparer.Ordinal)
                 .ToArray();
 
-            Assert.NotNull(dependencies);
+            Assert.NotNull(dependencyGroups);
 
-            var metricsDependency = Assert.Single(
-                dependencies!,
-                dependency => dependency.Name == ns + "dependency" &&
-                              string.Equals(dependency.Attribute("id")?.Value, "SimplicityTools.Metrics", StringComparison.Ordinal));
+            // One dependency group per shipped target framework, each declaring the Metrics dependency.
+            Assert.Collection(
+                dependencyGroups!,
+                group => Assert.Equal("net10.0", group.Attribute("targetFramework")?.Value),
+                group => Assert.Equal("net8.0", group.Attribute("targetFramework")?.Value));
 
-            Assert.Equal(validation.Version, metricsDependency.Attribute("version")?.Value);
+            foreach (var group in dependencyGroups!)
+            {
+                var metricsDependency = Assert.Single(
+                    group.Elements(),
+                    dependency => dependency.Name == ns + "dependency" &&
+                                  string.Equals(dependency.Attribute("id")?.Value, "SimplicityTools.Metrics", StringComparison.Ordinal));
+
+                Assert.Equal(validation.Version, metricsDependency.Attribute("version")?.Value);
+            }
         }
 
         var consumerDirectory = Path.Combine(validation.WorkingDirectory, "consumer");
