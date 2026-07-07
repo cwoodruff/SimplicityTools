@@ -1,20 +1,14 @@
 using Microsoft.Build.Construction;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.MSBuild;
 
 namespace SimplicityTools.Metrics;
 
 internal sealed class SemanticCollectionPass
 {
-    public async Task<SemanticMetrics> CollectAsync(string solutionPath, CancellationToken cancellationToken)
+    public async Task<SemanticMetrics> CollectAsync(Solution solution, CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(solutionPath);
-
-        await SolutionRestoreCoordinator.RestoreIfNeededAsync(solutionPath, cancellationToken).ConfigureAwait(false);
-
-        using var workspace = MSBuildWorkspace.Create();
-        var solution = await workspace.OpenSolutionAsync(Path.GetFullPath(solutionPath), cancellationToken: cancellationToken).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(solution);
 
         var abstractionLayers = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
         var implementationMap = new Dictionary<INamedTypeSymbol, HashSet<INamedTypeSymbol>>(SymbolEqualityComparer.Default);

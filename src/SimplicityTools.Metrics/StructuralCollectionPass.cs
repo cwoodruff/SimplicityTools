@@ -31,6 +31,13 @@ internal sealed class StructuralCollectionPass
             totalProjects++;
 
             var projectPath = Path.GetFullPath(Path.Combine(solutionDirectory, project.RelativePath));
+            if (!File.Exists(projectPath))
+            {
+                // Declared but missing on disk: still counted as a project so the collector can
+                // report the workspace-load shortfall; there are no files to scan.
+                continue;
+            }
+
             var projectMetrics = ScanProject(projectPath, cancellationToken);
 
             totalFiles += projectMetrics.SourceFileCount;

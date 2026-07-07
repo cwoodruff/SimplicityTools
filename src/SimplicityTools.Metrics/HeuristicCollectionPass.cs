@@ -1,20 +1,14 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.FindSymbols;
-using Microsoft.CodeAnalysis.MSBuild;
 
 namespace SimplicityTools.Metrics;
 
 internal sealed class HeuristicCollectionPass
 {
-    public async Task<int> CollectPrimaryPathFileCountAsync(string solutionPath, CancellationToken cancellationToken)
+    public async Task<int> CollectPrimaryPathFileCountAsync(Solution solution, CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(solutionPath);
-
-        await SolutionRestoreCoordinator.RestoreIfNeededAsync(solutionPath, cancellationToken).ConfigureAwait(false);
-
-        using var workspace = MSBuildWorkspace.Create();
-        var solution = await workspace.OpenSolutionAsync(Path.GetFullPath(solutionPath), cancellationToken: cancellationToken).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(solution);
 
         var documents = new List<DocumentHeuristicInfo>();
         foreach (var project in solution.Projects.Where(ShouldAnalyzeProject))

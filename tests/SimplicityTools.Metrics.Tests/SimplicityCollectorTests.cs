@@ -68,6 +68,20 @@ public sealed class SimplicityCollectorTests
     }
 
     [Fact]
+    public async Task CollectAsync_ReportsWorkspaceDiagnostics_WhenAProjectFailsToLoad()
+    {
+        var diagnostics = new List<string>();
+        var collector = new SimplicityCollector(diagnostics.Add);
+
+        var snapshot = await collector.CollectAsync(GetFixturePath("BrokenReferenceFixture", "BrokenReferenceFixture.sln"));
+
+        Assert.Equal(2, snapshot.TotalProjects);
+        Assert.NotEmpty(diagnostics);
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Contains("Ghost", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Contains("1 of 2", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task CollectAsync_ScansCurrentSampleSolutions()
     {
         var collector = new SimplicityCollector();
