@@ -337,8 +337,7 @@ public sealed class AnalyzeCommandTests
         Assert.Contains("Operational Surface", output);
         Assert.Contains("Change Safety", output);
         Assert.Contains("Discoverability", output);
-        Assert.Contains("Onboarding time:", output);
-        Assert.Contains("target <= 40.0h", output);
+        Assert.Contains("Cognitive Load      not scored — onboarding time has not been computed.", output);
         Assert.Contains("Premature abstraction ratio:", output);
         Assert.Contains("target <= 0.25", output);
         Assert.Contains("Average method complexity:", output);
@@ -378,7 +377,6 @@ public sealed class AnalyzeCommandTests
 
             var output = NormalizeLineEndings(result.StandardOutput).Trim();
 
-            Assert.Contains("target <= 10.0h", output);
             Assert.Contains("target <= 0.05", output);
             Assert.Contains("target <= 1.50", output);
             Assert.Contains("target >= 0.95", output);
@@ -855,15 +853,16 @@ public sealed class AnalyzeCommandTests
         Assert.True(delta <= tolerance, $"{sampleName} {metricName} expected {expected}, actual {actual}, tolerance {tolerance:P0}.");
     }
 
-    private static void AssertTimeSpanWithinTolerance(TimeSpan expected, TimeSpan actual, double tolerance, string sampleName)
+    private static void AssertTimeSpanWithinTolerance(TimeSpan? expected, TimeSpan? actual, double tolerance, string sampleName)
     {
-        if (expected == TimeSpan.Zero)
+        if (expected is not { } expectedTime || expectedTime == TimeSpan.Zero)
         {
-            Assert.Equal(expected, actual);
+            Assert.Equal(expected is null || expected == TimeSpan.Zero, actual is null || actual == TimeSpan.Zero);
             return;
         }
 
-        var delta = Math.Abs((actual - expected).TotalSeconds) / expected.TotalSeconds;
+        Assert.NotNull(actual);
+        var delta = Math.Abs((actual.Value - expectedTime).TotalSeconds) / expectedTime.TotalSeconds;
         Assert.True(delta <= tolerance, $"{sampleName} EstimatedOnboardingTime expected {expected}, actual {actual}, tolerance {tolerance:P0}.");
     }
 
@@ -990,7 +989,7 @@ public sealed class AnalyzeCommandTests
         int UnusedDependencyCount,
         int InterfacesWithSingleImplementation,
         double AverageMethodComplexity,
-        TimeSpan EstimatedOnboardingTime)
+        TimeSpan? EstimatedOnboardingTime)
     {
         public SimplicitySnapshot ToSnapshot(DateTimeOffset collectedAt)
         {

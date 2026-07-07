@@ -82,7 +82,7 @@ public sealed class SimplicityCollector : ISimplicityCollector
             semanticMetrics.UnusedDependencyCount,
             semanticMetrics.InterfacesWithSingleImplementation,
             semanticMetrics.AverageMethodComplexity,
-            TimeSpan.Zero,
+            null,
             collectedAt);
     }
 }

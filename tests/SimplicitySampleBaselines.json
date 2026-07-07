@@ -11,7 +11,7 @@
       "unusedDependencyCount": 0,
       "interfacesWithSingleImplementation": 0,
       "averageMethodComplexity": 1.4,
-      "estimatedOnboardingTime": "00:00:00"
+      "estimatedOnboardingTime": null
     },
     {
       "name": "Sample.OverEngineered",
@@ -24,7 +24,7 @@
       "unusedDependencyCount": 0,
       "interfacesWithSingleImplementation": 24,
       "averageMethodComplexity": 1.2,
-      "estimatedOnboardingTime": "00:00:00"
+      "estimatedOnboardingTime": null
     }
   ]
 }

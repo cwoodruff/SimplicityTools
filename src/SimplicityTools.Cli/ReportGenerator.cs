@@ -350,7 +350,9 @@ internal static class ReportGenerator
     private static string GenerateExecutiveSummary(SimplicitySnapshot snapshot)
     {
         var collectedDate = snapshot.CollectedAt.ToString("MMMM d, yyyy 'at' h:mm tt", CultureInfo.InvariantCulture);
-        var onboardingHours = snapshot.EstimatedOnboardingTime.TotalHours.ToString("F1", CultureInfo.InvariantCulture);
+        var onboardingDisplay = snapshot.EstimatedOnboardingTime is { } measuredOnboarding
+            ? measuredOnboarding.TotalHours.ToString("F1", CultureInfo.InvariantCulture) + "h"
+            : "Not yet measured";
 
         return $"""
             <div class="container section">
@@ -372,7 +374,7 @@ internal static class ReportGenerator
                 </div>
                 <div class="metric-card">
                   <div class="metric-label">Estimated Onboarding</div>
-                  <div class="metric-value">{onboardingHours}h</div>
+                  <div class="metric-value">{onboardingDisplay}</div>
                 </div>
               </div>
             </div>
@@ -480,7 +482,7 @@ internal static class ReportGenerator
                   </tr>
                   <tr>
                     <td>Estimated Onboarding Time</td>
-                    <td class="highlight">{snapshot.EstimatedOnboardingTime.TotalHours:F1} hours</td>
+                    <td class="highlight">{(snapshot.EstimatedOnboardingTime is { } tableOnboarding ? $"{tableOnboarding.TotalHours:F1} hours" : "Not yet measured")}</td>
                     <td>Estimated time for a developer to understand the codebase</td>
                   </tr>
                 </tbody>
@@ -491,7 +493,6 @@ internal static class ReportGenerator
 
     private static string GenerateComplexityBudget(SimplicitySnapshot snapshot)
     {
-        var onboardingHours = snapshot.EstimatedOnboardingTime.TotalHours;
         var complexity = snapshot.AverageMethodComplexity;
 
         var complexityStatus = complexity switch
@@ -502,12 +503,15 @@ internal static class ReportGenerator
             _ => ("High", "status-critical")
         };
 
-        var onboardingStatus = onboardingHours switch
-        {
-            < 16 => ("Efficient", "status-good"),
-            < 40 => ("Moderate", "status-warn"),
-            _ => ("Substantial", "status-critical")
-        };
+        // No verdict is rendered for a metric that was never computed.
+        var (onboardingValue, onboardingVerdict, onboardingClass) = snapshot.EstimatedOnboardingTime is { } onboardingTime
+            ? onboardingTime.TotalHours switch
+            {
+                < 16 => ($"{onboardingTime.TotalHours:F1}h", "Efficient", "status-good"),
+                < 40 => ($"{onboardingTime.TotalHours:F1}h", "Moderate", "status-warn"),
+                _ => ($"{onboardingTime.TotalHours:F1}h", "Substantial", "status-critical")
+            }
+            : ("Not yet measured", "Metric not computed", string.Empty);
 
         return $"""
             <div class="container section">
@@ -521,8 +525,8 @@ internal static class ReportGenerator
                 </div>
                 <div class="metric-card">
                   <div class="metric-label">Onboarding Time</div>
-                  <div class="metric-value {onboardingStatus.Item2}">{onboardingHours:F1}h</div>
-                  <div class="metric-subvalue">{onboardingStatus.Item1}</div>
+                  <div class="metric-value {onboardingClass}">{onboardingValue}</div>
+                  <div class="metric-subvalue">{onboardingVerdict}</div>
                 </div>
                 <div class="metric-card">
                   <div class="metric-label">Simplicity Score</div>
@@ -551,8 +555,8 @@ internal static class ReportGenerator
               <div class="trend-stack">
                 <div class="trend-card">
                   <h3>Trend Wave</h3>
-                  <p class="trend-note">The SVG chart tracks primary path coverage, average method complexity, onboarding hours, and simplicity score over time with exact values rendered below.</p>
-                  {GenerateTrendLegend()}
+                  <p class="trend-note">The SVG chart tracks primary path coverage, average method complexity{(trendPoints.All(trendPoint => trendPoint.Snapshot.EstimatedOnboardingTime is not null) ? ", onboarding hours," : " and")} simplicity score over time with exact values rendered below.</p>
+                  {GenerateTrendLegend(trendPoints.All(trendPoint => trendPoint.Snapshot.EstimatedOnboardingTime is not null))}
                   {GenerateTrendChart(trendPoints)}
                 </div>
                 <div class="trend-card">
@@ -607,13 +611,17 @@ internal static class ReportGenerator
             .ToArray();
     }
 
-    private static string GenerateTrendLegend()
+    private static string GenerateTrendLegend(bool includeOnboarding)
     {
+        var onboardingItem = includeOnboarding
+            ? $"""<span class="trend-legend-item"><span class="trend-swatch" style="background: {OnboardingColor};"></span>Onboarding Hours</span>"""
+            : string.Empty;
+
         return $$"""
             <div class="trend-legend">
               <span class="trend-legend-item"><span class="trend-swatch" style="background: {{PrimaryPathColor}};"></span>Primary Path Coverage</span>
               <span class="trend-legend-item"><span class="trend-swatch" style="background: {{ComplexityColor}};"></span>Avg Method Complexity</span>
-              <span class="trend-legend-item"><span class="trend-swatch" style="background: {{OnboardingColor}};"></span>Onboarding Hours</span>
+              {{onboardingItem}}
               <span class="trend-legend-item"><span class="trend-swatch" style="background: {{BrandAccentColor}};"></span>Simplicity Score</span>
             </div>
             """;
@@ -621,13 +629,19 @@ internal static class ReportGenerator
 
     private static string GenerateTrendChart(IReadOnlyList<TrendPoint> trendPoints)
     {
-        var metrics = new[]
+        var metrics = new List<TrendMetric>
         {
-            new TrendMetric("Primary Path Coverage", trendPoint => trendPoint.Snapshot.PrimaryPathRatio * 100, PrimaryPathColor, "F1", "%", 0d, 100d),
-            new TrendMetric("Avg Method Complexity", trendPoint => trendPoint.Snapshot.AverageMethodComplexity, ComplexityColor, "F2", string.Empty, 0d, null),
-            new TrendMetric("Onboarding Hours", trendPoint => trendPoint.Snapshot.EstimatedOnboardingTime.TotalHours, OnboardingColor, "F1", "h", 0d, null),
-            new TrendMetric("Simplicity Score", trendPoint => trendPoint.SimplicityScore, BrandAccentColor, "F0", string.Empty, 0d, 100d)
+            new("Primary Path Coverage", trendPoint => trendPoint.Snapshot.PrimaryPathRatio * 100, PrimaryPathColor, "F1", "%", 0d, 100d),
+            new("Avg Method Complexity", trendPoint => trendPoint.Snapshot.AverageMethodComplexity, ComplexityColor, "F2", string.Empty, 0d, null)
         };
+
+        // Charting an uncomputed metric would draw a fabricated flat line.
+        if (trendPoints.All(trendPoint => trendPoint.Snapshot.EstimatedOnboardingTime is not null))
+        {
+            metrics.Add(new TrendMetric("Onboarding Hours", trendPoint => trendPoint.Snapshot.EstimatedOnboardingTime!.Value.TotalHours, OnboardingColor, "F1", "h", 0d, null));
+        }
+
+        metrics.Add(new TrendMetric("Simplicity Score", trendPoint => trendPoint.SimplicityScore, BrandAccentColor, "F0", string.Empty, 0d, 100d));
 
         const double width = 1080d;
         const double height = 620d;
@@ -637,7 +651,7 @@ internal static class ReportGenerator
         const double panelHeight = 105d;
         const double panelGap = 38d;
         var chartWidth = width - left - right;
-        var fullChartHeight = metrics.Length * panelHeight + (metrics.Length - 1) * panelGap;
+        var fullChartHeight = metrics.Count * panelHeight + (metrics.Count - 1) * panelGap;
 
         var sb = new StringBuilder();
         sb.AppendLine($"<svg class=\"trend-chart\" viewBox=\"0 0 {width.ToString(CultureInfo.InvariantCulture)} {height.ToString(CultureInfo.InvariantCulture)}\" role=\"img\" aria-label=\"Historical trend chart for primary path coverage, average method complexity, onboarding hours, and simplicity score.\">");
@@ -650,7 +664,7 @@ internal static class ReportGenerator
             sb.AppendLine($"<text class=\"chart-series-label\" x=\"{FormatNumber(currentX - 48d)}\" y=\"20\" fill=\"{BrandAccentColor}\" font-size=\"11\">Current report</text>");
         }
 
-        for (var index = 0; index < metrics.Length; index++)
+        for (var index = 0; index < metrics.Count; index++)
         {
             AppendTrendMetricPanel(
                 sb,
@@ -660,7 +674,7 @@ internal static class ReportGenerator
                 top + (index * (panelHeight + panelGap)),
                 chartWidth,
                 panelHeight,
-                showXAxisLabels: index == metrics.Length - 1);
+                showXAxisLabels: index == metrics.Count - 1);
         }
 
         sb.AppendLine("</svg>");
@@ -832,8 +846,8 @@ internal static class ReportGenerator
             builder.AppendLine($"      <td>{FormatTableDate(trendPoint.Snapshot.CollectedAt)}{(trendPoint.IsCurrent ? " <span class=\"badge badge-critical current-run\">Current report</span>" : string.Empty)}</td>");
             builder.AppendLine($"      <td class=\"highlight\">{trendPoint.Snapshot.AverageMethodComplexity:F2}</td>");
             builder.AppendLine($"      <td>{FormatWorseningDelta(previous is null ? null : trendPoint.Snapshot.AverageMethodComplexity - previous.Snapshot.AverageMethodComplexity, "F2")}</td>");
-            builder.AppendLine($"      <td class=\"highlight\">{trendPoint.Snapshot.EstimatedOnboardingTime.TotalHours:F1}h</td>");
-            builder.AppendLine($"      <td>{FormatWorseningDelta(previous is null ? null : trendPoint.Snapshot.EstimatedOnboardingTime.TotalHours - previous.Snapshot.EstimatedOnboardingTime.TotalHours, "F1", "h")}</td>");
+            builder.AppendLine($"      <td class=\"highlight\">{(trendPoint.Snapshot.EstimatedOnboardingTime is { } rowOnboarding ? $"{rowOnboarding.TotalHours:F1}h" : "—")}</td>");
+            builder.AppendLine($"      <td>{FormatWorseningDelta(trendPoint.Snapshot.EstimatedOnboardingTime is { } currentOnboarding && previous?.Snapshot.EstimatedOnboardingTime is { } previousOnboarding ? currentOnboarding.TotalHours - previousOnboarding.TotalHours : null, "F1", "h")}</td>");
             builder.AppendLine($"      <td class=\"highlight\">{trendPoint.Snapshot.AbstractionLayerCount}</td>");
             builder.AppendLine($"      <td>{FormatWorseningDelta(previous is null ? null : trendPoint.Snapshot.AbstractionLayerCount - previous.Snapshot.AbstractionLayerCount)}</td>");
             builder.AppendLine($"      <td class=\"highlight\">{trendPoint.Snapshot.UnusedDependencyCount}</td>");

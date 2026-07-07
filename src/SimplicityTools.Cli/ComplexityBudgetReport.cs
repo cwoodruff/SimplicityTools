@@ -11,15 +11,23 @@ internal static class ComplexityBudgetReportBuilder
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(thresholds);
 
-        var dimensions = new[]
+        var dimensions = new List<ComplexityBudgetDimension>();
+
+        // Fabricating a "WITHIN BUDGET" verdict from an uncomputed metric would be a lie; the
+        // dimension is reported as not computed instead of scored.
+        if (snapshot.EstimatedOnboardingTime is { } onboardingTime)
         {
-            CreateMaximumThresholdDimension(
+            dimensions.Add(CreateMaximumThresholdDimension(
                 "Cognitive Load",
                 "Onboarding time",
-                snapshot.EstimatedOnboardingTime.TotalHours,
+                onboardingTime.TotalHours,
                 thresholds.MaxOnboardingHours,
                 value => $"{value.ToString("F1", CultureInfo.InvariantCulture)}h",
-                "Reduce spread and indirection so new engineers can learn the codebase faster."),
+                "Reduce spread and indirection so new engineers can learn the codebase faster."));
+        }
+
+        dimensions.AddRange(
+        [
             CreateMaximumThresholdDimension(
                 "Operational Surface",
                 "Premature abstraction ratio",
@@ -41,16 +49,21 @@ internal static class ComplexityBudgetReportBuilder
                 thresholds.PrimaryPathRatioTarget,
                 value => value.ToString("F2", CultureInfo.InvariantCulture),
                 "Move more of the main business flow onto the primary path so teams can trace it faster.")
-        };
+        ]);
 
         var withinBudgetCount = dimensions.Count(static dimension => dimension.IsWithinBudget);
         var builder = new StringBuilder();
 
         builder.AppendLine("Complexity Budget");
         builder.AppendLine("-----------------");
-        builder.AppendLine($"Status: {withinBudgetCount}/{dimensions.Length} dimension(s) within budget.");
+        builder.AppendLine($"Status: {withinBudgetCount}/{dimensions.Count} dimension(s) within budget.");
         builder.AppendLine("Bars show configured budget used. Values above 100% are over budget.");
         builder.AppendLine();
+
+        if (snapshot.EstimatedOnboardingTime is null)
+        {
+            builder.AppendLine("Cognitive Load      not scored — onboarding time has not been computed.");
+        }
 
         foreach (var dimension in dimensions)
         {

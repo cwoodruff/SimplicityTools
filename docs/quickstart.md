@@ -22,7 +22,7 @@ Abstraction layers: 1
 Single-impl interfaces: 0
 External deps: 0 (0 unused)
 Avg complexity: 1.4
-Est. onboarding: 0h
+Est. onboarding: not computed
 ```
 
 **What this means:**
@@ -30,7 +30,7 @@ Est. onboarding: 0h
 - **Abstraction layers:** How many levels of indirection exist (1 = good; high numbers signal over-engineering).
 - **Single-impl interfaces:** Interfaces with only one implementation (dead abstraction).
 - **Avg complexity:** Average cyclomatic complexity per method (1.4 is healthy; >5 signals refactoring needed).
-- **Est. onboarding:** Annual cost of onboarding a new team member due to complexity.
+- **Est. onboarding:** Estimated onboarding time for a new team member. Shown as `not computed` until the metric is implemented — no verdict is fabricated from it.
 
 Run this first anytime you want to check the current state of your solution.
 
@@ -56,7 +56,7 @@ Abstraction layers: 1
 Single-impl interfaces: 0
 External deps: 0 (0 unused)
 Avg complexity: 1.4
-Est. onboarding: 0h
+Est. onboarding: not computed
 
 Baseline written to /Users/cwoodruff/Git/SimplicityTools/samples/Sample.Simplified/.simplicity-baseline.json
 ```
@@ -120,7 +120,7 @@ Metric delta
 - External dependencies: 0 -> 0 (0)
 - Unused dependencies: 0 -> 0 (0)
 - Average method complexity: 1.35 -> 1.35 (0.00)
-- Estimated onboarding time: 0.0h -> 0.0h (0.0h)
+- Estimated onboarding time: not computed
 
 Filter score delta
 - TwoAmTest: 1.00 -> 1.00 (0.00)
@@ -156,8 +156,7 @@ Complexity Budget
 Status: 3/4 dimension(s) within budget.
 Bars show configured budget used. Values above 100% are over budget.
 
-Cognitive Load      [----------]     0%  WITHIN BUDGET
-  Onboarding time: 0.0h (target <= 40.0h)
+Cognitive Load      not scored — onboarding time has not been computed.
 Operational Surface [----------]     0%  WITHIN BUDGET
   Premature abstraction ratio: 0.00 (target <= 0.25)
 Change Safety       [###-------]    27%  WITHIN BUDGET
@@ -208,7 +207,7 @@ Abstraction layers: 1
 Single-impl interfaces: 0
 External deps: 0 (0 unused)
 Avg complexity: 1.4
-Est. onboarding: 0h
+Est. onboarding: not computed
 
 Filter Verdicts
 ---------------

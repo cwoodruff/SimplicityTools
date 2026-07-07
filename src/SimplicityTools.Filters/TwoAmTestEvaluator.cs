@@ -14,13 +14,19 @@ public static class TwoAmTestEvaluator
     /// <returns>The filter verdict for the snapshot.</returns>
     public static FilterVerdict Evaluate(SimplicitySnapshot snapshot)
     {
-        var subScores = new[]
+        var subScores = new List<FilterSubScore>
         {
-            new FilterSubScore("Discoverability", FilterScoring.InverseThreshold(snapshot.PrimaryPathFileCount, 5.0)),
-            new FilterSubScore("Diagnosability", FilterScoring.InverseThreshold(snapshot.AverageMethodComplexity, 5.0)),
-            new FilterSubScore("Fixability", FilterScoring.RatioThreshold(snapshot.AbstractionLayerCount, snapshot.TotalProjects, 3.0)),
-            new FilterSubScore("Cognitive load", FilterScoring.InverseThreshold(snapshot.EstimatedOnboardingTime.TotalHours, 40.0))
+            new("Discoverability", FilterScoring.InverseThreshold(snapshot.PrimaryPathFileCount, 5.0)),
+            new("Diagnosability", FilterScoring.InverseThreshold(snapshot.AverageMethodComplexity, 5.0)),
+            new("Fixability", FilterScoring.RatioThreshold(snapshot.AbstractionLayerCount, snapshot.TotalProjects, 3.0))
         };
+
+        // An uncomputed onboarding time cannot be scored; the verdict averages the measured
+        // sub-scores instead of treating the metric as a perfect zero.
+        if (snapshot.EstimatedOnboardingTime is { } onboardingTime)
+        {
+            subScores.Add(new FilterSubScore("Cognitive load", FilterScoring.InverseThreshold(onboardingTime.TotalHours, 40.0)));
+        }
 
         return FilterScoring.CreateVerdict(
             FilterName.TwoAmTest,

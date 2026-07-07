@@ -116,12 +116,17 @@ internal static class SnapshotDiffReportBuilder
             $"{baseline:F2} -> {current:F2} ({FormatSignedDouble(delta, "F2")})");
     }
 
-    private static string FormatHoursMetric(TimeSpan baseline, TimeSpan current)
+    private static string FormatHoursMetric(TimeSpan? baseline, TimeSpan? current)
     {
-        var delta = current.TotalHours - baseline.TotalHours;
+        if (baseline is not { } baselineTime || current is not { } currentTime)
+        {
+            return "not computed";
+        }
+
+        var delta = currentTime.TotalHours - baselineTime.TotalHours;
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"{baseline.TotalHours:F1}h -> {current.TotalHours:F1}h ({FormatSignedDouble(delta, "F1")}h)");
+            $"{baselineTime.TotalHours:F1}h -> {currentTime.TotalHours:F1}h ({FormatSignedDouble(delta, "F1")}h)");
     }
 
     private static string FormatSignedInt(int value)

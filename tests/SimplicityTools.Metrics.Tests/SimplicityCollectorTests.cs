@@ -23,7 +23,7 @@ public sealed class SimplicityCollectorTests
         Assert.Equal(3, snapshot.UnusedDependencyCount);
         Assert.Equal(0, snapshot.InterfacesWithSingleImplementation);
         Assert.Equal(1d, snapshot.AverageMethodComplexity);
-        Assert.Equal(TimeSpan.Zero, snapshot.EstimatedOnboardingTime);
+        Assert.Null(snapshot.EstimatedOnboardingTime);
         Assert.InRange(snapshot.CollectedAt, before, after);
     }
 

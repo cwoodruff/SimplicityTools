@@ -8,7 +8,7 @@ internal static class FilterScoring
 
     internal static FilterVerdict CreateVerdict(
         FilterName filter,
-        FilterSubScore[] subScores,
+        IReadOnlyList<FilterSubScore> subScores,
         IReadOnlyDictionary<string, string> violationMessages,
         IReadOnlyDictionary<string, string> recommendationMessages)
     {
