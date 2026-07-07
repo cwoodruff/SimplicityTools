@@ -19,7 +19,19 @@ public sealed class WatchCommandTests : IDisposable
     }
 
     private static SimplicitySnapshot CreateSnapshot() =>
-        new(1, 10, 5, 0, 0, 0, 0, 1.0, null, DateTimeOffset.UtcNow);
+        new()
+        {
+            TotalProjects = 1,
+            TotalFiles = 10,
+            PrimaryPathFileCount = 5,
+            AbstractionLayerCount = 0,
+            ExternalDependencyCount = 0,
+            UnusedDependencyCount = 0,
+            InterfacesWithSingleImplementation = 0,
+            AverageMethodComplexity = 1.0,
+            EstimatedOnboardingTime = null,
+            CollectedAt = DateTimeOffset.UtcNow
+        };
 
     [Fact]
     public async Task Debouncer_ForceFiresAfterMaxLatency_DespiteContinuousChurn()

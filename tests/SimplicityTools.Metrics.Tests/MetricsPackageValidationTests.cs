@@ -21,14 +21,16 @@ public sealed class MetricsPackageValidationTests
             Assert.Contains("lib/net10.0/SimplicityTools.Metrics.xml", entries);
 
             var libraryAssets = entries
-                .Where(static entry => entry.StartsWith("lib/net10.0/", StringComparison.Ordinal))
+                .Where(static entry => entry.StartsWith("lib/", StringComparison.Ordinal))
                 .OrderBy(static entry => entry, StringComparer.Ordinal)
                 .ToArray();
 
             Assert.Equal(
                 [
                     "lib/net10.0/SimplicityTools.Metrics.dll",
-                    "lib/net10.0/SimplicityTools.Metrics.xml"
+                    "lib/net10.0/SimplicityTools.Metrics.xml",
+                    "lib/net8.0/SimplicityTools.Metrics.dll",
+                    "lib/net8.0/SimplicityTools.Metrics.xml"
                 ],
                 libraryAssets);
         }

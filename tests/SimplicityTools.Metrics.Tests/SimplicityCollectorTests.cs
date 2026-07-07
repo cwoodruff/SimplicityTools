@@ -125,6 +125,70 @@ public sealed class SimplicityCollectorTests
         Assert.True(overEngineered.InterfacesWithSingleImplementation > simplified.InterfacesWithSingleImplementation);
     }
 
+    [Fact]
+    public async Task CollectAsync_DoesNotSpawnRestore_WhenAllowRestoreIsDisabled()
+    {
+        // A fresh copy of a fixture that declares packages, with no obj/ directories: the
+        // default behavior would spawn `dotnet restore` here and write project.assets.json.
+        var workspaceDirectory = Path.Combine(Path.GetTempPath(), "simplicity-collector-tests", Guid.NewGuid().ToString("N"));
+        CopyDirectoryWithoutBuildOutput(GetFixturePath("SemanticFixture"), workspaceDirectory);
+
+        try
+        {
+            var assetsPath = Path.Combine(workspaceDirectory, "SemanticFixture.App", "obj", "project.assets.json");
+            Assert.False(File.Exists(assetsPath));
+
+            var collector = new SimplicityCollector(new SimplicityCollectorOptions { AllowRestore = false });
+
+            var snapshot = await collector.CollectAsync(Path.Combine(workspaceDirectory, "SemanticFixture.sln"));
+
+            Assert.False(File.Exists(assetsPath), "AllowRestore=false must not spawn a restore or write package assets.");
+            Assert.Equal(1, snapshot.TotalProjects);
+            // Without package assets the unused-dependency pass skips the project instead of guessing.
+            Assert.Equal(0, snapshot.UnusedDependencyCount);
+        }
+        finally
+        {
+            Directory.Delete(workspaceDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task CollectAsync_Succeeds_WhenLocatorRegistrationIsDisabledAndAlreadyRegistered()
+    {
+        // First collection with default options registers MSBuild for the test process; the
+        // second one opts out of registration and must still work against the registered instance.
+        var registeringCollector = new SimplicityCollector();
+        _ = await registeringCollector.CollectAsync(GetFixturePath("StructuralFixture", "StructuralFixture.sln"));
+
+        var collector = new SimplicityCollector(new SimplicityCollectorOptions { RegisterMSBuildLocator = false });
+
+        var snapshot = await collector.CollectAsync(GetFixturePath("StructuralFixture", "StructuralFixture.sln"));
+
+        Assert.Equal(2, snapshot.TotalProjects);
+        Assert.Equal(4, snapshot.TotalFiles);
+    }
+
+    private static void CopyDirectoryWithoutBuildOutput(string sourceDirectory, string destinationDirectory)
+    {
+        Directory.CreateDirectory(destinationDirectory);
+
+        foreach (var file in Directory.GetFiles(sourceDirectory, "*", SearchOption.AllDirectories))
+        {
+            var relativePath = Path.GetRelativePath(sourceDirectory, file);
+            var segments = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (segments.Contains("obj", StringComparer.OrdinalIgnoreCase) ||
+                segments.Contains("bin", StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var destinationPath = Path.Combine(destinationDirectory, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+            File.Copy(file, destinationPath);
+        }
+    }
+
     private static string GetFixturePath(params string[] segments)
     {
         return Path.Combine(GetRepositoryRoot(), "tests", "SimplicityTools.Metrics.Tests", "TestData", Path.Combine(segments));

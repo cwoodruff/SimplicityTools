@@ -1,0 +1,13 @@
+<Project>
+  <!--
+    The package-validation tests generate throwaway consumer projects under artifacts/ with
+    inline PackageReference Version attributes (pointing at freshly packed nupkgs). Because
+    artifacts/ sits inside the repository, the repo-root Directory.Packages.props would
+    otherwise apply to those restores and fail them with NU1008. Central package management
+    is switched off at this boundary. The rest of artifacts/ stays gitignored; this file is
+    force-included so clean checkouts keep the boundary.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

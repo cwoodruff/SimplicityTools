@@ -683,31 +683,35 @@ public sealed class AnalyzeCommandTests
 
             await WriteSnapshotAsync(
                 Path.Combine(historyDirectory, "2026-04-28T090000Z.json"),
-                new SimplicitySnapshot(
-                    2,
-                    23,
-                    4,
-                    3,
-                    0,
-                    1,
-                    2,
-                    2.40d,
-                    TimeSpan.FromHours(18),
-                    DateTimeOffset.Parse("2026-04-28T09:00:00Z", CultureInfo.InvariantCulture)));
+                new SimplicitySnapshot
+                {
+                    TotalProjects = 2,
+                    TotalFiles = 23,
+                    PrimaryPathFileCount = 4,
+                    AbstractionLayerCount = 3,
+                    ExternalDependencyCount = 0,
+                    UnusedDependencyCount = 1,
+                    InterfacesWithSingleImplementation = 2,
+                    AverageMethodComplexity = 2.40d,
+                    EstimatedOnboardingTime = TimeSpan.FromHours(18),
+                    CollectedAt = DateTimeOffset.Parse("2026-04-28T09:00:00Z", CultureInfo.InvariantCulture)
+                });
 
             await WriteSnapshotAsync(
                 Path.Combine(historyDirectory, "2026-04-29T090000Z.json"),
-                new SimplicitySnapshot(
-                    2,
-                    23,
-                    5,
-                    2,
-                    0,
-                    0,
-                    1,
-                    2.10d,
-                    TimeSpan.FromHours(14),
-                    DateTimeOffset.Parse("2026-04-29T09:00:00Z", CultureInfo.InvariantCulture)));
+                new SimplicitySnapshot
+                {
+                    TotalProjects = 2,
+                    TotalFiles = 23,
+                    PrimaryPathFileCount = 5,
+                    AbstractionLayerCount = 2,
+                    ExternalDependencyCount = 0,
+                    UnusedDependencyCount = 0,
+                    InterfacesWithSingleImplementation = 1,
+                    AverageMethodComplexity = 2.10d,
+                    EstimatedOnboardingTime = TimeSpan.FromHours(14),
+                    CollectedAt = DateTimeOffset.Parse("2026-04-29T09:00:00Z", CultureInfo.InvariantCulture)
+                });
 
             var result = await RunProcessAsync(
                 "dotnet",
@@ -1096,17 +1100,19 @@ public sealed class AnalyzeCommandTests
     {
         public SimplicitySnapshot ToSnapshot(DateTimeOffset collectedAt)
         {
-            return new SimplicitySnapshot(
-                TotalProjects,
-                TotalFiles,
-                PrimaryPathFileCount,
-                AbstractionLayerCount,
-                ExternalDependencyCount,
-                UnusedDependencyCount,
-                InterfacesWithSingleImplementation,
-                AverageMethodComplexity,
-                EstimatedOnboardingTime,
-                collectedAt);
+            return new SimplicitySnapshot
+            {
+                TotalProjects = TotalProjects,
+                TotalFiles = TotalFiles,
+                PrimaryPathFileCount = PrimaryPathFileCount,
+                AbstractionLayerCount = AbstractionLayerCount,
+                ExternalDependencyCount = ExternalDependencyCount,
+                UnusedDependencyCount = UnusedDependencyCount,
+                InterfacesWithSingleImplementation = InterfacesWithSingleImplementation,
+                AverageMethodComplexity = AverageMethodComplexity,
+                EstimatedOnboardingTime = EstimatedOnboardingTime,
+                CollectedAt = collectedAt
+            };
         }
     }
 }
