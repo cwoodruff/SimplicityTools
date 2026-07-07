@@ -27,6 +27,11 @@ public static class PrimaryPathFirstEvaluator
     {
         ArgumentNullException.ThrowIfNull(thresholds);
 
+        if (!FilterScoring.HasMeasurableCode(snapshot))
+        {
+            return FilterScoring.CreateEmptySnapshotVerdict(FilterName.PrimaryPathFirst);
+        }
+
         var subScores = new[]
         {
             new FilterSubScore("Primary path concentration", FilterScoring.PrimaryPathConcentration(snapshot, thresholds.PrimaryPathRatioTarget)),

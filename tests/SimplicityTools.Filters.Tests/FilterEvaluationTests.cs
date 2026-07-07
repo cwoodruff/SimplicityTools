@@ -7,15 +7,6 @@ namespace SimplicityTools.Filters.Tests;
 public sealed class FilterEvaluationTests
 {
     [Fact]
-    public void Evaluation_HoldsSnapshotReference()
-    {
-        var snapshot = SimplicitySnapshot.Empty("Sample");
-        var evaluation = new FilterEvaluation("2AM", Passed: true, "Placeholder", snapshot);
-
-        Assert.Same(snapshot, evaluation.Snapshot);
-    }
-
-    [Fact]
     public void TwoAmTestEvaluator_ReturnsPerfectScoreWhenTargetsAreMet()
     {
         var snapshot = CreateSnapshot(
@@ -56,7 +47,8 @@ public sealed class FilterEvaluationTests
             subScore => Assert.Equal(("Premature abstraction", 0.0), (subScore.Name, subScore.Score)),
             subScore => Assert.Equal(("Dependency accumulation", 0.7), (subScore.Name, subScore.Score)),
             subScore => Assert.Equal(("Dependency sprawl", 0.4), (subScore.Name, subScore.Score)));
-        Assert.Equal(3, verdict.Violations.Length);
+        // Only the sub-scores below the passing bar are violations (0.0 and 0.4; not 0.7).
+        Assert.Equal(2, verdict.Violations.Count);
         Assert.Single(verdict.Recommendations);
         Assert.Contains("single-implementation interfaces", verdict.Recommendations[0]);
         AssertAllScoresAreBounded(verdict);

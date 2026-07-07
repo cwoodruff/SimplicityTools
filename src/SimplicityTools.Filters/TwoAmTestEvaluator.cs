@@ -25,6 +25,11 @@ public static class TwoAmTestEvaluator
     {
         ArgumentNullException.ThrowIfNull(thresholds);
 
+        if (!FilterScoring.HasMeasurableCode(snapshot))
+        {
+            return FilterScoring.CreateEmptySnapshotVerdict(FilterName.TwoAmTest);
+        }
+
         // Discoverability measures primary-path files per project — “can one flow be traced
         // through at most ~5 files at 2 AM.” An absolute file cap would penalize exactly the
         // concentration PrimaryPathFirst rewards, making the two filters mathematically

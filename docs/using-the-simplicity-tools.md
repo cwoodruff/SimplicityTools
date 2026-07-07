@@ -405,6 +405,13 @@ This is the right command for refactoring sessions where you want immediate “d
 
 The repository currently evaluates three filters.
 
+> **Closed filter set (by design).** The evaluator surface is intentionally not extensible:
+> `FilterName` is a closed enum and the three evaluators are static. The filters encode the
+> Simplicity-First methodology rather than a plugin system — a custom "filter" with different
+> semantics would silently change what the scores, budget, and TCA output mean. If your
+> thresholds differ, tune them via `simplicity.json`; if you need different *measurements*,
+> consume `SimplicitySnapshot` directly and score it yourself.
+
 ### `TwoAmTest`
 
 Asks whether the solution is understandable and fixable under pressure.

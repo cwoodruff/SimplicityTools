@@ -4,6 +4,12 @@ namespace SimplicityTools.Filters;
 
 internal static class FilterScoring
 {
+    /// <summary>
+    /// A sub-score below this floor marks a collapsed dimension: the verdict cannot pass no
+    /// matter how well the other dimensions average out.
+    /// </summary>
+    internal const double CatastrophicSubScoreFloor = 0.1;
+
     internal static FilterVerdict CreateVerdict(
         FilterName filter,
         double passingScore,
@@ -15,16 +21,22 @@ internal static class FilterScoring
             .Select(subScore => subScore with { Score = Clamp(subScore.Score) })
             .ToArray();
         var score = boundedSubScores.Average(static subScore => subScore.Score);
-        var failingSubScores = boundedSubScores.Where(static subScore => subScore.Score < 1.0).ToArray();
+
+        // Violations and recommendations describe sub-scores that miss the passing bar, not
+        // any sub-score short of perfection.
+        var failingSubScores = boundedSubScores.Where(subScore => subScore.Score < passingScore).ToArray();
         var lowestScore = failingSubScores
             .OrderBy(static subScore => subScore.Score)
             .FirstOrDefault();
 
+        var hasCollapsedDimension = boundedSubScores.Any(static subScore => subScore.Score < CatastrophicSubScoreFloor);
+        var passes = score >= passingScore && !hasCollapsedDimension;
+
         return new FilterVerdict(
             filter,
-            score >= passingScore,
+            passes,
             score,
-            CreateSummary(filter, score, passingScore, boundedSubScores),
+            CreateSummary(filter, score, passingScore, boundedSubScores, hasCollapsedDimension),
             boundedSubScores,
             failingSubScores
                 .Select(subScore => violationMessages[subScore.Name])
@@ -34,6 +46,25 @@ internal static class FilterScoring
                 ? []
                 : [recommendationMessages[lowestScore.Name]]);
     }
+
+    /// <summary>
+    /// The failing verdict every evaluator returns for a snapshot with no measurable code —
+    /// a failed collection must never be reported as an ideally simple codebase.
+    /// </summary>
+    internal static FilterVerdict CreateEmptySnapshotVerdict(FilterName filter)
+    {
+        return new FilterVerdict(
+            filter,
+            Passes: false,
+            Score: 0.0,
+            $"{filter} fails: the snapshot contains no measurable code, so nothing can be scored.",
+            SubScores: [],
+            Violations: ["The snapshot contains no measurable code (zero projects or zero files) — the collection may have failed."],
+            Recommendations: ["Verify the solution path and check collection diagnostics before trusting this run."]);
+    }
+
+    internal static bool HasMeasurableCode(SimplicitySnapshot snapshot) =>
+        snapshot.TotalProjects > 0 && snapshot.TotalFiles > 0;
 
     internal static double InverseThreshold(double metric, double target)
     {
@@ -72,11 +103,19 @@ internal static class FilterScoring
     internal static double Clamp(double value)
         => double.IsNaN(value) ? 0.0 : Math.Clamp(value, 0.0, 1.0);
 
-    private static string CreateSummary(FilterName filter, double score, double passingScore, IReadOnlyCollection<FilterSubScore> subScores)
+    private static string CreateSummary(
+        FilterName filter,
+        double score,
+        double passingScore,
+        IReadOnlyCollection<FilterSubScore> subScores,
+        bool hasCollapsedDimension)
     {
         var metCheckCount = subScores.Count(subScore => subScore.Score >= passingScore);
-        var outcome = score >= passingScore ? "passes" : "fails";
+        var outcome = score >= passingScore && !hasCollapsedDimension ? "passes" : "fails";
+        var collapsedNote = hasCollapsedDimension && score >= passingScore
+            ? " A collapsed dimension blocks the pass despite the average."
+            : string.Empty;
 
-        return $"{filter} {outcome} with score {score:F2} ({metCheckCount}/{subScores.Count} checks at or above {passingScore:F2}).";
+        return $"{filter} {outcome} with score {score:F2} ({metCheckCount}/{subScores.Count} checks at or above {passingScore:F2}).{collapsedNote}";
     }
 }

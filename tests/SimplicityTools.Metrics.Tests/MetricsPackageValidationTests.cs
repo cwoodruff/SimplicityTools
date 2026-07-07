@@ -69,7 +69,7 @@ public sealed class MetricsPackageValidationTests
                 public static async Task Main()
                 {
                     ISimplicityCollector collector = new SimplicityCollector();
-                    var snapshot = SimplicitySnapshot.Empty("Consumer");
+                    var snapshot = SimplicitySnapshot.Empty();
 
                     _ = snapshot.PrimaryPathRatio;
                     _ = snapshot.PrematureAbstractionRatio;

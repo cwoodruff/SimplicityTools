@@ -25,6 +25,11 @@ public static class HalfRuleEvaluator
     {
         ArgumentNullException.ThrowIfNull(thresholds);
 
+        if (!FilterScoring.HasMeasurableCode(snapshot))
+        {
+            return FilterScoring.CreateEmptySnapshotVerdict(FilterName.HalfRule);
+        }
+
         var subScores = new[]
         {
             new FilterSubScore("Premature abstraction", FilterScoring.PrematureAbstraction(snapshot.PrematureAbstractionRatio, thresholds.PrematureAbstractionRatioTarget)),
