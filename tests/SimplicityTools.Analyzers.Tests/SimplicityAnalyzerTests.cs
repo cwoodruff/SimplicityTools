@@ -8,8 +8,41 @@ namespace SimplicityTools.Analyzers.Tests;
 
 public sealed class SimplicityAnalyzerTests
 {
+    private static readonly Dictionary<string, string> IncludePublicApiOptions = new(StringComparer.Ordinal)
+    {
+        ["simplicity_first.include_public_api"] = "true"
+    };
+
     [Fact]
     public async Task SingleImplementationInterfaceAnalyzer_ReportsSingleConcreteImplementation()
+    {
+        var diagnostics = await RunAsync(
+            new SingleImplementationInterfaceAnalyzer(),
+            [
+                new SourceFile("/repo/Feature.cs", """
+                namespace Demo;
+
+                internal interface IPricer
+                {
+                    decimal Price();
+                }
+
+                public sealed class DefaultPricer : IPricer
+                {
+                    public decimal Price() => 12m;
+                }
+                """)
+            ]);
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal(SingleImplementationInterfaceAnalyzer.DiagnosticId, diagnostic.Id);
+        Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Info, diagnostic.Severity);
+        Assert.Contains("IPricer", diagnostic.GetMessage(), StringComparison.Ordinal);
+        Assert.Contains("DefaultPricer", diagnostic.GetMessage(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SingleImplementationInterfaceAnalyzer_SkipsPublicInterfaceByDefault()
     {
         var diagnostics = await RunAsync(
             new SingleImplementationInterfaceAnalyzer(),
@@ -29,10 +62,37 @@ public sealed class SimplicityAnalyzerTests
                 """)
             ]);
 
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public async Task SingleImplementationInterfaceAnalyzer_ReportsPublicInterfaceWhenPublicApiIncluded()
+    {
+        var diagnostics = await RunAsync(
+            new SingleImplementationInterfaceAnalyzer(),
+            [
+                new SourceFile("/repo/Feature.cs", """
+                namespace Demo;
+
+                public interface IPricer
+                {
+                    decimal Price();
+                }
+
+                public sealed class DefaultPricer : IPricer
+                {
+                    public decimal Price() => 12m;
+                }
+                """)
+            ],
+            globalOptions: new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["simplicity_first.include_public_api"] = "true"
+            });
+
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal(SingleImplementationInterfaceAnalyzer.DiagnosticId, diagnostic.Id);
         Assert.Contains("IPricer", diagnostic.GetMessage(), StringComparison.Ordinal);
-        Assert.Contains("DefaultPricer", diagnostic.GetMessage(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -92,7 +152,7 @@ public sealed class SimplicityAnalyzerTests
             ]);
 
         var analyzer = new SingleImplementationInterfaceAnalyzer();
-        var diagnostics = await GetAnalyzerDiagnosticsAsync(project, analyzer);
+        var diagnostics = await GetAnalyzerDiagnosticsAsync(project, analyzer, globalOptions: IncludePublicApiOptions);
         var diagnostic = Assert.Single(diagnostics);
         var codeFix = new SingleImplementationInterfaceCodeFixProvider();
         var document = project.Documents.Single(static document => document.FilePath == "/repo/Feature.cs");
@@ -148,7 +208,7 @@ public sealed class SimplicityAnalyzerTests
             ]);
 
         var analyzer = new SingleImplementationInterfaceAnalyzer();
-        var diagnostics = await GetAnalyzerDiagnosticsAsync(project, analyzer);
+        var diagnostics = await GetAnalyzerDiagnosticsAsync(project, analyzer, globalOptions: IncludePublicApiOptions);
         var diagnostic = Assert.Single(diagnostics.Where(static diagnostic => diagnostic.GetMessage().Contains("IPricer", StringComparison.Ordinal)));
         var codeFix = new SingleImplementationInterfaceCodeFixProvider();
         var document = project.Documents.Single(static document => document.FilePath == "/repo/Feature.cs");
@@ -213,8 +273,43 @@ public sealed class SimplicityAnalyzerTests
 
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal(UnusedDependencyAnalyzer.DiagnosticId, diagnostic.Id);
+        Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Info, diagnostic.Severity);
         Assert.Contains("Newtonsoft.Json", diagnostic.GetMessage(), StringComparison.Ordinal);
         Assert.Equal(projectPath, diagnostic.Location.SourceTree?.FilePath ?? diagnostic.Location.GetLineSpan().Path);
+    }
+
+    [Fact]
+    public async Task UnusedDependencyAnalyzer_SkipsPackagesExcludedByConfiguration()
+    {
+        const string projectPath = "/repo/Demo.csproj";
+        const string projectText = """
+        <Project Sdk="Microsoft.NET.Sdk">
+          <ItemGroup>
+            <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+          </ItemGroup>
+        </Project>
+        """;
+
+        var diagnostics = await RunAsync(
+            new UnusedDependencyAnalyzer(),
+            [
+                new SourceFile("/repo/Feature.cs", """
+                namespace Demo;
+
+                public static class Feature
+                {
+                    public static string Describe(int count) => count.ToString();
+                }
+                """)
+            ],
+            additionalReferences: [CreateNuGetPackageReference("newtonsoft.json", "Newtonsoft.Json.dll")],
+            additionalFiles: [CreateAdditionalText(projectPath, projectText)],
+            globalOptions: new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["simplicity_first.sf0002_excluded_packages"] = "Some.Other.Package, newtonsoft.json"
+            });
+
+        Assert.Empty(diagnostics);
     }
 
     [Fact]
@@ -249,6 +344,95 @@ public sealed class SimplicityAnalyzerTests
             {
                 ["build_property.MSBuildProjectFullPath"] = projectPath
             });
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public async Task UnusedDependencyAnalyzer_DoesNotCrashOrReportOnMalformedProjectFile()
+    {
+        const string projectPath = "/repo/Demo.csproj";
+        const string projectText = """
+        <Project Sdk="Microsoft.NET.Sdk">
+          <ItemGroup>
+            <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+        </Project>
+        """;
+
+        var diagnostics = await RunAsync(
+            new UnusedDependencyAnalyzer(),
+            [
+                new SourceFile("/repo/Feature.cs", """
+                namespace Demo;
+
+                public static class Feature
+                {
+                    public static string Describe(int count) => count.ToString();
+                }
+                """)
+            ],
+            additionalReferences: [CreateNuGetPackageReference("newtonsoft.json", "Newtonsoft.Json.dll")],
+            additionalFiles: [CreateAdditionalText(projectPath, projectText)]);
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public async Task UnusedDependencyAnalyzer_DoesNotReadProjectFileFromDisk()
+    {
+        var projectPath = Path.Combine(Path.GetTempPath(), $"sf0002-disk-{Guid.NewGuid():N}.csproj");
+        await File.WriteAllTextAsync(projectPath, """
+        <Project Sdk="Microsoft.NET.Sdk">
+          <ItemGroup>
+            <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+          </ItemGroup>
+        </Project>
+        """);
+
+        try
+        {
+            var diagnostics = await RunAsync(
+                new UnusedDependencyAnalyzer(),
+                [
+                    new SourceFile("/repo/Feature.cs", """
+                    namespace Demo;
+
+                    public static class Feature
+                    {
+                        public static string Describe(int count) => count.ToString();
+                    }
+                    """)
+                ],
+                additionalReferences: [CreateNuGetPackageReference("newtonsoft.json", "Newtonsoft.Json.dll")],
+                globalOptions: new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["build_property.MSBuildProjectFullPath"] = projectPath
+                });
+
+            Assert.Empty(diagnostics);
+        }
+        finally
+        {
+            File.Delete(projectPath);
+        }
+    }
+
+    [Fact]
+    public async Task UnusedDependencyAnalyzer_DoesNotReportWithoutAdditionalFiles()
+    {
+        var diagnostics = await RunAsync(
+            new UnusedDependencyAnalyzer(),
+            [
+                new SourceFile("/repo/Feature.cs", """
+                namespace Demo;
+
+                public static class Feature
+                {
+                    public static string Describe(int count) => count.ToString();
+                }
+                """)
+            ],
+            additionalReferences: [CreateNuGetPackageReference("newtonsoft.json", "Newtonsoft.Json.dll")]);
 
         Assert.Empty(diagnostics);
     }
@@ -435,6 +619,72 @@ public sealed class SimplicityAnalyzerTests
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal(HighComplexityAnalyzer.DiagnosticId, diagnostic.Id);
         Assert.Contains("complexity 12", diagnostic.GetMessage(), StringComparison.Ordinal);
+        Assert.Contains("exceeds the limit of 10", diagnostic.GetMessage(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task HighComplexityAnalyzer_UsesConfiguredThreshold()
+    {
+        const string source = """
+        namespace Demo;
+
+        public sealed class Feature
+        {
+            public int Score(bool a, bool b)
+            {
+                var result = 0;
+                if (a) result++;
+                if (b) result++;
+                return result;
+            }
+        }
+        """;
+
+        var defaultDiagnostics = await RunAsync(
+            new HighComplexityAnalyzer(),
+            [new SourceFile("/repo/Complexity.cs", source)]);
+        Assert.Empty(defaultDiagnostics);
+
+        var diagnostics = await RunAsync(
+            new HighComplexityAnalyzer(),
+            [new SourceFile("/repo/Complexity.cs", source)],
+            globalOptions: new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["simplicity_first.sf0003_complexity_threshold"] = "2"
+            });
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal(HighComplexityAnalyzer.DiagnosticId, diagnostic.Id);
+        Assert.Contains("exceeds the limit of 2", diagnostic.GetMessage(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task HighComplexityAnalyzer_FallsBackToDefaultThresholdOnInvalidConfiguration()
+    {
+        var diagnostics = await RunAsync(
+            new HighComplexityAnalyzer(),
+            [
+                new SourceFile("/repo/Complexity.cs", """
+                namespace Demo;
+
+                public sealed class Feature
+                {
+                    public int Score(bool a, bool b)
+                    {
+                        var result = 0;
+                        if (a) result++;
+                        if (b) result++;
+                        return result;
+                    }
+                }
+                """)
+            ],
+            globalOptions: new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["simplicity_first.sf0003_complexity_threshold"] = "not-a-number"
+            });
+
+        Assert.Empty(diagnostics);
     }
 
     [Fact]
@@ -508,6 +758,35 @@ public sealed class SimplicityAnalyzerTests
     }
 
     [Fact]
+    public async Task AbstractionLayerDepthAnalyzer_UsesConfiguredThreshold()
+    {
+        var diagnostics = await RunAsync(
+            new AbstractionLayerDepthAnalyzer(),
+            [
+                new SourceFile("/repo/Pipeline.cs", """
+                namespace Demo;
+
+                public sealed class Pipeline
+                {
+                    public void Step1() => Step2();
+                    private void Step2() => Step3();
+                    private void Step3() => Step4();
+                    private void Step4() { }
+                }
+                """)
+            ],
+            globalOptions: new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["simplicity_first.sf0004_layer_threshold"] = "2"
+            });
+
+        Assert.NotEmpty(diagnostics);
+        var diagnostic = Assert.Single(diagnostics, static diagnostic => diagnostic.GetMessage().Contains("Step1", StringComparison.Ordinal));
+        Assert.Equal(AbstractionLayerDepthAnalyzer.DiagnosticId, diagnostic.Id);
+        Assert.Contains("exceeding the limit of 2", diagnostic.GetMessage(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ConstructorParameterCountAnalyzer_ReportsConstructorAboveThreshold()
     {
         var diagnostics = await RunAsync(
@@ -533,6 +812,41 @@ public sealed class SimplicityAnalyzerTests
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal(ConstructorParameterCountAnalyzer.DiagnosticId, diagnostic.Id);
         Assert.Contains("8 parameters", diagnostic.GetMessage(), StringComparison.Ordinal);
+        Assert.Contains("exceeding the limit of 7", diagnostic.GetMessage(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ConstructorParameterCountAnalyzer_UsesConfiguredThreshold()
+    {
+        const string source = """
+        namespace Demo;
+
+        public sealed class Feature(int a, int b, int c, int d, int e, int f, int g)
+        {
+        }
+        """;
+
+        var raisedThresholdDiagnostics = await RunAsync(
+            new ConstructorParameterCountAnalyzer(),
+            [new SourceFile("/repo/Feature.cs", source)],
+            globalOptions: new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["simplicity_first.sf0005_parameter_threshold"] = "10"
+            });
+        Assert.Empty(raisedThresholdDiagnostics);
+
+        var loweredThresholdDiagnostics = await RunAsync(
+            new ConstructorParameterCountAnalyzer(),
+            [new SourceFile("/repo/Feature.cs", source)],
+            globalOptions: new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["simplicity_first.sf0005_parameter_threshold"] = "3"
+            });
+
+        var diagnostic = Assert.Single(loweredThresholdDiagnostics);
+        Assert.Equal(ConstructorParameterCountAnalyzer.DiagnosticId, diagnostic.Id);
+        Assert.Contains("7 parameters", diagnostic.GetMessage(), StringComparison.Ordinal);
+        Assert.Contains("exceeding the limit of 3", diagnostic.GetMessage(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -586,6 +900,39 @@ public sealed class SimplicityAnalyzerTests
                 new SourceFile("/repo/Feature.cs", """
                 namespace Demo;
 
+                internal sealed class Envelope<T>
+                {
+                    public T Value { get; }
+
+                    public Envelope(T value)
+                    {
+                        Value = value;
+                    }
+                }
+
+                internal static class Usage
+                {
+                    public static Envelope<string> Create() => new("hello");
+                }
+                """)
+            ]);
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal(SingleSpecializationGenericParameterAnalyzer.DiagnosticId, diagnostic.Id);
+        Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Info, diagnostic.Severity);
+        Assert.Contains("Envelope<T>", diagnostic.GetMessage(), StringComparison.Ordinal);
+        Assert.Contains("string", diagnostic.GetMessage(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SingleSpecializationGenericParameterAnalyzer_SkipsPublicGenericTypeByDefault()
+    {
+        var diagnostics = await RunAsync(
+            new SingleSpecializationGenericParameterAnalyzer(),
+            [
+                new SourceFile("/repo/Feature.cs", """
+                namespace Demo;
+
                 public sealed class Envelope<T>
                 {
                     public T Value { get; }
@@ -603,10 +950,39 @@ public sealed class SimplicityAnalyzerTests
                 """)
             ]);
 
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public async Task SingleSpecializationGenericParameterAnalyzer_ReportsPublicGenericTypeWhenPublicApiIncluded()
+    {
+        var diagnostics = await RunAsync(
+            new SingleSpecializationGenericParameterAnalyzer(),
+            [
+                new SourceFile("/repo/Feature.cs", """
+                namespace Demo;
+
+                public sealed class Envelope<T>
+                {
+                    public T Value { get; }
+
+                    public Envelope(T value)
+                    {
+                        Value = value;
+                    }
+                }
+
+                public static class Usage
+                {
+                    public static Envelope<string> Create() => new("hello");
+                }
+                """)
+            ],
+            globalOptions: IncludePublicApiOptions);
+
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal(SingleSpecializationGenericParameterAnalyzer.DiagnosticId, diagnostic.Id);
         Assert.Contains("Envelope<T>", diagnostic.GetMessage(), StringComparison.Ordinal);
-        Assert.Contains("string", diagnostic.GetMessage(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -692,6 +1068,60 @@ public sealed class SimplicityAnalyzerTests
                 }
                 """)
             ]);
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal(NonPrimaryPathOverReferencedAnalyzer.DiagnosticId, diagnostic.Id);
+        Assert.Contains("OrderCoordinator.cs", diagnostic.GetMessage(), StringComparison.Ordinal);
+
+        // The diagnostic points at the first type declaration's identifier, not the whole file.
+        Assert.NotNull(diagnostic.Location.SourceTree);
+        var locationText = diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan);
+        Assert.Equal("OrderCoordinator", locationText);
+    }
+
+    [Fact]
+    public async Task NonPrimaryPathOverReferencedAnalyzer_UsesConfiguredConventionFolders()
+    {
+        var diagnostics = await RunAsync(
+            new NonPrimaryPathOverReferencedAnalyzer(),
+            [
+                new SourceFile("/repo/Workflows/CheckoutFlow.cs", """
+                namespace Demo.Workflows;
+
+                public sealed class CheckoutFlow
+                {
+                }
+                """),
+                new SourceFile("/repo/Services/OrderCoordinator.cs", """
+                namespace Demo.Services;
+
+                public sealed class OrderCoordinator
+                {
+                }
+                """),
+                new SourceFile("/repo/Consumers.cs", """
+                namespace Demo;
+
+                public sealed class ConsumerA
+                {
+                    private readonly Services.OrderCoordinator _coordinator = new();
+                }
+
+                public sealed class ConsumerB
+                {
+                    private readonly Services.OrderCoordinator _coordinator = new();
+                }
+
+                public sealed class WorkflowConsumer
+                {
+                    private readonly Workflows.CheckoutFlow _flow = new();
+                }
+                """)
+            ],
+            globalOptions: new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["simplicity_first.sf0007_convention_folders"] = "Workflows"
+            });
 
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal(NonPrimaryPathOverReferencedAnalyzer.DiagnosticId, diagnostic.Id);

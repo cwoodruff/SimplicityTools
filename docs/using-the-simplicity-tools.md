@@ -458,11 +458,39 @@ The CLI watch output and HTML report both surface these verdicts directly.
 | `SF0006` | Generic parameter has only one specialization | HalfRule | No |
 | `SF0007` | Supporting file is referenced more than the primary path | PrimaryPathFirst | No |
 
-### Current thresholds baked into analyzers
+### Default severities
+
+- `SF0003`, `SF0004`, `SF0005`, `SF0007` report as **Warning**.
+- `SF0001`, `SF0002`, `SF0006` report as **Info** by default (they are advisory half-rules). Raise them with `dotnet_diagnostic.SF0001.severity = warning` (and friends) in `.editorconfig` or `.globalconfig`.
+- `SF0001` and `SF0006` skip externally visible (public) interfaces and generic definitions by default, since public API shape is often a deliberate contract. Opt back in with `simplicity_first.include_public_api = true`.
+
+### Default thresholds
 
 - `SF0003`: cyclomatic complexity over `10`
 - `SF0004`: call chain depth over `8`
 - `SF0005`: constructor parameter count over `7`
+
+### Configuring the analyzers
+
+All knobs are read from analyzer config options (`.editorconfig` or `.globalconfig`). Invalid values silently fall back to the defaults.
+
+| Key | Default | Effect |
+| --- | --- | --- |
+| `simplicity_first.sf0003_complexity_threshold` | `10` | Cyclomatic complexity limit for SF0003 |
+| `simplicity_first.sf0004_layer_threshold` | `8` | Abstraction layer depth limit for SF0004 |
+| `simplicity_first.sf0005_parameter_threshold` | `7` | Constructor parameter limit for SF0005 |
+| `simplicity_first.sf0002_excluded_packages` | empty | Comma-separated package ids SF0002 never reports |
+| `simplicity_first.sf0007_convention_folders` | `Controllers,Endpoints,Handlers,Pages` | Folder names treated as primary path by SF0007 |
+| `simplicity_first.include_public_api` | `false` | Analyze externally visible API in SF0001/SF0006 |
+
+Example `.editorconfig`:
+
+```ini
+[*.cs]
+simplicity_first.sf0003_complexity_threshold = 15
+simplicity_first.sf0002_excluded_packages = Serilog, coverlet.collector
+simplicity_first.include_public_api = true
+```
 
 ### Current code fixes
 
@@ -490,7 +518,7 @@ For another solution, the normal consumer shape is a package reference such as:
 </ItemGroup>
 ```
 
-That package is intentionally analyzer-only: it lights up Roslyn diagnostics and code fixes in the IDE/build, but it does not add compile-time library references to the consuming project.
+That package is intentionally analyzer-only: it lights up Roslyn diagnostics and code fixes in the IDE/build, but it does not add compile-time library references to the consuming project. The package also ships `build`/`buildTransitive` props that expose the consuming project's `.csproj` to the analyzers as an `AdditionalFiles` item, which is what allows `SF0002` to inspect `PackageReference` items without any file I/O.
 
 If you also want explicit primary-path annotations in application code, reference `SimplicityTools.Metrics` and use `[PrimaryPath]` on a class or method:
 
@@ -735,19 +763,19 @@ The CLI validates and uses `tca` settings from `simplicity.json`. Library consum
 
 **Diagnostics:**
 
-| ID | Rule | Category | Code Fix | Threshold |
-| --- | --- | --- | --- | --- |
-| `SF0001` | Interface has single implementation | HalfRule | ✅ Yes | N/A |
-| `SF0002` | Package reference has no symbol usage | HalfRule | ✅ Yes | N/A |
-| `SF0003` | Method is too complex for fast understanding | TwoAmTest | ❌ No | CC > 10 |
-| `SF0004` | Method call chain is too deep | PrimaryPathFirst | ❌ No | Depth > 8 |
-| `SF0005` | Constructor takes too many parameters | TwoAmTest | ❌ No | Params > 7 |
-| `SF0006` | Generic parameter has only one specialization | HalfRule | ❌ No | N/A |
-| `SF0007` | Supporting file is referenced more than primary path | PrimaryPathFirst | ❌ No | N/A |
+| ID | Rule | Category | Code Fix | Default Severity | Threshold (configurable) |
+| --- | --- | --- | --- | --- | --- |
+| `SF0001` | Interface has single implementation | HalfRule | ✅ Yes | Info | N/A |
+| `SF0002` | Package reference has no symbol usage | HalfRule | ✅ Yes | Info | N/A |
+| `SF0003` | Method is too complex for fast understanding | TwoAmTest | ❌ No | Warning | CC > 10 |
+| `SF0004` | Method call chain is too deep | PrimaryPathFirst | ❌ No | Warning | Depth > 8 |
+| `SF0005` | Constructor takes too many parameters | TwoAmTest | ❌ No | Warning | Params > 7 |
+| `SF0006` | Generic parameter has only one specialization | HalfRule | ❌ No | Info | N/A |
+| `SF0007` | Supporting file is referenced more than primary path | PrimaryPathFirst | ❌ No | Warning | N/A |
 
 **IDE experience:**
 
-- Diagnostics appear as warnings in your editor
+- Diagnostics appear as warnings or info suggestions in your editor
 - Hover over the warning to see the rule and recommendation
 - Click the lightbulb to apply code fixes (for SF0001 and SF0002)
 
@@ -767,7 +795,7 @@ public sealed class CheckoutHandler
 
 If no explicit annotations exist, the analyzer falls back to convention-based detection:
 
-- Folders named `Controllers`, `Endpoints`, `Handlers`, or `Pages`
+- Folders named `Controllers`, `Endpoints`, `Handlers`, or `Pages` (override with `simplicity_first.sf0007_convention_folders`)
 - Reference-based heuristics (classes that are heavily referenced)
 
 **When to use:** Enable in all projects to surface simplification opportunities during normal development. Combine with the CLI for team-wide dashboards.
