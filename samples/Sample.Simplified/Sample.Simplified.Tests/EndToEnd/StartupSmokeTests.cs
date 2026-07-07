@@ -19,11 +19,19 @@ public sealed class StartupSmokeTests
             WorkingDirectory = sampleRoot
         };
 
+        // Match the configuration this test assembly was built with so --no-build
+        // finds the App binaries (CI builds Release only).
+#if DEBUG
+        const string configuration = "Debug";
+#else
+        const string configuration = "Release";
+#endif
+
         startInfo.ArgumentList.Add("run");
         startInfo.ArgumentList.Add("--project");
         startInfo.ArgumentList.Add(projectPath);
         startInfo.ArgumentList.Add("--configuration");
-        startInfo.ArgumentList.Add("Debug");
+        startInfo.ArgumentList.Add(configuration);
         startInfo.ArgumentList.Add("--no-build");
 
         using var process = Process.Start(startInfo);
