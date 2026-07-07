@@ -4,27 +4,27 @@
       "name": "Sample.Simplified",
       "solutionPath": "samples/Sample.Simplified/Sample.Simplified.sln",
       "totalProjects": 2,
-      "totalFiles": 24,
+      "totalFiles": 19,
       "primaryPathFileCount": 5,
       "abstractionLayerCount": 1,
       "externalDependencyCount": 0,
       "unusedDependencyCount": 0,
       "interfacesWithSingleImplementation": 0,
       "averageMethodComplexity": 1.4,
-      "estimatedOnboardingTime": "00:00:00"
+      "estimatedOnboardingTime": null
     },
     {
       "name": "Sample.OverEngineered",
       "solutionPath": "samples/Sample.OverEngineered/Sample.OverEngineered.sln",
       "totalProjects": 12,
-      "totalFiles": 62,
+      "totalFiles": 65,
       "primaryPathFileCount": 31,
       "abstractionLayerCount": 25,
       "externalDependencyCount": 0,
       "unusedDependencyCount": 0,
       "interfacesWithSingleImplementation": 24,
       "averageMethodComplexity": 1.2,
-      "estimatedOnboardingTime": "00:00:00"
+      "estimatedOnboardingTime": null
     }
   ]
 }

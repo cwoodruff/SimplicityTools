@@ -93,7 +93,7 @@ public sealed record TcaEstimate(
 
         var coordinationAnnual = Math.Max(0, snapshot.TotalProjects - 3) * 4000m * 12m;
 
-        var cognitiveAnnual = ((decimal)snapshot.EstimatedOnboardingTime.TotalHours / 40m)
+        var cognitiveAnnual = ((decimal)(snapshot.EstimatedOnboardingTime?.TotalHours ?? 0d) / 40m)
             * inputs.AverageEngineerMonthlySalaryUsd
             * 12m
             * (inputs.AttritionCoefficientPercent / 100m)

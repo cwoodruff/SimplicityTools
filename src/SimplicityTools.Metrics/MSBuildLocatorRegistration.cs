@@ -1,19 +1,25 @@
-using System.Threading;
 using Microsoft.Build.Locator;
 
 namespace SimplicityTools.Metrics;
 
 internal static class MSBuildLocatorRegistration
 {
-    private static int initialized;
+    private static readonly object SyncLock = new();
+    private static bool initialized;
 
     public static void EnsureRegistered()
     {
-        if (Interlocked.Exchange(ref initialized, 1) == 1 || MSBuildLocator.IsRegistered)
+        lock (SyncLock)
         {
-            return;
-        }
+            if (initialized || MSBuildLocator.IsRegistered)
+            {
+                initialized = true;
+                return;
+            }
 
-        MSBuildLocator.RegisterDefaults();
+            // Only latch after a successful registration so a failed attempt can be retried.
+            MSBuildLocator.RegisterDefaults();
+            initialized = true;
+        }
     }
 }

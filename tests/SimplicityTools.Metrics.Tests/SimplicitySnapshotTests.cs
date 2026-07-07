@@ -18,7 +18,7 @@ public sealed class SimplicitySnapshotTests
         typeof(int),
         typeof(int),
         typeof(double),
-        typeof(TimeSpan),
+        typeof(TimeSpan?),
         typeof(DateTimeOffset)
     ];
 
@@ -42,7 +42,7 @@ public sealed class SimplicitySnapshotTests
             parameter => AssertParameter(parameter, "UnusedDependencyCount", typeof(int)),
             parameter => AssertParameter(parameter, "InterfacesWithSingleImplementation", typeof(int)),
             parameter => AssertParameter(parameter, "AverageMethodComplexity", typeof(double)),
-            parameter => AssertParameter(parameter, "EstimatedOnboardingTime", typeof(TimeSpan)),
+            parameter => AssertParameter(parameter, "EstimatedOnboardingTime", typeof(TimeSpan?)),
             parameter => AssertParameter(parameter, "CollectedAt", typeof(DateTimeOffset)));
 
         var publicProperties = snapshotType
@@ -74,7 +74,7 @@ public sealed class SimplicitySnapshotTests
         AssertProperty<int>(publicProperties, "UnusedDependencyCount", initOnly: true);
         AssertProperty<int>(publicProperties, "InterfacesWithSingleImplementation", initOnly: true);
         AssertProperty<double>(publicProperties, "AverageMethodComplexity", initOnly: true);
-        AssertProperty<TimeSpan>(publicProperties, "EstimatedOnboardingTime", initOnly: true);
+        AssertProperty<TimeSpan?>(publicProperties, "EstimatedOnboardingTime", initOnly: true);
         AssertProperty<DateTimeOffset>(publicProperties, "CollectedAt", initOnly: true);
         AssertProperty<double>(publicProperties, "PrimaryPathRatio", initOnly: false);
         AssertProperty<double>(publicProperties, "PrematureAbstractionRatio", initOnly: false);
@@ -154,6 +154,24 @@ public sealed class SimplicitySnapshotTests
         Assert.Equal(expected, InvokeToSummary(snapshot));
     }
 
+    [Fact]
+    public void ToSummary_AnnouncesUncomputedOnboardingTime()
+    {
+        var snapshot = CreateSnapshot(
+            totalProjects: 3,
+            totalFiles: 40,
+            primaryPathFileCount: 28,
+            abstractionLayerCount: 6,
+            externalDependencyCount: 9,
+            unusedDependencyCount: 2,
+            interfacesWithSingleImplementation: 1,
+            averageMethodComplexity: 3.0,
+            estimatedOnboardingTime: null,
+            collectedAt: new DateTimeOffset(2026, 4, 29, 15, 45, 0, TimeSpan.FromHours(-4)));
+
+        Assert.EndsWith("Est. onboarding: not computed", InvokeToSummary(snapshot), StringComparison.Ordinal);
+    }
+
     private static void AssertParameter(ParameterInfo parameter, string expectedName, Type expectedType)
     {
         Assert.Equal(expectedName, parameter.Name);
@@ -188,7 +206,7 @@ public sealed class SimplicitySnapshotTests
         int unusedDependencyCount,
         int interfacesWithSingleImplementation,
         double averageMethodComplexity,
-        TimeSpan estimatedOnboardingTime,
+        TimeSpan? estimatedOnboardingTime,
         DateTimeOffset collectedAt)
     {
         var constructor = typeof(SimplicitySnapshot).GetConstructor(ExpectedConstructorTypes);
@@ -204,7 +222,7 @@ public sealed class SimplicitySnapshotTests
             unusedDependencyCount,
             interfacesWithSingleImplementation,
             averageMethodComplexity,
-            estimatedOnboardingTime,
+            estimatedOnboardingTime!,
             collectedAt
         ]);
     }

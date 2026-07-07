@@ -1,37 +1,41 @@
-using Microsoft.Build.Construction;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.MSBuild;
 
 namespace SimplicityTools.Metrics;
 
 internal sealed class SemanticCollectionPass
 {
-    public async Task<SemanticMetrics> CollectAsync(string solutionPath, CancellationToken cancellationToken)
+    public async Task<SemanticMetrics> CollectAsync(Solution solution, IReadOnlySet<string> projectFilePaths, CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(solutionPath);
+        ArgumentNullException.ThrowIfNull(solution);
+        ArgumentNullException.ThrowIfNull(projectFilePaths);
 
-        await SolutionRestoreCoordinator.RestoreIfNeededAsync(solutionPath, cancellationToken).ConfigureAwait(false);
-
-        using var workspace = MSBuildWorkspace.Create();
-        var solution = await workspace.OpenSolutionAsync(Path.GetFullPath(solutionPath), cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        var abstractionLayers = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
-        var implementationMap = new Dictionary<INamedTypeSymbol, HashSet<INamedTypeSymbol>>(SymbolEqualityComparer.Default);
+        // Keys are compilation-independent identities (assembly + fully-qualified name) so the
+        // same interface or implementation seen from sibling-TFM compilations counts once and
+        // cross-project matches survive metadata-reference fallback.
+        var abstractionLayers = new HashSet<string>(StringComparer.Ordinal);
+        var implementationMap = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
         var methodComplexities = new List<int>();
         var declaredPackages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var usedPackages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var project in solution.Projects.Where(ShouldAnalyzeProject))
+        foreach (var project in SelectAnalyzableProjects(solution, projectFilePaths))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException($"Could not build a Roslyn compilation for '{project.FilePath ?? project.Name}'.");
 
-            var projectPackages = GetDeclaredPackageReferences(project.FilePath);
-            declaredPackages.UnionWith(projectPackages);
-            usedPackages.UnionWith(ResolveUsedPackages(compilation, projectPackages, cancellationToken));
+            var packageAssets = PackageAssetsReader.TryRead(project.FilePath);
+            if (packageAssets is not null)
+            {
+                declaredPackages.UnionWith(packageAssets.DeclaredPackageIds);
+
+                // Analyzer, build-asset, placeholder, and meta-packages contribute no compile
+                // assembly; "no detected symbol usage" is meaningless for them.
+                usedPackages.UnionWith(packageAssets.BuildOnlyPackageIds);
+                usedPackages.UnionWith(ResolveUsedPackages(compilation, packageAssets.AssemblyNamesByPackageId, cancellationToken));
+            }
 
             foreach (var type in EnumerateNamedTypes(compilation.Assembly.GlobalNamespace))
             {
@@ -42,11 +46,11 @@ internal sealed class SemanticCollectionPass
                     continue;
                 }
 
-                var originalDefinition = type.OriginalDefinition;
+                var typeIdentity = GetSymbolIdentity(type);
                 if (type.TypeKind == TypeKind.Interface)
                 {
-                    abstractionLayers.Add(originalDefinition);
-                    implementationMap.TryAdd(originalDefinition, []);
+                    abstractionLayers.Add(typeIdentity);
+                    implementationMap.TryAdd(typeIdentity, []);
                     continue;
                 }
 
@@ -57,14 +61,14 @@ internal sealed class SemanticCollectionPass
 
                 foreach (var implementedInterface in type.AllInterfaces)
                 {
-                    var interfaceDefinition = implementedInterface.OriginalDefinition;
-                    if (!implementationMap.TryGetValue(interfaceDefinition, out var implementations))
+                    var interfaceIdentity = GetSymbolIdentity(implementedInterface);
+                    if (!implementationMap.TryGetValue(interfaceIdentity, out var implementations))
                     {
                         implementations = [];
-                        implementationMap.Add(interfaceDefinition, implementations);
+                        implementationMap.Add(interfaceIdentity, implementations);
                     }
 
-                    implementations.Add(originalDefinition);
+                    implementations.Add(typeIdentity);
                 }
             }
 
@@ -78,15 +82,32 @@ internal sealed class SemanticCollectionPass
 
         return new SemanticMetrics(
             abstractionLayers.Count,
-            abstractionLayers.Count(interfaceType => implementationMap.TryGetValue(interfaceType, out var implementations) && implementations.Count == 1),
+            abstractionLayers.Count(interfaceIdentity => implementationMap.TryGetValue(interfaceIdentity, out var implementations) && implementations.Count == 1),
             methodComplexities.Count > 0 ? methodComplexities.Average() : 0d,
             declaredPackages.Count,
             declaredPackages.Count(packageId => !usedPackages.Contains(packageId)));
     }
 
-    private static bool ShouldAnalyzeProject(Project project)
+    /// <summary>
+    /// Selects the projects to analyze: declared by the solution (the workspace also loads
+    /// project-referenced projects from outside it), not test projects, and — because a
+    /// multi-targeted project appears in the workspace once per target framework — one workspace
+    /// instance per project file so nothing double-counts.
+    /// </summary>
+    internal static IEnumerable<Project> SelectAnalyzableProjects(Solution solution, IReadOnlySet<string> projectFilePaths)
     {
-        return !SourceFileConventions.IsTestProject(project.FilePath, project.Name);
+        return solution.Projects
+            .Where(project => project.FilePath is not null && projectFilePaths.Contains(project.FilePath))
+            .Where(project => !SourceFileConventions.IsTestProject(project.FilePath, project.Name))
+            .GroupBy(project => project.FilePath!, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First());
+    }
+
+    private static string GetSymbolIdentity(INamedTypeSymbol type)
+    {
+        var definition = type.OriginalDefinition;
+        var assemblyName = definition.ContainingAssembly?.Identity.Name ?? string.Empty;
+        return $"{assemblyName}|{definition.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}";
     }
 
     private static bool ShouldAnalyzeSyntaxTree(SyntaxTree syntaxTree)
@@ -138,36 +159,16 @@ internal sealed class SemanticCollectionPass
                type.AllInterfaces.Length > 0;
     }
 
-    private static IReadOnlySet<string> GetDeclaredPackageReferences(string? projectPath)
-    {
-        if (string.IsNullOrWhiteSpace(projectPath) || !File.Exists(projectPath))
-        {
-            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        }
-
-        var projectRoot = ProjectRootElement.Open(projectPath)
-            ?? throw new InvalidOperationException($"Could not load project '{projectPath}'.");
-
-        return projectRoot.Items
-            .Where(item => string.Equals(item.ItemType, "PackageReference", StringComparison.OrdinalIgnoreCase))
-            .Select(item => item.Include)
-            .Where(include => !string.IsNullOrWhiteSpace(include))
-            .Select(include => include!.Trim())
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-    }
-
     private static IReadOnlySet<string> ResolveUsedPackages(
         Compilation compilation,
-        IReadOnlyCollection<string> declaredPackages,
+        IReadOnlyDictionary<string, IReadOnlySet<string>> assemblyNamesByPackageId,
         CancellationToken cancellationToken)
     {
-        if (declaredPackages.Count == 0)
-        {
-            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        }
-
-        var packageLookup = BuildPackageLookup(compilation, declaredPackages);
         var usedPackages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (assemblyNamesByPackageId.Count == 0)
+        {
+            return usedPackages;
+        }
 
         foreach (var syntaxTree in compilation.SyntaxTrees.Where(ShouldAnalyzeSyntaxTree))
         {
@@ -176,22 +177,12 @@ internal sealed class SemanticCollectionPass
             var semanticModel = compilation.GetSemanticModel(syntaxTree);
             var root = syntaxTree.GetRoot(cancellationToken);
 
-            foreach (var usingDirective in root.DescendantNodes().OfType<UsingDirectiveSyntax>())
-            {
-                if (usingDirective.Name is not null)
-                {
-                    MarkUsedByNamespace(packageLookup, usedPackages, usingDirective.Name.ToString());
-                    MarkUsedBySymbol(packageLookup, usedPackages, semanticModel.GetSymbolInfo(usingDirective.Name, cancellationToken));
-                }
-            }
-
             foreach (var name in root.DescendantNodes().OfType<NameSyntax>())
             {
-                MarkUsedByNamespace(packageLookup, usedPackages, name.ToString());
-                MarkUsedBySymbol(packageLookup, usedPackages, semanticModel.GetSymbolInfo(name, cancellationToken));
+                MarkUsedBySymbol(assemblyNamesByPackageId, usedPackages, semanticModel.GetSymbolInfo(name, cancellationToken));
             }
 
-            if (usedPackages.Count == packageLookup.Count)
+            if (usedPackages.Count == assemblyNamesByPackageId.Count)
             {
                 break;
             }
@@ -200,86 +191,8 @@ internal sealed class SemanticCollectionPass
         return usedPackages;
     }
 
-    private static Dictionary<string, PackageUsageInfo> BuildPackageLookup(Compilation compilation, IReadOnlyCollection<string> declaredPackages)
-    {
-        var packageLookup = declaredPackages.ToDictionary(
-            packageId => packageId,
-            packageId => new PackageUsageInfo(),
-            StringComparer.OrdinalIgnoreCase);
-
-        foreach (var reference in compilation.References.OfType<PortableExecutableReference>())
-        {
-            if (string.IsNullOrWhiteSpace(reference.FilePath))
-            {
-                continue;
-            }
-
-            foreach (var packageId in declaredPackages)
-            {
-                if (!IsReferenceFromPackage(reference.FilePath, packageId))
-                {
-                    continue;
-                }
-
-                if (compilation.GetAssemblyOrModuleSymbol(reference) is not IAssemblySymbol assemblySymbol)
-                {
-                    continue;
-                }
-
-                packageLookup[packageId].AssemblyNames.Add(assemblySymbol.Identity.Name);
-                CollectNamespaces(assemblySymbol.GlobalNamespace, packageLookup[packageId].Namespaces);
-            }
-        }
-
-        return packageLookup;
-    }
-
-    private static bool IsReferenceFromPackage(string filePath, string packageId)
-    {
-        var normalizedPath = filePath.Replace('\\', '/');
-        var normalizedPackageId = packageId.ToLowerInvariant();
-        return normalizedPath.Contains($"/.nuget/packages/{normalizedPackageId}/", StringComparison.OrdinalIgnoreCase) ||
-               normalizedPath.Contains($"/packages/{normalizedPackageId}/", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static void CollectNamespaces(INamespaceSymbol namespaceSymbol, ISet<string> namespaces)
-    {
-        foreach (var nestedNamespace in namespaceSymbol.GetNamespaceMembers())
-        {
-            if (!nestedNamespace.IsGlobalNamespace)
-            {
-                namespaces.Add(nestedNamespace.ToDisplayString());
-            }
-
-            CollectNamespaces(nestedNamespace, namespaces);
-        }
-    }
-
-    private static void MarkUsedByNamespace(
-        IReadOnlyDictionary<string, PackageUsageInfo> packageLookup,
-        ISet<string> usedPackages,
-        string namespaceText)
-    {
-        if (string.IsNullOrWhiteSpace(namespaceText))
-        {
-            return;
-        }
-
-        var normalizedNamespace = namespaceText.Replace("global::", string.Empty, StringComparison.Ordinal);
-        foreach (var entry in packageLookup)
-        {
-            if (entry.Value.Namespaces.Any(packageNamespace =>
-                    string.Equals(packageNamespace, normalizedNamespace, StringComparison.Ordinal) ||
-                    packageNamespace.StartsWith(normalizedNamespace + ".", StringComparison.Ordinal) ||
-                    normalizedNamespace.StartsWith(packageNamespace + ".", StringComparison.Ordinal)))
-            {
-                usedPackages.Add(entry.Key);
-            }
-        }
-    }
-
     private static void MarkUsedBySymbol(
-        IReadOnlyDictionary<string, PackageUsageInfo> packageLookup,
+        IReadOnlyDictionary<string, IReadOnlySet<string>> assemblyNamesByPackageId,
         ISet<string> usedPackages,
         SymbolInfo symbolInfo)
     {
@@ -290,9 +203,9 @@ internal sealed class SemanticCollectionPass
             return;
         }
 
-        foreach (var entry in packageLookup)
+        foreach (var entry in assemblyNamesByPackageId)
         {
-            if (entry.Value.AssemblyNames.Contains(assemblyName))
+            if (entry.Value.Contains(assemblyName))
             {
                 usedPackages.Add(entry.Key);
             }
@@ -318,11 +231,4 @@ internal sealed class SemanticCollectionPass
         double AverageMethodComplexity,
         int ExternalDependencyCount,
         int UnusedDependencyCount);
-
-    private sealed class PackageUsageInfo
-    {
-        public HashSet<string> AssemblyNames { get; } = new(StringComparer.OrdinalIgnoreCase);
-
-        public HashSet<string> Namespaces { get; } = new(StringComparer.Ordinal);
-    }
 }
