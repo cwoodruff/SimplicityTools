@@ -22,7 +22,7 @@ public sealed class HighComplexityAnalyzer : DiagnosticAnalyzer
         helpLinkUri: "https://simplicitytools.dev/analyzers/sf0003/",
         description: "Methods that exceed the agreed cyclomatic complexity threshold are hard to reason about under pressure.");
 
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
     public override void Initialize(AnalysisContext context)
     {

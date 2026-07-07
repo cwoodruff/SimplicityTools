@@ -3,7 +3,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
+    <LangVersion>latest</LangVersion>
     <PackageId>SimplicityTools.Analyzers</PackageId>
     <PackageType>Analyzer</PackageType>
     <Description>Roslyn analyzer package for Simplicity-First diagnostics.</Description>
@@ -11,14 +11,9 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <EnforceExtendedAnalyzerRules>false</EnforceExtendedAnalyzerRules>
-    <!--
-      RS1038: the code fix providers ship in this same assembly and need
-      Microsoft.CodeAnalysis.Workspaces. Command-line compilations load the analyzers fine because
-      the workspaces types are only touched from the code-fix paths, which never run there.
-      Removing this suppression would require splitting the package into separate analyzer and
-      code-fix assemblies.
-    -->
-    <NoWarn>$(NoWarn);RS1038</NoWarn>
+    <!-- Symbols are embedded in the shipped assemblies; no loose pdb or snupkg. -->
+    <DebugType>embedded</DebugType>
+    <IncludeSymbols>false</IncludeSymbols>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,10 +26,12 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0">
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0">
+    <!--
+      Compile against the oldest Roslyn whose APIs the analyzers use so older SDK/VS hosts
+      can load the shipped assemblies (CS9057). The dependency stays PrivateAssets-only; the
+      package declares no NuGet dependencies.
+    -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.4.0">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
@@ -44,10 +41,21 @@
     <None Include="buildTransitive/SimplicityTools.Analyzers.props" Pack="true" PackagePath="build/" />
   </ItemGroup>
 
+  <!--
+    Both the analyzer assembly and the code-fix assembly ship in analyzers/dotnet/cs of this
+    single package, per the standard Roslyn analyzer/code-fix split. The code-fix project is
+    built on demand here (a ProjectReference would be circular for build ordering) and its
+    output packed alongside this assembly.
+  -->
   <Target Name="PackRoslynAnalyzerArtifacts" BeforeTargets="_GetPackageFiles">
+    <MSBuild Projects="../SimplicityTools.Analyzers.CodeFixes/SimplicityTools.Analyzers.CodeFixes.csproj"
+             Targets="Build"
+             Properties="Configuration=$(Configuration)">
+      <Output TaskParameter="TargetOutputs" ItemName="_SimplicityCodeFixAssembly" />
+    </MSBuild>
     <ItemGroup>
       <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-      <None Include="$(OutputPath)$(AssemblyName).pdb" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" Condition="Exists('$(OutputPath)$(AssemblyName).pdb')" />
+      <None Include="@(_SimplicityCodeFixAssembly)" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     </ItemGroup>
   </Target>
 

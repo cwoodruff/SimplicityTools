@@ -21,7 +21,7 @@ public sealed class ConstructorParameterCountAnalyzer : DiagnosticAnalyzer
         helpLinkUri: "https://simplicitytools.dev/analyzers/sf0005/",
         description: "Large constructor parameter lists are a strong signal that a type is doing too much.");
 
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
     public override void Initialize(AnalysisContext context)
     {

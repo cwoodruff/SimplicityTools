@@ -21,7 +21,7 @@ public sealed class SingleSpecializationGenericParameterAnalyzer : DiagnosticAna
         description: "A generic parameter that is only ever bound to one concrete type is indirection without flexibility.",
         customTags: [WellKnownDiagnosticTags.CompilationEnd]);
 
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
     public override void Initialize(AnalysisContext context)
     {
@@ -63,12 +63,12 @@ public sealed class SingleSpecializationGenericParameterAnalyzer : DiagnosticAna
             case INamedTypeSymbol namedType when namedType.Arity > 0 &&
                                                  namedType.TypeKind != TypeKind.Delegate &&
                                                  IsDeclaredInCountableFile(namedType):
-                genericDefinitions.TryAdd(namedType, [.. namedType.TypeParameters]);
+                genericDefinitions.TryAdd(namedType, namedType.TypeParameters);
                 break;
             case IMethodSymbol method when method.Arity > 0 &&
                                            method.MethodKind == MethodKind.Ordinary &&
                                            IsDeclaredInCountableFile(method):
-                genericDefinitions.TryAdd(method, [.. method.TypeParameters]);
+                genericDefinitions.TryAdd(method, method.TypeParameters);
                 break;
         }
     }

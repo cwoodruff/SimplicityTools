@@ -11,7 +11,7 @@ namespace SimplicityTools.Analyzers.CodeFixes;
 [Shared]
 public sealed class UnusedDependencyCodeFixProvider : CodeFixProvider
 {
-    public override ImmutableArray<string> FixableDiagnosticIds => [UnusedDependencyAnalyzer.DiagnosticId];
+    public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(UnusedDependencyAnalyzer.DiagnosticId);
 
     // The batch fixer merges text changes against the original csproj text, so overlapping
     // multi-package removals effectively apply one package at a time. This is documented

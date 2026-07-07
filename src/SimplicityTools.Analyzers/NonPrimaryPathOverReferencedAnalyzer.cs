@@ -22,7 +22,7 @@ public sealed class NonPrimaryPathOverReferencedAnalyzer : DiagnosticAnalyzer
         description: "When supporting files become more referenced than primary-path files, the real business flow is no longer obvious.",
         customTags: [WellKnownDiagnosticTags.CompilationEnd]);
 
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
     public override void Initialize(AnalysisContext context)
     {

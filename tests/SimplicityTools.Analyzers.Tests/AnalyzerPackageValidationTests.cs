@@ -18,10 +18,18 @@ public sealed class AnalyzerPackageValidationTests
         {
             var entries = archive.Entries.Select(static entry => entry.FullName).ToArray();
 
+            // The analyzer and its code fixes ship as two assemblies in the same package:
+            // the analyzer assembly must load without Microsoft.CodeAnalysis.Workspaces in
+            // command-line compilations, while the code-fix assembly carries the
+            // workspaces-dependent providers for IDE hosts.
             Assert.Contains("analyzers/dotnet/cs/SimplicityTools.Analyzers.dll", entries);
+            Assert.Contains("analyzers/dotnet/cs/SimplicityTools.Analyzers.CodeFixes.dll", entries);
             Assert.Contains("build/SimplicityTools.Analyzers.props", entries);
             Assert.Contains("buildTransitive/SimplicityTools.Analyzers.props", entries);
             Assert.DoesNotContain(entries, static entry => entry.StartsWith("lib/", StringComparison.Ordinal));
+            // Symbols are embedded (DebugType=embedded); no loose pdb files ship.
+            Assert.DoesNotContain(entries, static entry => entry.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase));
+            Assert.Equal(2, entries.Count(static entry => entry.StartsWith("analyzers/", StringComparison.Ordinal) && entry.EndsWith(".dll", StringComparison.Ordinal)));
 
             var nuspecEntry = archive.GetEntry("SimplicityTools.Analyzers.nuspec");
             Assert.NotNull(nuspecEntry);
@@ -106,6 +114,10 @@ public sealed class AnalyzerPackageValidationTests
         var buildOutput = $"{build.StandardOutput}{Environment.NewLine}{build.StandardError}";
         Assert.Contains("warning SF0001", buildOutput, StringComparison.Ordinal);
         Assert.Contains("warning SF0002", buildOutput, StringComparison.Ordinal);
+        // The code-fix assembly (which references Microsoft.CodeAnalysis.Workspaces) must not
+        // produce analyzer-load failures in a command-line compilation.
+        Assert.DoesNotContain("warning CS8032", buildOutput, StringComparison.Ordinal);
+        Assert.DoesNotContain("warning CS8034", buildOutput, StringComparison.Ordinal);
 
         using var assets = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(consumerDirectory, "obj", "project.assets.json")));
         var targetPackage = assets.RootElement

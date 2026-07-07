@@ -2,7 +2,7 @@ using Microsoft.CodeAnalysis;
 
 namespace SimplicityTools.Analyzers;
 
-internal static class SymbolVisibility
+public static class SymbolVisibility
 {
     /// <summary>
     /// Returns true when the symbol's effective accessibility makes it visible outside its

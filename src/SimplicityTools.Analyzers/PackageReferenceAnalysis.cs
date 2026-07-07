@@ -7,9 +7,9 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace SimplicityTools.Analyzers;
 
-internal static class PackageReferenceAnalysis
+public static class PackageReferenceAnalysis
 {
-    internal const string PackageIdPropertyName = "PackageId";
+    public const string PackageIdPropertyName = "PackageId";
 
     public static ImmutableArray<PackageReferenceInfo> CollectPackageReferences(AnalyzerOptions options)
     {
@@ -18,7 +18,7 @@ internal static class PackageReferenceAnalysis
             return ParsePackageReferences(projectPath, sourceText);
         }
 
-        return [];
+        return ImmutableArray<PackageReferenceInfo>.Empty;
     }
 
     public static ImmutableDictionary<string, ImmutableArray<IAssemblySymbol>> MapPackagesToAssemblies(Compilation compilation)
@@ -48,7 +48,7 @@ internal static class PackageReferenceAnalysis
 
         foreach (var pair in buckets)
         {
-            builder[pair.Key] = [.. new HashSet<IAssemblySymbol>(pair.Value, SymbolEqualityComparer.Default)];
+            builder[pair.Key] = ImmutableArray.CreateRange(new HashSet<IAssemblySymbol>(pair.Value, SymbolEqualityComparer.Default));
         }
 
         return builder.ToImmutable();
@@ -65,11 +65,11 @@ internal static class PackageReferenceAnalysis
                 var key = assembly.Identity.ToString();
                 if (!packageIdsByAssemblyIdentity.TryGetValue(key, out var packageIds))
                 {
-                    packageIdsByAssemblyIdentity[key] = [pair.Key];
+                    packageIdsByAssemblyIdentity[key] = ImmutableArray.Create(pair.Key);
                     continue;
                 }
 
-                packageIdsByAssemblyIdentity[key] = [.. packageIds.Add(pair.Key)];
+                packageIdsByAssemblyIdentity[key] = packageIds.Add(pair.Key);
             }
         }
 
@@ -156,7 +156,7 @@ internal static class PackageReferenceAnalysis
         }
         catch (XmlException)
         {
-            return [];
+            return ImmutableArray<PackageReferenceInfo>.Empty;
         }
 
         var builder = ImmutableArray.CreateBuilder<PackageReferenceInfo>();
@@ -373,4 +373,4 @@ internal static class PackageReferenceAnalysis
         => packageId.Trim().ToLowerInvariant();
 }
 
-internal sealed record PackageReferenceInfo(string PackageId, string NormalizedPackageId, Location Location);
+public sealed record PackageReferenceInfo(string PackageId, string NormalizedPackageId, Location Location);

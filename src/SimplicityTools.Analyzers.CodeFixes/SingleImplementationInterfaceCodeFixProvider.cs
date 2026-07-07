@@ -21,7 +21,7 @@ public sealed class SingleImplementationInterfaceCodeFixProvider : CodeFixProvid
     /// </summary>
     private static readonly SyntaxAnnotation DependencyInjectionReviewAnnotation = new("SimplicityTools.SF0001.DependencyInjectionReview");
 
-    public override ImmutableArray<string> FixableDiagnosticIds => [SingleImplementationInterfaceAnalyzer.DiagnosticId];
+    public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(SingleImplementationInterfaceAnalyzer.DiagnosticId);
 
     public override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 
@@ -244,7 +244,7 @@ public sealed class SingleImplementationInterfaceCodeFixProvider : CodeFixProvid
     {
         if (DocumentationCommentId.GetFirstSymbolForDeclarationId(interfaceIdentity.DeclarationId, compilation) is not INamedTypeSymbol interfaceSymbol)
         {
-            return [];
+            return ImmutableArray<InterfaceMemberTemplate>.Empty;
         }
 
         var builder = ImmutableArray.CreateBuilder<InterfaceMemberTemplate>();

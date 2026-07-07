@@ -6,7 +6,7 @@ namespace SimplicityTools.Analyzers;
 internal static class PrimaryPathConventions
 {
     public static readonly System.Collections.Immutable.ImmutableArray<string> DefaultConventionalSegments =
-        ["Controllers", "Endpoints", "Handlers", "Pages"];
+        System.Collections.Immutable.ImmutableArray.Create("Controllers", "Endpoints", "Handlers", "Pages");
 
     public static bool IsPrimaryPathAnnotated(SyntaxNode root, SemanticModel semanticModel, CancellationToken cancellationToken)
     {
