@@ -61,6 +61,18 @@ public sealed class AnalyzerPackageValidationTests
             </Project>
             """);
 
+        // SF0001/SF0002 default to Info severity and SF0001 skips public API by default;
+        // raise them to warnings and opt into public API analysis so the build log proves
+        // both the analyzers and their configuration knobs work in a real consumer.
+        await File.WriteAllTextAsync(
+            Path.Combine(consumerDirectory, ".globalconfig"),
+            """
+            is_global = true
+            simplicity_first.include_public_api = true
+            dotnet_diagnostic.SF0001.severity = warning
+            dotnet_diagnostic.SF0002.severity = warning
+            """);
+
         await File.WriteAllTextAsync(
             Path.Combine(consumerDirectory, "Feature.cs"),
             """

@@ -5,7 +5,8 @@ namespace SimplicityTools.Analyzers;
 
 internal static class PrimaryPathConventions
 {
-    private static readonly string[] ConventionalSegments = ["Controllers", "Endpoints", "Handlers", "Pages"];
+    public static readonly System.Collections.Immutable.ImmutableArray<string> DefaultConventionalSegments =
+        ["Controllers", "Endpoints", "Handlers", "Pages"];
 
     public static bool IsPrimaryPathAnnotated(SyntaxNode root, SemanticModel semanticModel, CancellationToken cancellationToken)
     {
@@ -23,10 +24,10 @@ internal static class PrimaryPathConventions
         return false;
     }
 
-    public static bool MatchesPrimaryPathConvention(string? filePath)
+    public static bool MatchesPrimaryPathConvention(string? filePath, System.Collections.Immutable.ImmutableArray<string> conventionalSegments)
     {
         return filePath is not null &&
                !string.IsNullOrWhiteSpace(filePath) &&
-               ConventionalSegments.Any(segment => AnalyzerSourceFileConventions.ContainsDirectorySegment(filePath, segment));
+               conventionalSegments.Any(segment => AnalyzerSourceFileConventions.ContainsDirectorySegment(filePath, segment));
     }
 }

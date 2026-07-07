@@ -14,7 +14,7 @@ public sealed class SingleImplementationInterfaceAnalyzer : DiagnosticAnalyzer
         title: "Interface has single implementation",
         messageFormat: "Interface {0} has exactly one non-abstract implementation: {1}. Remove the interface and use the concrete type directly.",
         category: AnalyzerCategories.HalfRule,
-        defaultSeverity: DiagnosticSeverity.Warning,
+        defaultSeverity: DiagnosticSeverity.Info,
         isEnabledByDefault: true,
         helpLinkUri: "https://simplicitytools.dev/analyzers/sf0001/",
         description: "Interfaces with a single concrete implementation add indirection without buying polymorphism.");
@@ -41,6 +41,16 @@ public sealed class SingleImplementationInterfaceAnalyzer : DiagnosticAnalyzer
         if (context.Symbol is not INamedTypeSymbol interfaceSymbol ||
             interfaceSymbol.TypeKind != TypeKind.Interface ||
             !interfaceSymbol.Locations.Any(static location => location.IsInSource))
+        {
+            return;
+        }
+
+        if (SymbolVisibility.IsExternallyVisible(interfaceSymbol) &&
+            !AnalyzerOptionReader.GetFlag(
+                context.Options,
+                AnalyzerOptionReader.GetDeclaringTree(interfaceSymbol),
+                AnalyzerOptionReader.IncludePublicApiKey,
+                defaultValue: false))
         {
             return;
         }

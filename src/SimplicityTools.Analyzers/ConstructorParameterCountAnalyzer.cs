@@ -7,14 +7,14 @@ namespace SimplicityTools.Analyzers;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class ConstructorParameterCountAnalyzer : DiagnosticAnalyzer
 {
-    private const int ParameterThreshold = 7;
+    internal const int DefaultParameterThreshold = 7;
 
     public const string DiagnosticId = "SF0005";
 
     public static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticId,
         title: "Constructor takes too many parameters",
-        messageFormat: "Constructor on {0} takes {1} parameters, exceeding the limit of 7",
+        messageFormat: "Constructor on {0} takes {1} parameters, exceeding the limit of {2}",
         category: AnalyzerCategories.TwoAmTest,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
@@ -39,13 +39,19 @@ public sealed class ConstructorParameterCountAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        foreach (var constructor in namedType.InstanceConstructors.Where(static constructor => !constructor.IsImplicitlyDeclared && constructor.Parameters.Length > ParameterThreshold))
+        var threshold = AnalyzerOptionReader.GetThreshold(
+            context.Options,
+            AnalyzerOptionReader.GetDeclaringTree(namedType),
+            AnalyzerOptionReader.ParameterThresholdKey,
+            DefaultParameterThreshold);
+        foreach (var constructor in namedType.InstanceConstructors.Where(constructor => !constructor.IsImplicitlyDeclared && constructor.Parameters.Length > threshold))
         {
             context.ReportDiagnostic(Diagnostic.Create(
                 Rule,
                 constructor.Locations[0],
                 namedType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
-                constructor.Parameters.Length));
+                constructor.Parameters.Length,
+                threshold));
         }
     }
 }
