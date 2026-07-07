@@ -25,9 +25,15 @@ public static class TwoAmTestEvaluator
     {
         ArgumentNullException.ThrowIfNull(thresholds);
 
+        // Discoverability measures primary-path files per project — “can one flow be traced
+        // through at most ~5 files at 2 AM.” An absolute file cap would penalize exactly the
+        // concentration PrimaryPathFirst rewards, making the two filters mathematically
+        // incompatible for any solution above ~8 files (issue #90).
+        var primaryPathFilesPerProject = (double)snapshot.PrimaryPathFileCount / Math.Max(1, snapshot.TotalProjects);
+
         var subScores = new List<FilterSubScore>
         {
-            new("Discoverability", FilterScoring.InverseThreshold(snapshot.PrimaryPathFileCount, 5.0)),
+            new("Discoverability", FilterScoring.InverseThreshold(primaryPathFilesPerProject, 5.0)),
             new("Diagnosability", FilterScoring.InverseThreshold(snapshot.AverageMethodComplexity, thresholds.MaxMethodComplexity)),
             new("Fixability", FilterScoring.RatioThreshold(snapshot.AbstractionLayerCount, snapshot.TotalProjects, 3.0))
         };
@@ -45,14 +51,14 @@ public static class TwoAmTestEvaluator
             subScores,
             new Dictionary<string, string>
             {
-                ["Discoverability"] = "Primary-path navigation exceeds the 2 AM target of five files.",
+                ["Discoverability"] = "Primary-path navigation exceeds the 2 AM target of five files per project.",
                 ["Diagnosability"] = "Average method complexity is above the 2 AM target of five.",
                 ["Fixability"] = "Abstraction layers per project make fixes harder than the 2 AM target.",
                 ["Cognitive load"] = "Estimated onboarding time is above the 2 AM target of 40 hours."
             },
             new Dictionary<string, string>
             {
-                ["Discoverability"] = "Reduce the number of files on the primary path so the main flow is easier to trace.",
+                ["Discoverability"] = "Reduce the primary-path files carried by each project so one flow stays traceable.",
                 ["Diagnosability"] = "Break up complex methods until average complexity trends back toward five or lower.",
                 ["Fixability"] = "Collapse unnecessary abstraction layers so each project has fewer moving parts to change.",
                 ["Cognitive load"] = "Trim indirection and spread so onboarding can stay within roughly one work week."

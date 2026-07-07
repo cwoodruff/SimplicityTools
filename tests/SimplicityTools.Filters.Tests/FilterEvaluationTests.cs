@@ -101,6 +101,45 @@ public sealed class FilterEvaluationTests
     }
 
     [Fact]
+    public void TwoAmTestAndPrimaryPathFirst_CanBothScorePerfect_OnLargeConcentratedSolutions()
+    {
+        // 100 files, 60 on the primary path, spread across 12 projects: exactly the shape
+        // PrimaryPathFirst's concentration sub-score rewards. Discoverability must not collapse
+        // just because the solution is large (issue #90: the old absolute 5-file target made the
+        // two filters mathematically contradictory above ~8 files).
+        var snapshot = CreateSnapshot(
+            totalProjects: 12,
+            totalFiles: 100,
+            primaryPathFileCount: 60,
+            abstractionLayerCount: 0,
+            averageMethodComplexity: 2,
+            estimatedOnboardingTime: TimeSpan.FromHours(10));
+
+        var twoAm = TwoAmTestEvaluator.Evaluate(snapshot);
+        var primaryPathFirst = PrimaryPathFirstEvaluator.Evaluate(snapshot);
+
+        Assert.Equal(1.0, Assert.Single(twoAm.SubScores, subScore => subScore.Name == "Discoverability").Score);
+        Assert.Equal(1.0, Assert.Single(primaryPathFirst.SubScores, subScore => subScore.Name == "Primary path concentration").Score);
+    }
+
+    [Fact]
+    public void Discoverability_PenalizesBloatedPrimaryPathPerProject()
+    {
+        // 2 projects carrying 20 primary-path files (10 per project, target is 5 per project).
+        var snapshot = CreateSnapshot(
+            totalProjects: 2,
+            totalFiles: 30,
+            primaryPathFileCount: 20,
+            abstractionLayerCount: 0,
+            averageMethodComplexity: 2,
+            estimatedOnboardingTime: TimeSpan.FromHours(10));
+
+        var verdict = TwoAmTestEvaluator.Evaluate(snapshot);
+
+        Assert.Equal(0.5, Assert.Single(verdict.SubScores, subScore => subScore.Name == "Discoverability").Score);
+    }
+
+    [Fact]
     public void Evaluators_HonorCustomThresholds()
     {
         // Perfect under the defaults.
