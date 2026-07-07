@@ -6,9 +6,10 @@ namespace SimplicityTools.Metrics;
 
 internal sealed class SemanticCollectionPass
 {
-    public async Task<SemanticMetrics> CollectAsync(Solution solution, CancellationToken cancellationToken)
+    public async Task<SemanticMetrics> CollectAsync(Solution solution, IReadOnlySet<string> projectFilePaths, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(solution);
+        ArgumentNullException.ThrowIfNull(projectFilePaths);
 
         // Keys are compilation-independent identities (assembly + fully-qualified name) so the
         // same interface or implementation seen from sibling-TFM compilations counts once and
@@ -19,7 +20,7 @@ internal sealed class SemanticCollectionPass
         var declaredPackages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var usedPackages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var project in SelectOneTargetFrameworkPerProject(solution.Projects.Where(ShouldAnalyzeProject)))
+        foreach (var project in SelectAnalyzableProjects(solution, projectFilePaths))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -81,19 +82,18 @@ internal sealed class SemanticCollectionPass
             declaredPackages.Count(packageId => !usedPackages.Contains(packageId)));
     }
 
-    private static bool ShouldAnalyzeProject(Project project)
-    {
-        return !SourceFileConventions.IsTestProject(project.FilePath, project.Name);
-    }
-
     /// <summary>
-    /// A multi-targeted project appears in the workspace once per target framework; analyzing
-    /// every instance double-counts each metric, so only the first instance is analyzed.
+    /// Selects the projects to analyze: declared by the solution (the workspace also loads
+    /// project-referenced projects from outside it), not test projects, and — because a
+    /// multi-targeted project appears in the workspace once per target framework — one workspace
+    /// instance per project file so nothing double-counts.
     /// </summary>
-    internal static IEnumerable<Project> SelectOneTargetFrameworkPerProject(IEnumerable<Project> projects)
+    internal static IEnumerable<Project> SelectAnalyzableProjects(Solution solution, IReadOnlySet<string> projectFilePaths)
     {
-        return projects
-            .GroupBy(project => project.FilePath ?? project.Name, StringComparer.OrdinalIgnoreCase)
+        return solution.Projects
+            .Where(project => project.FilePath is not null && projectFilePaths.Contains(project.FilePath))
+            .Where(project => !SourceFileConventions.IsTestProject(project.FilePath, project.Name))
+            .GroupBy(project => project.FilePath!, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First());
     }
 

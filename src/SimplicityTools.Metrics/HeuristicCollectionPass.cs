@@ -6,12 +6,13 @@ namespace SimplicityTools.Metrics;
 
 internal sealed class HeuristicCollectionPass
 {
-    public async Task<int> CollectPrimaryPathFileCountAsync(Solution solution, CancellationToken cancellationToken)
+    public async Task<HeuristicMetrics> CollectAsync(Solution solution, IReadOnlySet<string> projectFilePaths, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(solution);
+        ArgumentNullException.ThrowIfNull(projectFilePaths);
 
         var documents = new List<DocumentHeuristicInfo>();
-        foreach (var project in SemanticCollectionPass.SelectOneTargetFrameworkPerProject(solution.Projects.Where(ShouldAnalyzeProject)))
+        foreach (var project in SemanticCollectionPass.SelectAnalyzableProjects(solution, projectFilePaths))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -22,29 +23,20 @@ internal sealed class HeuristicCollectionPass
             }
         }
 
-        var annotatedDocuments = documents.Count(document => document.HasPrimaryPathAnnotation);
-        if (annotatedDocuments > 0)
-        {
-            return annotatedDocuments;
-        }
-
-        var conventionMatches = documents.Count(document => document.MatchesPrimaryPathConvention);
+        // Annotations and folder conventions both contribute; annotations no longer suppress
+        // every other signal. The inbound-reference quartile supplements among the rest.
+        var primaryPathFileCount = documents.Count(document => document.HasPrimaryPathAnnotation || document.MatchesPrimaryPathConvention);
         var percentileCandidates = documents
-            .Where(document => !document.MatchesPrimaryPathConvention)
+            .Where(document => !document.HasPrimaryPathAnnotation && !document.MatchesPrimaryPathConvention)
             .ToArray();
 
         var percentileThreshold = GetTopQuartileThreshold(percentileCandidates.Select(document => document.InboundReferenceCount).ToArray());
-        if (percentileThreshold is null)
+        if (percentileThreshold is not null)
         {
-            return conventionMatches;
+            primaryPathFileCount += percentileCandidates.Count(document => document.InboundReferenceCount >= percentileThreshold.Value);
         }
 
-        return conventionMatches + percentileCandidates.Count(document => document.InboundReferenceCount >= percentileThreshold.Value);
-    }
-
-    private static bool ShouldAnalyzeProject(Project project)
-    {
-        return !SourceFileConventions.IsTestProject(project.FilePath, project.Name);
+        return new HeuristicMetrics(primaryPathFileCount, documents.Count);
     }
 
     private static bool ShouldAnalyzeDocument(Document document)
@@ -152,7 +144,7 @@ internal sealed class HeuristicCollectionPass
                SourceFileConventions.ContainsDirectorySegment(filePath, "Pages");
     }
 
-    private static int? GetTopQuartileThreshold(IReadOnlyList<int> counts)
+    internal static int? GetTopQuartileThreshold(IReadOnlyList<int> counts)
     {
         if (counts.Count == 0)
         {
@@ -160,12 +152,22 @@ internal sealed class HeuristicCollectionPass
         }
 
         var sortedCounts = counts.OrderBy(count => count).ToArray();
+
+        // A homogeneous distribution has no meaningful top quartile — without this guard every
+        // file would qualify as primary path.
+        if (sortedCounts[0] == sortedCounts[^1])
+        {
+            return null;
+        }
+
         var thresholdIndex = (int)Math.Ceiling(sortedCounts.Length * 0.75d) - 1;
         thresholdIndex = Math.Clamp(thresholdIndex, 0, sortedCounts.Length - 1);
 
         var threshold = sortedCounts[thresholdIndex];
         return threshold > 0 ? threshold : null;
     }
+
+    internal readonly record struct HeuristicMetrics(int PrimaryPathFileCount, int AnalyzedFileCount);
 
     private readonly record struct DocumentHeuristicInfo(
         bool HasPrimaryPathAnnotation,

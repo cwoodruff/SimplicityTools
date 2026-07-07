@@ -40,7 +40,7 @@ public sealed class SimplicityCollectorTests
     }
 
     [Fact]
-    public async Task CollectAsync_UsesAnnotationAsOverride_WhenPrimaryPathAttributeExists()
+    public async Task CollectAsync_UnionsAnnotationsWithConventionMatches_WhenPrimaryPathAttributeExists()
     {
         var collector = new SimplicityCollector();
 
@@ -48,7 +48,18 @@ public sealed class SimplicityCollectorTests
 
         Assert.Equal(1, snapshot.TotalProjects);
         Assert.Equal(4, snapshot.TotalFiles);
-        Assert.Equal(1, snapshot.PrimaryPathFileCount);
+        Assert.Equal(2, snapshot.PrimaryPathFileCount);
+    }
+
+    [Theory]
+    [InlineData(new int[0], null)]
+    [InlineData(new[] { 0, 0 }, null)]
+    [InlineData(new[] { 2, 2, 2 }, null)]
+    [InlineData(new[] { 0, 0, 3 }, 3)]
+    [InlineData(new[] { 1, 2, 3, 4 }, 3)]
+    public void GetTopQuartileThreshold_ReturnsNullForDegenerateDistributions(int[] counts, int? expected)
+    {
+        Assert.Equal(expected, HeuristicCollectionPass.GetTopQuartileThreshold(counts));
     }
 
     [Fact]
@@ -106,7 +117,9 @@ public sealed class SimplicityCollectorTests
 
         Assert.Equal(2, simplified.TotalProjects);
         Assert.Equal(12, overEngineered.TotalProjects);
-        Assert.True(simplified.TotalFiles > 0);
+        // TotalFiles counts the analyzed population: countable source files outside test
+        // projects — the same population the primary-path numerator is drawn from.
+        Assert.Equal(19, simplified.TotalFiles);
         Assert.True(overEngineered.TotalFiles > simplified.TotalFiles);
         Assert.True(overEngineered.AbstractionLayerCount > simplified.AbstractionLayerCount);
         Assert.True(overEngineered.InterfacesWithSingleImplementation > simplified.InterfacesWithSingleImplementation);

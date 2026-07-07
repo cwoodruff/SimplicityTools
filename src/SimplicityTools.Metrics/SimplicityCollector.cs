@@ -70,13 +70,13 @@ public sealed class SimplicityCollector : ISimplicityCollector
                 $"Only {loadedProjectCount} of {structuralMetrics.TotalProjects} projects loaded into the analysis workspace; semantic metrics may be incomplete.");
         }
 
-        var semanticMetrics = await semanticCollectionPass.CollectAsync(solution, cancellationToken).ConfigureAwait(false);
-        var primaryPathFileCount = await heuristicCollectionPass.CollectPrimaryPathFileCountAsync(solution, cancellationToken).ConfigureAwait(false);
+        var semanticMetrics = await semanticCollectionPass.CollectAsync(solution, structuralMetrics.ProjectFilePaths, cancellationToken).ConfigureAwait(false);
+        var heuristicMetrics = await heuristicCollectionPass.CollectAsync(solution, structuralMetrics.ProjectFilePaths, cancellationToken).ConfigureAwait(false);
 
         return new SimplicitySnapshot(
             structuralMetrics.TotalProjects,
-            structuralMetrics.TotalFiles,
-            primaryPathFileCount,
+            heuristicMetrics.AnalyzedFileCount,
+            heuristicMetrics.PrimaryPathFileCount,
             semanticMetrics.AbstractionLayerCount,
             semanticMetrics.ExternalDependencyCount,
             semanticMetrics.UnusedDependencyCount,
