@@ -27,4 +27,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SimplicityTools.Analyzers\SimplicityTools.Analyzers.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shared with SimplicityTools.Metrics.Tests so both complexity implementations are proven identical. -->
+    <Compile Include="..\Shared\ComplexityCountingTestCases.cs" Link="ComplexityCountingTestCases.cs" />
+  </ItemGroup>
 </Project>

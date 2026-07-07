@@ -460,6 +460,43 @@ Filter verdicts carry:
 
 The CLI watch output and HTML report both surface these verdicts directly.
 
+## Complexity counting rules
+
+The `AverageMethodComplexity` metric (from `SimplicityTools.Metrics`) and the `SF0003` analyzer use the same cyclomatic complexity counter. Two implementations exist (analyzer assemblies cannot reference the metrics assembly), but they follow identical rules and a shared test battery keeps them producing identical numbers.
+
+### Measured units
+
+Each of the following is measured as its own unit, starting at a base complexity of **1**:
+
+- method bodies (block or expression-bodied)
+- constructor bodies
+- operator and conversion operator bodies
+- accessor bodies (`get`, `set`, `init`, `add`, `remove`)
+- expression-bodied properties and indexers
+- local functions — measured **separately**; their bodies do **not** count toward the enclosing member
+- a file's top-level statement block (a branchy top-level `Program.cs` counts as one method-equivalent)
+
+Lambdas and anonymous methods are **not** separate units: their branches count toward the enclosing unit.
+
+### What adds +1
+
+| Construct | Count |
+| --- | --- |
+| `if` | +1 (the `else` keyword is free; `else if` counts via its `if`) |
+| `for`, `foreach`, `while`, `do` | +1 each |
+| `catch` clause | +1 each |
+| conditional expression `a ? b : c` | +1 |
+| conditional access `?.` | +1 per `?.` (opinionated: every null-conditional hop is a hidden branch; most tools do not count this) |
+| `case` label in a `switch` statement | +1 each, constant or pattern (`case 1:`, `case string s:`, `case int n when n > 0:`); the `default:` label is free |
+| `switch` expression arm | +1 each; the discard arm `_ =>` without a `when` clause is free (it is the `else`-equivalent), but `_ when ... =>` counts |
+| `&&`, `\|\|` | +1 each |
+| `??`, `??=` | +1 each |
+| pattern combinators `and`, `or` | +1 each (in `is` expressions, `case` labels, and switch expression arms alike) |
+
+Not counted: `else` on its own, `default:` labels, bare discard arms, `when` clauses (the label or arm carrying them already counts), `is` checks without combinators, `finally` blocks, and `goto`/`break`/`continue`/`return`/`throw`.
+
+If you change any rule here, change both `SimplicityTools.Metrics/CyclomaticComplexityAnalyzer.cs` and `SimplicityTools.Analyzers/CyclomaticComplexityCalculator.cs`, plus the shared test battery in `tests/Shared/ComplexityCountingTestCases.cs`.
+
 ## Analyzer package and code-fix usage
 
 `SimplicityTools.Analyzers` is the Roslyn package in this repo. It currently ships seven diagnostics.
@@ -482,7 +519,7 @@ The CLI watch output and HTML report both surface these verdicts directly.
 
 ### Default thresholds
 
-- `SF0003`: cyclomatic complexity over `10`
+- `SF0003`: cyclomatic complexity over `10` per measured unit (methods, constructors, operators, accessors, local functions, expression-bodied properties/indexers, and top-level statement blocks — see [Complexity counting rules](#complexity-counting-rules))
 - `SF0004`: call chain depth over `8`
 - `SF0005`: constructor parameter count over `7`
 
