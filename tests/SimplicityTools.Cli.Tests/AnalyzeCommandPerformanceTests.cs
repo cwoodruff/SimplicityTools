@@ -7,6 +7,13 @@ namespace SimplicityTools.Cli.Tests;
 public sealed class AnalyzeCommandPerformanceTests
 {
     private const string GitHubActionsEnvironmentVariable = "GITHUB_ACTIONS";
+    private readonly Xunit.Abstractions.ITestOutputHelper output;
+
+    public AnalyzeCommandPerformanceTests(Xunit.Abstractions.ITestOutputHelper output)
+    {
+        this.output = output;
+    }
+
     private static readonly SemaphoreSlim BuildLock = new(1, 1);
     private static bool cliBuilt;
 
@@ -36,6 +43,13 @@ public sealed class AnalyzeCommandPerformanceTests
 
         var p95 = CalculatePercentile(durations, 0.95d);
         var threshold = GetP95Threshold();
+
+        // Emitted on success too, so threshold headroom is visible in CI logs before drift
+        // ever turns into a failure (issue #104: the old 10s threshold sat inside runner noise
+        // and the first sign was a coin-flip red).
+        output.WriteLine(string.Create(
+            CultureInfo.InvariantCulture,
+            $"analyze p95 {p95.TotalSeconds:F3}s (threshold {threshold.TotalSeconds:F0}s, {GetPerformanceEnvironmentLabel()}); runs: {string.Join(", ", durations.Select(static duration => duration.TotalSeconds.ToString("F3", CultureInfo.InvariantCulture)))}"));
 
         Assert.True(
             p95 < threshold,
@@ -114,6 +128,10 @@ public sealed class AnalyzeCommandPerformanceTests
 
     private static TimeSpan GetP95Threshold()
     {
+        // Absolute thresholds sized at roughly 3x the P95 measured after the single-pass
+        // inbound-reference rework (#92): ~5s on ubuntu-latest runners, ~1.5-2s locally.
+        // Anything inside runner noise produces coin-flip results (issue #104); anything much
+        // looser stops catching real regressions like the pre-#92 quadratic pass.
         return IsRunningInGitHubActions()
             ? TimeSpan.FromSeconds(15)
             : TimeSpan.FromSeconds(5);
