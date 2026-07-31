@@ -28,6 +28,31 @@
 - **Docs-site sync:** Version extraction script generates version.ts at build time from MSBuild property.
 - **macOS apphost constraint:** Sample projects must disable apphost generation or use non-`.App` naming.
 
+## Learnings (2026-07-31)
+
+**Current release:** `0.5.0` — first public NuGet release, shipped 2026-07-08. All five packages published together. `Directory.Build.props` and `CHANGELOG.md` are the version source of truth.
+
+**All three May 28 NO-GO blockers were resolved before 0.5.0:**
+1. CS8604 null-safety — fixed `261d7ac` (M1 stabilize, 2026-07-06); explicit null guards, `netstandard2.0` narrowing gap documented.
+2. ReportGenerator/SF0003 complexity — fixed `84c549a`; dictionary dispatch replaces if/else chain.
+3. Analyzer validation gate — added `ci.yml` in `261d7ac`; consumer validation hardened in `b25f100`.
+
+**Three internal milestones (M1→M3) landed between May 28 review and 0.5.0:**
+- M1: stability/CI; M2: measurement trust, watch robustness, versioned persistence; M3: O(n) reference counting, TCA overhaul, analyzer package split, CLI JSON output, complexity unification.
+
+**Key file paths confirmed:**
+- `Directory.Build.props` — `SimplicityToolsReleaseVersion` = `0.5.0`
+- `CHANGELOG.md` — full 0.5.0 change narrative
+- `.github/workflows/ci.yml` — added in M1; contains analyzer consumer validation gate
+- `src/SimplicityTools.Analyzers.CodeFixes/` — new package from M3 analyzer split
+- `artifacts/analyzer-package-validation-tests/` and `artifacts/analyzer-consumer-validation/` — CI contract suites
+
+**Post-0.5.0 state:** One intentional TODO in `SingleImplementationInterfaceCodeFixProvider.cs` (emitted as user-facing reviewer guidance). `EstimatedOnboardingTime` is `null` — documented unimplemented gap. Stale sprint branches (m1-*/m2-*/m3-*) on origin are safe to prune.
+
+**Decision inbox:** `.squad/decisions/inbox/morpheus-release-readiness-update.md` — documents blocker resolution and retroactive GO verdict.
+
+---
+
 ## Archived History
 
 **Pre-2026-05-28 work:** See `.squad/agents/morpheus/history-archive.md`
