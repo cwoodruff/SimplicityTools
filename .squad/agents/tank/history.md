@@ -98,3 +98,39 @@ Established 3-phase site validation checklist for docs-site PRs: (1) Build Valid
 
 ---
 
+
+## Learnings
+
+### 2026-07-31T09:38:54-04:00 — Concurrent Pack Race & Stale SHA Assertion Fixes
+
+**Bug A: File-lock race in package-validation tests (Metrics, Filters, Tca)**
+
+Root cause: `MetricsPackageValidationTests`, `FiltersPackageValidationTests`, and `TcaPackageValidationTests` each invoke `dotnet pack ... --configuration Release` against the shared source projects (particularly `SimplicityTools.Metrics.csproj`). When `dotnet test` on the solution runs these test assemblies as concurrent vstest processes, the concurrent invocations race to write to the same `obj/Release/net8.0/ref/SimplicityTools.Metrics.dll` (Roslyn CopyRefAssembly task), causing intermittent `IOException: The process cannot access the file`.
+
+A second contributing race: each test set `NUGET_PACKAGES` to a different isolated global-packages directory, causing concurrent writes of incompatible `project.assets.json` content to `src/SimplicityTools.Metrics/obj/project.assets.json`.
+
+**Fixes applied (3 pack test files):**
+1. Added `-p:BaseOutputPath={workingDir}/build-output/{projectSlug}/` per pack invocation → moves compiled `bin/Release/` output to an isolated directory per test run, preventing the originally-reported `deps.json` lock.
+2. Added `-p:ProduceReferenceAssembly=false` per pack invocation → disables the Roslyn `CopyRefAssembly` task entirely, eliminating the `obj/Release/net8.0/ref/SimplicityTools.Metrics.dll` race. Reference assemblies are only needed for incremental build optimization and are never included in the NuGet package, so disabling them is safe for the pack-test context.
+3. Changed `nugetPackagesDirectory` to nullable `string?`; pack invocations pass `null` (use `~/.nuget/packages/`) while consumer builds still use the isolated `globalPackagesDirectory`. This eliminates the concurrent `project.assets.json` content conflict.
+
+**What NOT to use (lesson learned the hard way):** Passing `-p:BaseIntermediateOutputPath=...` to redirect `obj/` breaks NuGet dependency discovery. When `BaseIntermediateOutputPath` is a global MSBuild property, ALL projects in the multi-project build share it. This causes intra-build collisions (Metrics, Filters, and Tca all write to the same `build-obj/tca/Release/net8.0/` directory), and NuGet loses track of project reference → PackageId mappings, producing nuspec files with MISSING DEPENDENCIES (Filters disappeared from Tca's nuspec). `ProduceReferenceAssembly=false` is the correct minimal fix.
+
+**Also fixed: `AnalyzeCommandTests.BuildCliAsync()` race**  
+This helper built with `--configuration Release`, which also races with pack tests on shared project Release `obj/` files. Changed to Debug (no `--configuration` flag) and updated `GetCliAssemblyPath()` from `bin/Release/` to `bin/Debug/`. Performance tests intentionally remain on Release.
+
+**Verification:** Ran all 4 affected test projects in parallel via background `dotnet test` processes simultaneously — all 4 passed. Full solution test run (242 tests, all packages) also passed with zero failures.
+
+---
+
+**Bug B: `VersionFlag_PrintsInformationalVersionAndReturnsZero` hardcoded stale commit SHA**
+
+Root cause: The test originally called `CliHelp.GetInformationalVersion()` to get the expected version string from the IN-PROCESS test assembly. But the subprocess runs a freshly-built CLI binary, which carries the current `SourceRevisionId` from HEAD at build time. When the test-runner and the CLI binary were built at different times (e.g., test DLL stale from a previous build), their `InformationalVersion` SHA suffixes could diverge.
+
+**Fix:** Replaced `Assert.Equal(CliHelp.GetInformationalVersion(), actualOutput)` with `Assert.Matches(@"^0\.5\.0-local\+[0-9a-f]+$", actualOutput)`. The regex validates:
+- Version prefix matches the `SimplicityToolsLocalPackageVersion` property from `Directory.Build.props` (`0.5.0-local`)
+- `+` separator per SemVer informational version convention
+- Hex SHA suffix of any length (`[0-9a-f]+`)
+
+This will not break on the next commit or on any future version bump (once the prefix constant is updated to match `Directory.Build.props`).
+

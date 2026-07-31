@@ -892,7 +892,7 @@ public sealed class AnalyzeCommandTests
 
             var result = await RunProcessAsync(
                 "dotnet",
-                ["build", GetRepositoryPath("src", "SimplicityTools.Cli", "SimplicityTools.Cli.csproj"), "--configuration", "Release", "--nologo", "--verbosity", "quiet"],
+                ["build", GetRepositoryPath("src", "SimplicityTools.Cli", "SimplicityTools.Cli.csproj"), "--nologo", "--verbosity", "quiet"],
                 GetRepositoryRoot());
 
             Assert.Equal(0, result.ExitCode);
@@ -906,7 +906,7 @@ public sealed class AnalyzeCommandTests
 
     private static string GetCliAssemblyPath()
     {
-        return GetRepositoryPath("src", "SimplicityTools.Cli", "bin", "Release", "net10.0", "SimplicityTools.Cli.dll");
+        return GetRepositoryPath("src", "SimplicityTools.Cli", "bin", "Debug", "net10.0", "SimplicityTools.Cli.dll");
     }
 
     private static DateTimeOffset ParseSummaryDate(string summary)

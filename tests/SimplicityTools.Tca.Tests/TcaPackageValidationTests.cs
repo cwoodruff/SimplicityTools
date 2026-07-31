@@ -202,16 +202,18 @@ public sealed class TcaPackageValidationTests
         Directory.CreateDirectory(packageSourceDirectory);
         Directory.CreateDirectory(globalPackagesDirectory);
 
-        foreach (var projectPath in new[]
+        var buildOutputDirectory = Path.Combine(workingDirectory, "build-output");
+
+        foreach (var (projectPath, projectSlug) in new[]
                  {
-                     Path.Combine("src", "SimplicityTools.Metrics", "SimplicityTools.Metrics.csproj"),
-                     Path.Combine("src", "SimplicityTools.Filters", "SimplicityTools.Filters.csproj"),
-                     Path.Combine("src", "SimplicityTools.Tca", "SimplicityTools.Tca.csproj")
+                     (Path.Combine("src", "SimplicityTools.Metrics", "SimplicityTools.Metrics.csproj"), "metrics"),
+                     (Path.Combine("src", "SimplicityTools.Filters", "SimplicityTools.Filters.csproj"), "filters"),
+                     (Path.Combine("src", "SimplicityTools.Tca", "SimplicityTools.Tca.csproj"), "tca")
                  })
         {
             var pack = await RunDotNetAsync(
                 repositoryRoot,
-                globalPackagesDirectory,
+                nugetPackagesDirectory: null,
                 [
                     "pack",
                     projectPath,
@@ -221,7 +223,9 @@ public sealed class TcaPackageValidationTests
                     packageSourceDirectory,
                     "--verbosity",
                     "minimal",
-                    $"-p:Version={version}"
+                    $"-p:Version={version}",
+                    $"-p:BaseOutputPath={Path.Combine(buildOutputDirectory, projectSlug)}{Path.DirectorySeparatorChar}",
+                    "-p:ProduceReferenceAssembly=false"
                 ]);
 
             if (pack.ExitCode != 0)
@@ -235,7 +239,7 @@ public sealed class TcaPackageValidationTests
         return new PackageValidationResult(version, workingDirectory, packageSourceDirectory, globalPackagesDirectory, tcaPackagePath);
     }
 
-    private static async Task<ProcessResult> RunDotNetAsync(string workingDirectory, string globalPackagesDirectory, IReadOnlyList<string> arguments)
+    private static async Task<ProcessResult> RunDotNetAsync(string workingDirectory, string? nugetPackagesDirectory, IReadOnlyList<string> arguments)
     {
         var startInfo = new ProcessStartInfo("dotnet")
         {
@@ -249,7 +253,10 @@ public sealed class TcaPackageValidationTests
             startInfo.ArgumentList.Add(argument);
         }
 
-        startInfo.Environment["NUGET_PACKAGES"] = globalPackagesDirectory;
+        if (nugetPackagesDirectory is not null)
+        {
+            startInfo.Environment["NUGET_PACKAGES"] = nugetPackagesDirectory;
+        }
 
         using var process = Process.Start(startInfo)
             ?? throw new InvalidOperationException("Could not start dotnet.");

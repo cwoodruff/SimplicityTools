@@ -113,9 +113,11 @@ public sealed class MetricsPackageValidationTests
         Directory.CreateDirectory(packageSourceDirectory);
         Directory.CreateDirectory(globalPackagesDirectory);
 
+        var buildOutputDirectory = Path.Combine(workingDirectory, "build-output");
+
         var pack = await RunDotNetAsync(
             repositoryRoot,
-            globalPackagesDirectory,
+            nugetPackagesDirectory: null,
             [
                 "pack",
                 Path.Combine("src", "SimplicityTools.Metrics", "SimplicityTools.Metrics.csproj"),
@@ -125,7 +127,9 @@ public sealed class MetricsPackageValidationTests
                 packageSourceDirectory,
                 "--verbosity",
                 "minimal",
-                $"-p:Version={version}"
+                $"-p:Version={version}",
+                $"-p:BaseOutputPath={buildOutputDirectory}{Path.DirectorySeparatorChar}",
+                "-p:ProduceReferenceAssembly=false"
             ]);
 
         if (pack.ExitCode != 0)
@@ -138,7 +142,7 @@ public sealed class MetricsPackageValidationTests
         return new PackageValidationResult(version, workingDirectory, packageSourceDirectory, globalPackagesDirectory, packagePath);
     }
 
-    private static async Task<ProcessResult> RunDotNetAsync(string workingDirectory, string globalPackagesDirectory, IReadOnlyList<string> arguments)
+    private static async Task<ProcessResult> RunDotNetAsync(string workingDirectory, string? nugetPackagesDirectory, IReadOnlyList<string> arguments)
     {
         var startInfo = new ProcessStartInfo("dotnet")
         {
@@ -152,7 +156,10 @@ public sealed class MetricsPackageValidationTests
             startInfo.ArgumentList.Add(argument);
         }
 
-        startInfo.Environment["NUGET_PACKAGES"] = globalPackagesDirectory;
+        if (nugetPackagesDirectory is not null)
+        {
+            startInfo.Environment["NUGET_PACKAGES"] = nugetPackagesDirectory;
+        }
 
         using var process = Process.Start(startInfo)
             ?? throw new InvalidOperationException("Could not start dotnet.");
