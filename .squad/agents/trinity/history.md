@@ -105,3 +105,19 @@ Contributed design clarification: NuGet release pipeline should resolve `release
 
 ---
 
+
+## 2026-07-31T09:04:03-04:00 — Security: NU1903 Dependency Fix
+
+## Learnings
+
+**What broke:** `System.Security.Cryptography.Xml` 10.0.9 acquired multiple high-severity NuGet advisory flags (GHSA-23rf-6693-g89p, GHSA-8q5v-6pqq-x66h, GHSA-cvvh-rhrc-wg4q, GHSA-g8r8-53c2-pm3f, GHSA-mmjf-rqrv-855v). Because `Directory.Build.props` sets `<TreatWarningsAsErrors>` to `true` in Release configuration, NU1903 warnings were promoted to errors, breaking all Release builds. This cascaded into ~20 test failures: 3 package-validation tests (Metrics, Filters, Tca) that invoke `dotnet pack -c Release`, and ~17 CLI integration tests whose `BuildCliAsync()` helper runs `dotnet build ... --configuration Release`.
+
+**The fix:** Bumped `System.Security.Cryptography.Xml` from `10.0.9` to `10.0.10` in `Directory.Packages.props` (line 32). Version 10.0.10 carries no NuGet advisory flags — the NU1903 errors disappear entirely. No suppression entries needed.
+
+**Before/after test counts:**
+- Before: ~222 passed, ~20 failed (242 total)
+- After: 242 passed, 0 failed (242 total)
+
+**Committed:** `fc6ad7c` — `fix: bump System.Security.Cryptography.Xml to 10.0.10 to resolve NU1903 advisories`
+
+**Takeaway:** Transitive advisory flags on pinned packages will surface as hard errors in Release builds here. When a new advisory appears on a pinned package, check NuGet immediately for a patched version — version bump is always preferred over NoWarn suppression.
