@@ -134,3 +134,27 @@ Root cause: The test originally called `CliHelp.GetInformationalVersion()` to ge
 
 This will not break on the next commit or on any future version bump (once the prefix constant is updated to match `Directory.Build.props`).
 
+---
+
+### 2026-08-01T08:08:11-04:00 — Second-order bug in the version regex fix above
+
+**What went wrong:** The `^0\.5\.0-local\+[0-9a-f]+$` regex introduced in the previous fix was itself a partial hardcode: it assumed both a specific version number (`0.5.0`) and a specific prerelease label (`-local`). In CI, the `test-cli-functional` job (part of Morpheus's now-parallelized nuget-publish.yml pipeline) builds the CLI with a different `-p:Version=` override — in this case `0.8.0` with no `-local` suffix — producing `InformationalVersion = 0.8.0+2b37f69ecd7e9e15e3eaad7f8f7fa0899c5253a3` (full 40-char SHA). The regex failed to match on both counts.
+
+**Root cause of the secondary hardcode:** The `0.5.0-local` portion was copied directly from the `SimplicityToolsLocalPackageVersion` property in `Directory.Build.props`. That value is only produced locally (via the `Condition="'$(Version)' == ''"` fallback). CI always overrides `$(Version)` via the workflow's `pack_version` output, so the local-only suffix must be treated as *optional*, and the version number itself is fully environment-dependent.
+
+**Corrected regex:**
+```csharp
+@"^\d+\.\d+\.\d+(-[a-zA-Z0-9][a-zA-Z0-9.-]*)?\+[0-9a-f]{7,40}$"
+```
+This validates:
+- Any `major.minor.patch` semver core (no hardcoded numbers)
+- Optional prerelease label starting with an alphanumeric character (covers `-local`, `-ci.42`, `-beta.1`, etc.)
+- Required `+` separator
+- Hex commit hash 7–40 chars (covers git short SHA ~7-12 chars locally and full 40-char SHA in CI)
+
+**Verification:**
+1. Regex validated in Node.js REPL against CI failure string (`0.8.0+2b37f69ecd7e9e15e3eaad7f8f7fa0899c5253a3`) and two local shapes (`0.5.0-local+fc6ad7c7a032e8a8b59c1cd5f5a6f`, `0.5.0-local+fc6ad7c`) — all three returned `true`.
+2. `VersionFlag_PrintsInformationalVersionAndReturnsZero` ran against the local Debug build and passed (1 test, 0 failures).
+
+**Lesson:** Regex assertions on version strings need to encode the FORMAT CONTRACT, not a specific expected value. Any time a version string is expected to vary across build environments, the assertion should be format-only. Never propagate `SimplicityToolsLocalPackageVersion` directly into a test regex; that value is local-only by design.
+

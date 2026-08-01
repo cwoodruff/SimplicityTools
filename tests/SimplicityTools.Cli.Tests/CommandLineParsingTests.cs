@@ -76,7 +76,10 @@ public sealed class CommandLineParsingTests
         // commit, so comparing against the in-process assembly version is fragile (the test
         // assembly's copy of the CLI DLL can be stale relative to the freshly-built subprocess).
         // Asserting the format is both sufficient and commit-stable.
-        Assert.Matches(@"^0\.5\.0-local\+[0-9a-f]+$", result.StandardOutput.Trim());
+        // Validates the format: <major>.<minor>.<patch>[-prerelease]+<hex-commit-sha>
+        // The version number and optional prerelease suffix (e.g. "-local") vary by environment;
+        // the commit hash length varies too (short ~7-12 chars locally, full 40 chars in CI).
+        Assert.Matches(@"^\d+\.\d+\.\d+(-[a-zA-Z0-9][a-zA-Z0-9.-]*)?\+[0-9a-f]{7,40}$", result.StandardOutput.Trim());
         Assert.True(string.IsNullOrWhiteSpace(result.StandardError), result.StandardError);
     }
 
