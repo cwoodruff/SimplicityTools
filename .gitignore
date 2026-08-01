@@ -451,3 +451,4 @@ tests/SimplicityTools.Cli.Tests/.workspace/
 # Local CLI output
 simplicity-report/
 out.txt
+.DS_Store
