@@ -76,10 +76,10 @@ public sealed class AnalyzeCommandPerformanceTests
 
             var result = await RunProcessAsync(
                 "dotnet",
-                ["build", GetRepositoryPath("src", "SimplicityTools.Cli", "SimplicityTools.Cli.csproj"), "-c", "Release", "--nologo", "--verbosity", "quiet"],
+                ["build", GetRepositoryPath("src", "SimplicityTools.Cli", "SimplicityTools.Cli.csproj"), "-c", "Release", "--no-restore", "--nologo", "--verbosity", "quiet"],
                 GetRepositoryRoot());
 
-            Assert.Equal(0, result.ExitCode);
+            Assert.True(result.ExitCode == 0, $"dotnet build failed (exit {result.ExitCode}):\nstdout: {result.StandardOutput}\nstderr: {result.StandardError}");
             cliBuilt = true;
         }
         finally

@@ -158,3 +158,22 @@ This validates:
 
 **Lesson:** Regex assertions on version strings need to encode the FORMAT CONTRACT, not a specific expected value. Any time a version string is expected to vary across build environments, the assertion should be format-only. Never propagate `SimplicityToolsLocalPackageVersion` directly into a test regex; that value is local-only by design.
 
+---
+
+### 2026-08-01T10:34:47-04:00 — Third-order bug in the pack-race fix: missing `--no-restore` causes 15-minute CI stall
+
+**What went wrong:** The `BuildCliAsync()` race fix (commit `0d265a3`) dropped `--configuration Release` to use Debug and avoid `obj/Release/` contention. It did NOT add `--no-restore`. In CI (`test-cli-functional` job), the workflow already runs `dotnet restore SimplicityTools.sln` as step 1 before tests run. The nested `dotnet build` in `BuildCliAsync()` (launched as a subprocess from the test code, not under `--no-build`) has no `--no-restore`, so MSBuild performs a full implicit restore preflight on every test run — including NuGet Audit vulnerability advisory network checks. On GitHub Actions (network-bound, rate-limited), this caused a 15-minute stall before the build ultimately errored out.
+
+**Confirmation that `--no-restore` is safe:**
+- Grepped all `src/**/*.csproj` for `Condition.*Configuration.*Release` on PackageReference elements — zero results. NuGet restore is configuration-agnostic for this solution.
+- `dotnet restore` (no `--configuration`) restores the full dependency graph for all TFMs regardless of build configuration; the Debug build's packages are a subset of that.
+
+**Fixes applied:**
+1. `tests/SimplicityTools.Cli.Tests/AnalyzeCommandTests.cs` — `BuildCliAsync()`: added `--no-restore` to the nested `dotnet build` arguments.
+2. `tests/SimplicityTools.Cli.Tests/AnalyzeCommandPerformanceTests.cs` — same `BuildCliAsync()` helper: added `--no-restore` to its `dotnet build -c Release` call for consistency (same CI exposure).
+3. Both files: replaced `Assert.Equal(0, result.ExitCode)` with `Assert.True(result.ExitCode == 0, $"dotnet build failed (exit {result.ExitCode}):\nstdout: {result.StandardOutput}\nstderr: {result.StandardError}")` — future CI failures will surface the actual build error instead of just an exit code.
+
+**Local verification:** 67 CLI tests (excluding performance gate) passed in 37s after the fix. Full proof that the 15-minute stall is eliminated can only be confirmed by an actual CI run — local warm-cache doesn't reproduce the network overhead.
+
+**Lesson:** Any `dotnet build` invoked as a subprocess from test code in a CI job that already ran `dotnet restore` MUST include `--no-restore`. Without it, MSBuild performs redundant NuGet restore preflight (including audit advisory fetches) that is trivially fast on a warm local machine but catastrophically slow under CI network constraints. This is a recurring trap: the fix for a race condition (drop Release config) can expose a latent performance landmine (`--no-restore` was never added when the call was first written). Always audit subprocess dotnet invocations for both `--no-restore` AND `--no-build` where applicable.
+
