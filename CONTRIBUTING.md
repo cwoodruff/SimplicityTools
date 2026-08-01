@@ -111,3 +111,13 @@ Use **Actions → NuGet release pipeline → Run workflow** to build, validate, 
 - Set `release_group` to `libraries`, `analyzers`, or `cli` to build and **publish** the matching package group to NuGet.org. The workflow uses `SimplicityToolsReleaseVersion` from `Directory.Build.props` unless you supply a `version` override.
 
 > **Note:** Tag pushes (`libraries/vX.Y.Z`, `analyzers/vX.Y.Z`, `cli/vX.Y.Z`) are still supported as an alternative release path. Both paths run the full test and validation gates before publishing.
+
+> **Important — CLI ships separately from libraries.** `release_group=libraries` publishes only `SimplicityTools.Metrics`, `SimplicityTools.Filters`, and `SimplicityTools.Tca`. The CLI depends on these libraries but has its own release cadence. To publish the CLI, run a **second dispatch** with `release_group=cli` (or push a `cli/vX.Y.Z` tag). If you're shipping a coordinated update that touches both groups, dispatch (or tag) each group in turn: `libraries` first, then `cli`.
+
+### Version bump checklist
+
+Before dispatching any publish run, verify the version source of truth is correct:
+
+1. Open `Directory.Build.props` and confirm `SimplicityToolsReleaseVersion` matches the version you want to publish.
+2. **Do not** hardcode `<Version>` or `<PackageVersion>` in individual `.csproj` files — those entries are ignored by CI (the workflow's `dotnet pack` passes `-p:Version=` from the command line, overriding any per-project value). Local builds also derive the default version from `Directory.Build.props` via `$(SimplicityToolsLocalPackageVersion)`.
+3. Commit `Directory.Build.props` before dispatching; the workflow reads the committed version from the checkout.

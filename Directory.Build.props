@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <SimplicityToolsReleaseVersion>0.5.0</SimplicityToolsReleaseVersion>
+    <SimplicityToolsReleaseVersion>0.8.0</SimplicityToolsReleaseVersion>
     <SimplicityToolsLocalPackageVersion>$(SimplicityToolsReleaseVersion)-local</SimplicityToolsLocalPackageVersion>
 
     <IsSimplicityPackage>false</IsSimplicityPackage>

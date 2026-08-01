@@ -5,6 +5,22 @@
 - **Stack:** C# 14, .NET 10, Roslyn, MSBuild, NuGet, CLI tooling, GitHub project management
 - **Created:** 2026-04-29T06:47:51.656-04:00
 
+## Learnings (2026-08-01 — CLI separate release group + version source of truth)
+
+**Item 1 — CLI not publishing alongside libraries: expectation gap, not a bug.**
+`release_group=libraries` is intentionally Metrics/Filters/Tca only. CLI has its own release cadence and must be dispatched separately with `release_group=cli` (or a `cli/vX.Y.Z` tag push). There is no workflow mechanism to auto-follow a libraries release with a CLI release. No code change required; CONTRIBUTING.md updated to document the two-dispatch pattern explicitly.
+
+**Item 2 — Version mismatch (0.5.0 published, 0.8.0 expected): root cause is an uncommitted Directory.Build.props.**
+The workflow's `resolve` job reads `SimplicityToolsReleaseVersion` from `Directory.Build.props` in the checked-out commit, then passes it as `-p:Version=<pack_version>` to every `dotnet pack` call. MSBuild command-line `-p:` properties have the highest precedence — they override anything in individual `.csproj` files unconditionally.
+
+Commit `df90533` ("Parallelize CI test jobs and bump versions to 0.8.0") added `<Version>0.8.0</Version>` to each `.csproj` file but did NOT update `Directory.Build.props`. `Directory.Build.props` was edited locally to `0.8.0` but never committed (confirmed: `git status` shows `M Directory.Build.props`, and `git show HEAD:Directory.Build.props` shows `0.5.0`). CI always checks out the COMMITTED state, so every run since `df90533` has read `0.5.0` as the canonical version and overridden the per-project values silently.
+
+**Correct fix (for Chris to apply):**
+1. Commit `Directory.Build.props` — the local 0.8.0 edit is already correct, it just needs `git add Directory.Build.props && git commit`.
+2. Remove the hardcoded `<Version>0.8.0</Version>` entries from all individual `.csproj` files — they violate the repo convention ("Never hardcode package versions in individual project files — always derive from Directory.Build.props") and will become stale on every future version bump.
+
+CONTRIBUTING.md updated with a "Version bump checklist" that documents the correct workflow explicitly.
+
 ## Core Context
 
 - SimplicityTools is the Simplicity-First .NET Toolkit, built to measure architecture in economic terms.
