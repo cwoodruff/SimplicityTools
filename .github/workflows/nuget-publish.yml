@@ -529,7 +529,13 @@ jobs:
           if-no-files-found: error
 
   publish:
-    if: startsWith(github.ref, 'refs/tags/')
+    # Run on tag pushes (canonical release path) OR on workflow_dispatch when the operator
+    # explicitly selected a real release group (not the default 'validation' mode).
+    # Branch pushes always skip this job — they are validation-only by design.
+    if: >-
+      startsWith(github.ref, 'refs/tags/') ||
+      (github.event_name == 'workflow_dispatch' &&
+       needs.validate.outputs.release_group != 'validation')
     needs: validate
     runs-on: ubuntu-latest
     environment: nuget

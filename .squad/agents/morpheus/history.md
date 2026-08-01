@@ -8,6 +8,23 @@
 ## Core Context
 
 - SimplicityTools is the Simplicity-First .NET Toolkit, built to measure architecture in economic terms.
+
+## Learnings (2026-08-01 — nuget-publish.yml publish gate fix)
+
+**Root cause:** The `publish` job in `nuget-publish.yml` had `if: startsWith(github.ref, 'refs/tags/')` (line 532). This gated publishing exclusively to tag-push triggers. Every run in the repo history has been either a branch push or a `workflow_dispatch` — the repo has zero release tags. So the publish job has **never run**. The design previously required a manual tag push after `workflow_dispatch`, but that second step was never executed.
+
+**Fix applied:** Widened the `publish` job `if:` condition to also fire when the trigger is `workflow_dispatch` and `release_group != 'validation'`:
+```yaml
+if: >-
+  startsWith(github.ref, 'refs/tags/') ||
+  (github.event_name == 'workflow_dispatch' &&
+   needs.validate.outputs.release_group != 'validation')
+```
+Branch pushes still skip publish entirely — validation-only by design. `workflow_dispatch` with `release_group=validation` (the default) still never publishes. A `workflow_dispatch` with `release_group=libraries/analyzers/cli` now publishes after passing all test and validation gates.
+
+**CONTRIBUTING.md updated:** Steps 4 and 5 rewritten — workflow_dispatch with a real release_group now both validates AND publishes in a single run. Tag pushes remain a supported alternative path but are no longer the only path.
+
+**Key insight:** There was no secondary guard to prevent validation-mode packages (stamped `-ci.<run>`) from being published — the `publish/validate-publishable-artifacts` step already rejects them with `if ".ci." in package_version`. So the widened condition is safe.
 - Package graph: Metrics → Filters/Tca → CLI, with analyzers integrated alongside.
 - Zero-config CI signal is a core product promise.
 - Three-milestone delivery aligned with book chapters and package dependencies.

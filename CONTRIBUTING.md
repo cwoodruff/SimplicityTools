@@ -103,35 +103,11 @@ Example analyzer reference:
 </ItemGroup>
 ```
 
-### 4. Optional: build upload-ready artifacts in GitHub Actions
+### 4. Publish via workflow dispatch
 
-Use **Actions → NuGet release pipeline → Run workflow** when you want GitHub to build the exact packages before you cut a tag:
+Use **Actions → NuGet release pipeline → Run workflow** to build, validate, and publish packages directly from the UI:
 
-- Leave `release_group=validation` when you want a validation-only run; the workflow will ignore the optional `version` field, log a notice if it was populated, and stamp CI-only package versions.
-- Set `release_group` to `libraries`, `analyzers`, or `cli`
-- Optionally set `version` to override the repo's current `SimplicityToolsReleaseVersion`
+- Leave `release_group=validation` (the default) for a dry-run that stamps CI-only versions and **never publishes**. The optional `version` field is ignored in this mode.
+- Set `release_group` to `libraries`, `analyzers`, or `cli` to build and **publish** the matching package group to NuGet.org. The workflow uses `SimplicityToolsReleaseVersion` from `Directory.Build.props` unless you supply a `version` override.
 
-That run will validate the solution, produce upload-ready `.nupkg` and `.snupkg` artifacts, and stop short of publishing.
-
-### 5. Cut the real release tag
-
-When the release candidate is good, create the tag that matches the package group:
-
-```bash
-git tag libraries/v0.4.0
-git push origin libraries/v0.4.0
-```
-
-Or:
-
-```bash
-git tag analyzers/v0.4.0
-git push origin analyzers/v0.4.0
-```
-
-```bash
-git tag cli/v0.4.0
-git push origin cli/v0.4.0
-```
-
-GitHub Actions will read the version from the tag, rebuild, repack, and publish only the matching package set to NuGet.org.
+> **Note:** Tag pushes (`libraries/vX.Y.Z`, `analyzers/vX.Y.Z`, `cli/vX.Y.Z`) are still supported as an alternative release path. Both paths run the full test and validation gates before publishing.
