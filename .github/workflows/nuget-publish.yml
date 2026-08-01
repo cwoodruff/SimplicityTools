@@ -354,10 +354,19 @@ jobs:
                           print(f"{package.name} is missing {label}", file=sys.stderr)
                           sys.exit(1)
 
-              symbol_package = package.with_suffix(".snupkg")
-              if not symbol_package.exists():
-                  print(f"{package.name} is missing matching symbol package {symbol_package.name}", file=sys.stderr)
-                  sys.exit(1)
+              # SimplicityTools.Analyzers intentionally embeds its PDB in the DLL
+              # (DebugType=embedded, IncludeSymbols=false) and does NOT produce a .snupkg.
+              # All other packages ship symbols as a separate .snupkg; a missing file
+              # for any of them is a hard build regression.
+              PACKAGES_WITHOUT_SNUPKG = {"SimplicityTools.Analyzers"}
+              package_id_elem = next(
+                  (child.text for child in metadata if local_name(child.tag) == "id"), None
+              )
+              if package_id_elem not in PACKAGES_WITHOUT_SNUPKG:
+                  symbol_package = package.with_suffix(".snupkg")
+                  if not symbol_package.exists():
+                      print(f"{package.name} is missing matching symbol package {symbol_package.name}", file=sys.stderr)
+                      sys.exit(1)
           PY
 
       - name: Validate analyzer consumer package
@@ -614,10 +623,15 @@ jobs:
                   print(f"{package.name} still looks like a validation-only package version.", file=sys.stderr)
                   sys.exit(1)
 
-              symbol_package = package.with_suffix(".snupkg")
-              if not symbol_package.exists():
-                  print(f"{package.name} is missing matching symbol package {symbol_package.name}.", file=sys.stderr)
-                  sys.exit(1)
+              # SimplicityTools.Analyzers intentionally embeds its PDB in the DLL
+              # (DebugType=embedded, IncludeSymbols=false) and does NOT produce a .snupkg.
+              # All other packages must have a matching .snupkg; absence is a build regression.
+              PACKAGES_WITHOUT_SNUPKG = {"SimplicityTools.Analyzers"}
+              if package_id not in PACKAGES_WITHOUT_SNUPKG:
+                  symbol_package = package.with_suffix(".snupkg")
+                  if not symbol_package.exists():
+                      print(f"{package.name} is missing matching symbol package {symbol_package.name}.", file=sys.stderr)
+                      sys.exit(1)
 
               actual_ids.add(package_id)
 

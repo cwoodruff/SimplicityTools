@@ -28,6 +28,18 @@
 - **Docs-site sync:** Version extraction script generates version.ts at build time from MSBuild property.
 - **macOS apphost constraint:** Sample projects must disable apphost generation or use non-`.App` naming.
 
+## Learnings (2026-08-01 — Analyzers snupkg exemption)
+
+**Analyzers package intentionally embeds PDB; snupkg validation exempted.**
+
+`SimplicityTools.Analyzers.csproj` sets `<DebugType>embedded</DebugType>` and `<IncludeSymbols>false</IncludeSymbols>`, so `dotnet pack` produces only a `.nupkg` — no `.snupkg` is generated. This is deliberate: Roslyn analyzer assemblies ship with embedded symbols rather than a separate symbol package.
+
+The blanket "every `.nupkg` must have a matching `.snupkg`" check in `nuget-publish.yml` failed for this package. Fixed both occurrences:
+- **Line ~358** — `validate` job, "Validate packed metadata" step
+- **Line ~629** — `publish` job, artifact-set validation step
+
+Each check now consults a `PACKAGES_WITHOUT_SNUPKG` set (currently `{"SimplicityTools.Analyzers"}`) before requiring a `.snupkg`. A comment explains the intent. Metrics, Filters, Tca, and Cli still fail hard if their `.snupkg` is absent. To add a future embedded-symbol package, add its ID to `PACKAGES_WITHOUT_SNUPKG` in both locations.
+
 ## Learnings (2026-08-01)
 
 **CI pipeline parallelization — `nuget-publish.yml` restructured.**
