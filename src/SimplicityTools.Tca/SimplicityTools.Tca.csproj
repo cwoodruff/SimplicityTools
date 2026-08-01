@@ -8,6 +8,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>SimplicityTools.Tca</PackageId>
     <Description>TCA translation layer for the Simplicity-First .NET Toolkit.</Description>
+    <Version>0.8.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

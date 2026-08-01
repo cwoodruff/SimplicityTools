@@ -9,6 +9,7 @@
     <ToolCommandName>dotnet-simplicity</ToolCommandName>
     <PackageId>SimplicityTools.Cli</PackageId>
     <Description>Global CLI entry point for the Simplicity-First .NET Toolkit.</Description>
+    <Version>0.8.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

@@ -14,6 +14,7 @@
     <!-- Symbols are embedded in the shipped assemblies; no loose pdb or snupkg. -->
     <DebugType>embedded</DebugType>
     <IncludeSymbols>false</IncludeSymbols>
+    <Version>0.8.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -50,7 +51,7 @@
   <Target Name="PackRoslynAnalyzerArtifacts" BeforeTargets="_GetPackageFiles">
     <MSBuild Projects="../SimplicityTools.Analyzers.CodeFixes/SimplicityTools.Analyzers.CodeFixes.csproj"
              Targets="Build"
-             Properties="Configuration=$(Configuration)">
+             Properties="Configuration=$(Configuration);NoBuild=false">
       <Output TaskParameter="TargetOutputs" ItemName="_SimplicityCodeFixAssembly" />
     </MSBuild>
     <ItemGroup>

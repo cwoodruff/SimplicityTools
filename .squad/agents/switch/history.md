@@ -18,6 +18,11 @@
 
 ## Learnings
 
+- **2026-08-01T06:45:04.687-04:00 — Analyzer pack `--no-build` fix:**
+  - **Bug:** `dotnet pack src/SimplicityTools.Analyzers/SimplicityTools.Analyzers.csproj -c Release --no-build` failed with `NETSDK1085: The 'NoBuild' property was set to true but the 'Build' target was invoked`. The `PackRoslynAnalyzerArtifacts` MSBuild target used a nested `<MSBuild Targets="Build">` call against `SimplicityTools.Analyzers.CodeFixes.csproj`. Global properties (including `NoBuild=true` set by `--no-build`) propagate into nested MSBuild calls unless explicitly overridden.
+  - **Fix:** Added `NoBuild=false` to the `Properties` attribute of the nested `<MSBuild>` call: `Properties="Configuration=$(Configuration);NoBuild=false"`. This overrides the propagated global property for just the CodeFixes nested invocation, allowing it to build on demand. MSBuild is smart enough not to re-restore if already restored (it uses the existing `.assets.json`).
+  - **Verification:** After the fix, `dotnet build ... -c Release && dotnet pack ... -c Release --no-build` succeeded. nupkg inspection confirmed both `analyzers/dotnet/cs/SimplicityTools.Analyzers.dll` and `analyzers/dotnet/cs/SimplicityTools.Analyzers.CodeFixes.dll` are present. Full solution build clean (0 warnings, 0 errors). All 59 analyzer tests passed.
+
 - My initial focus is Roslyn analysis, diagnostics, and compiler-backed heuristics.
 
 - 2026-04-29T07:32:23.826-04:00: I used the existing sample executable as a composition root and pushed the overengineering into 11 supporting libraries so future metrics work can count project fan-out, single-implementation interfaces, and mediator-style hops without inventing fake files later.

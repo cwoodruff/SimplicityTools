@@ -39,7 +39,8 @@ env:
   PACKAGE_OUTPUT_DIR: artifacts/packages
 
 jobs:
-  validate:
+  # ─── Phase 1: resolve release shape (no SDK needed) ────────────────────────
+  resolve:
     runs-on: ubuntu-latest
     outputs:
       release_group: ${{ steps.release.outputs.release_group }}
@@ -49,11 +50,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with:
           fetch-depth: 0
-
-      - name: Set up .NET 10 SDK
-        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
-        with:
-          dotnet-version: '10.0.x'
 
       - name: Resolve release shape
         id: release
@@ -132,19 +128,63 @@ jobs:
             esac
           fi
 
+  # ─── Phase 2a: unit / analyzer tests (parallel) ────────────────────────────
+  test-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
       - name: Restore solution
         run: dotnet restore SimplicityTools.sln --verbosity minimal
 
       - name: Build solution
         run: dotnet build SimplicityTools.sln --configuration Release --no-restore --verbosity minimal
 
-      - name: Test solution
+      - name: Test solution (Metrics, Filters, Tca, Analyzers)
         run: >
           dotnet test SimplicityTools.sln
           --configuration Release
           --no-build
           --verbosity minimal
           --filter "FullyQualifiedName!~SimplicityTools.Cli.Tests"
+
+  # ─── Phase 2b: CLI functional tests (parallel) ─────────────────────────────
+  test-cli-functional:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Restore solution
+        run: dotnet restore SimplicityTools.sln --verbosity minimal
+
+      - name: Build solution
+        run: dotnet build SimplicityTools.sln --configuration Release --no-restore --verbosity minimal
 
       - name: Validate CLI commands
         run: >
@@ -154,6 +194,31 @@ jobs:
           --logger "console;verbosity=detailed"
           --filter "FullyQualifiedName!~SimplicityTools.Cli.Tests.AnalyzeCommandPerformanceTests"
 
+  # ─── Phase 2c: CLI performance gate (parallel, deliberately isolated) ───────
+  test-cli-perf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Restore solution
+        run: dotnet restore SimplicityTools.sln --verbosity minimal
+
+      - name: Build solution
+        run: dotnet build SimplicityTools.sln --configuration Release --no-restore --verbosity minimal
+
       - name: Validate CLI performance gate
         run: >
           dotnet test tests/SimplicityTools.Cli.Tests/SimplicityTools.Cli.Tests.csproj
@@ -162,12 +227,41 @@ jobs:
           --logger "console;verbosity=detailed"
           --filter "FullyQualifiedName=SimplicityTools.Cli.Tests.AnalyzeCommandPerformanceTests.AnalyzeCommand_OverEngineeredSample_CompletesWithinExpectedThresholdAtP95"
 
+  # ─── Phase 3: pack and validate (after all test gates pass) ─────────────────
+  validate:
+    runs-on: ubuntu-latest
+    needs: [resolve, test-unit, test-cli-functional, test-cli-perf]
+    outputs:
+      release_group: ${{ needs.resolve.outputs.release_group }}
+      pack_version: ${{ needs.resolve.outputs.pack_version }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Restore solution
+        run: dotnet restore SimplicityTools.sln --verbosity minimal
+
+      - name: Build solution
+        run: dotnet build SimplicityTools.sln --configuration Release --no-restore --verbosity minimal
+
       - name: Pack NuGet artifacts
         shell: bash
         run: |
           mkdir -p "$PACKAGE_OUTPUT_DIR"
 
-          case "${{ steps.release.outputs.release_group }}" in
+          case "${{ needs.resolve.outputs.release_group }}" in
             libraries)
               projects=(
                 src/SimplicityTools.Metrics/SimplicityTools.Metrics.csproj
@@ -201,7 +295,7 @@ jobs:
               --configuration Release \
               --no-build \
               --output "$PACKAGE_OUTPUT_DIR" \
-              -p:Version=${{ steps.release.outputs.pack_version }} \
+              -p:Version=${{ needs.resolve.outputs.pack_version }} \
               --verbosity minimal
           done
 
@@ -421,7 +515,7 @@ jobs:
       - name: Upload package artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: nuget-packages-${{ steps.release.outputs.release_group }}-${{ steps.release.outputs.pack_version }}
+          name: nuget-packages-${{ needs.resolve.outputs.release_group }}-${{ needs.resolve.outputs.pack_version }}
           path: artifacts/packages/*
           if-no-files-found: error
 

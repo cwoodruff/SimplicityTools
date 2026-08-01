@@ -7,6 +7,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>SimplicityTools.Metrics</PackageId>
     <Description>Core data model and snapshot collection primitives for the Simplicity-First .NET Toolkit.</Description>
+    <Version>0.8.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Build" ExcludeAssets="runtime" />

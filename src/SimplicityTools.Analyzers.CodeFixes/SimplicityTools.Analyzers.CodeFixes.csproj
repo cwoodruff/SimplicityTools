@@ -13,6 +13,7 @@
     -->
     <IsPackable>false</IsPackable>
     <EnforceExtendedAnalyzerRules>false</EnforceExtendedAnalyzerRules>
+    <Version>0.8.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

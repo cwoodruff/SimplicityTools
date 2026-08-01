@@ -28,7 +28,27 @@
 - **Docs-site sync:** Version extraction script generates version.ts at build time from MSBuild property.
 - **macOS apphost constraint:** Sample projects must disable apphost generation or use non-`.App` naming.
 
-## Learnings (2026-07-31)
+## Learnings (2026-08-01)
+
+**CI pipeline parallelization — `nuget-publish.yml` restructured.**
+
+The single sequential `validate` job was split into five jobs:
+- `resolve` — lightweight; resolves release shape and outputs `release_group` + `pack_version`. No SDK needed.
+- `test-unit` — Metrics/Filters/Tca/Analyzers unit tests (parallel, no deps on resolve).
+- `test-cli-functional` — CLI integration tests excluding performance gate (parallel).
+- `test-cli-perf` — CLI P95 performance gate only (parallel, deliberately isolated per prior team decision in `.squad/decisions.md`).
+- `validate` — packs artifacts and validates metadata; runs only after all three test jobs pass; proxies `resolve` outputs to `publish`.
+- `publish` (unchanged) — tag-push-only gating, uses `validate` outputs.
+
+NuGet package caching added to all runner jobs via `actions/cache@0057852...` (v4), keyed on `Directory.Packages.props` hash. Each parallel job does its own restore+build; with a warm NuGet cache, redundant restore cost is negligible and this avoids artifact upload/download complexity.
+
+**Expected wall-clock impact:** Before ~12–15 min (sequential: unit tests + CLI functional + perf gate all in one job). After ~5–7 min (three test jobs run in parallel; `validate` follows immediately when all pass). NuGet cache hit reduces restore time from ~2–3 min to ~10–20 s per job on repeat runs.
+
+**Trade-off accepted:** Each test job re-runs `dotnet restore` + `dotnet build`. This is simpler than staging build artifacts and fast enough with cached packages. Builds are identical in content (same source, same packages).
+
+**Preservation guarantees:** All triggers, concurrency serialization, release shape logic, pack-per-group logic, metadata validation, analyzer consumer validation, and publish gating are unchanged. The perf gate remains its own isolated invocation (now a separate job rather than a separate step — isolation level is strictly equal or stronger).
+
+
 
 **Current release:** `0.5.0` — first public NuGet release, shipped 2026-07-08. All five packages published together. `Directory.Build.props` and `CHANGELOG.md` are the version source of truth.
 
