@@ -1,6 +1,6 @@
 # Quickstart: Five Essential Commands
 
-After installing `dotnet-simplicity`, try these five commands to understand how SimplicityTools works. This guide uses the Sample.Simplified project to demonstrate each workflow.
+After installing `dotnet-simplicity`, try these five commands to understand how SimplicityTools works. This guide uses the Sample.Simplified project to demonstrate each workflow, then re-runs the same commands against [Sample.ClaimsPortal](#7-a-solution-that-isnt-clean) — a solution with real problems — so you can see what the output looks like when a tool has something to say.
 
 ## 1. `analyze` — First Look at a Solution
 
@@ -236,6 +236,70 @@ Use `watch` during refactoring sessions to see your improvements in real time.
 
 ---
 
+## 7. A Solution That Isn't Clean
+
+Every example above runs against Sample.Simplified, which is already in good shape — useful for
+learning the commands, less useful for learning to read the output. `Sample.ClaimsPortal` is an
+eight-project claims intake service that builds clean and passes its tests, and is still measurably
+harder to understand than it needs to be. Same commands, different verdict.
+
+```bash
+dotnet simplicity analyze samples/Sample.ClaimsPortal/Sample.ClaimsPortal.sln
+```
+
+```text
+Simplicity Snapshot (2026-08-09)
+----------------------------------------
+Projects: 8
+Total files: 49
+Primary path files: 20
+Abstraction layers: 7
+Single-impl interfaces: 6
+External deps: 2 (1 unused)
+Avg complexity: 1.6
+Est. onboarding: not computed
+```
+
+Two lines carry the story. **Six of seven** abstraction layers are interfaces with a single
+implementation, and **one of two** package references is never used in source. Average complexity
+looks fine at 1.6 — the problem is not spread evenly, it is concentrated in one method that the
+SF0003 analyzer flags at complexity 21.
+
+Note what is missing: no `Info: using built-in defaults` notice. This sample ships a
+`simplicity.json`, so the CLI reads it and stays quiet.
+
+```bash
+dotnet simplicity budget samples/Sample.ClaimsPortal/Sample.ClaimsPortal.sln
+```
+
+```text
+Complexity Budget
+-----------------
+Status: 1/3 dimension(s) within budget.
+Bars show configured budget used. Values above 100% are over budget.
+
+Cognitive Load      not scored — onboarding time has not been computed.
+Operational Surface [##########]   343%  OVER BUDGET
+  Premature abstraction ratio: 0.86 (target <= 0.25)
+Change Safety       [###-------]    31%  WITHIN BUDGET
+  Average method complexity: 1.57 (target <= 5.00)
+Discoverability     [##########]   147%  OVER BUDGET
+  Primary path ratio: 0.41 (target >= 0.60)
+
+Next move: Operational Surface is 243% over budget. Remove single-use abstractions so the solution exposes fewer moving parts.
+```
+
+**1 of 3 dimensions within budget**, and the "Next move" line names the cheapest fix first:
+delete the interfaces nobody implements twice. That is a mechanical change with an IDE code fix
+behind it (SF0001), not an architecture debate.
+
+This sample is also where the rest of the toolkit has worked examples — all seven analyzer
+diagnostics, the three filter evaluators, and the TCA calculator. See
+[samples/Sample.ClaimsPortal/README.md](../samples/Sample.ClaimsPortal/README.md) for the per-tool
+walkthrough and a six-step exercise that fixes the solution while you watch the numbers move.
+
+---
+
 ## Zero-Config Promise
 
 All commands above work **with zero configuration**. SimplicityTools:
@@ -254,5 +318,5 @@ To customize budget thresholds or TCA inputs, add a `simplicity.json` file to yo
 - **Add to CI:** Use `dotnet simplicity diff --fail-on-regression` in pull request checks.
 - **Share insights:** Generate a report weekly and track trends.
 - **Protect your budget:** Use `dotnet simplicity budget` in sprint planning.
-- **IDE feedback:** Install the `SimplicityTools.Analyzers` package to surface issues inline.
+- **IDE feedback:** Install the `SimplicityTools.Analyzers` package to surface issues inline. All seven diagnostics fire in [Sample.ClaimsPortal](../samples/Sample.ClaimsPortal/README.md) if you want to see them before wiring your own solution.
 - **Deep dive:** Read [Using the SimplicityTools Toolset](using-the-simplicity-tools.md) for full command reference and configuration options.
