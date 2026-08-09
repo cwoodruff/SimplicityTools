@@ -6,6 +6,10 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional pointer to this schema, for editor completion and validation. Ignored by the CLI."
+    },
     "tca": {
       "type": "object",
       "description": "Team-specific inputs used for Total Cost of Architecture calculations.",

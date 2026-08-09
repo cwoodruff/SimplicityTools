@@ -44,7 +44,10 @@ internal static class SimplicityConfigurationLoader
     private static SimplicityConfiguration ParseConfiguration(JsonElement root)
     {
         EnsureObject(root, "The root value");
-        EnsureAllowedProperties(root, "$", new HashSet<string>(StringComparer.Ordinal) { "tca", "filters" });
+
+        // "$schema" is the conventional JSON Schema pointer editors use for completion and
+        // validation. It carries no configuration, so it is accepted and ignored.
+        EnsureAllowedProperties(root, "$", new HashSet<string>(StringComparer.Ordinal) { "$schema", "tca", "filters" });
 
         var configuration = SimplicityConfiguration.Defaults;
         var tca = configuration.Tca;

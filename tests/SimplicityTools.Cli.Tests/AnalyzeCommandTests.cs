@@ -403,6 +403,42 @@ public sealed class AnalyzeCommandTests
     }
 
     [Fact]
+    public async Task BudgetCommand_AcceptsSchemaPointerInSimplicityJson()
+    {
+        await BuildCliAsync();
+        var workspace = CreateSampleWorkspace("Sample.Simplified");
+
+        try
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(workspace, "simplicity.json"),
+                """
+                {
+                  "$schema": "https://github.com/cwoodruff/SimplicityTools/blob/main/docs/simplicity-schema.json",
+                  "filters": {
+                    "maxMethodComplexity": 1.5
+                  }
+                }
+                """);
+
+            var result = await RunProcessAsync(
+                "dotnet",
+                [GetCliAssemblyPath(), "budget", Path.Combine(workspace, "Sample.Simplified.sln")],
+                GetRepositoryRoot());
+
+            Assert.Equal(0, result.ExitCode);
+            Assert.True(string.IsNullOrWhiteSpace(result.StandardError), result.StandardError);
+
+            // The pointer is ignored, and the sibling threshold override still applies.
+            Assert.Contains("target <= 1.50", NormalizeLineEndings(result.StandardOutput));
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(workspace);
+        }
+    }
+
+    [Fact]
     public async Task BudgetCommand_UsesThresholdOverridesFromSimplicityJson()
     {
         await BuildCliAsync();
