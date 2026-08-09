@@ -37,7 +37,7 @@ public sealed class AnalyzeCommandTests
     }
 
     [Fact]
-    public async Task AnalyzeCommand_PrintsSummaryForBothSampleSolutions()
+    public async Task AnalyzeCommand_PrintsSummaryForEverySampleSolution()
     {
         await BuildCliAsync();
         var baselines = await LoadBaselinesAsync();
@@ -50,7 +50,7 @@ public sealed class AnalyzeCommandTests
                 GetRepositoryRoot());
 
             Assert.Equal(0, result.ExitCode);
-            AssertMissingConfigWarning(result.StandardError, Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!);
+            AssertSampleConfigDiagnostics(result.StandardError, GetRepositoryPath(sample.SolutionPath));
 
             var actual = NormalizeLineEndings(result.StandardOutput).Trim();
             var summaryDate = ParseSummaryDate(actual);
@@ -619,7 +619,7 @@ public sealed class AnalyzeCommandTests
     }
 
     [Fact]
-    public async Task ReportCommand_GeneratesSelfContainedHtmlForBothSamples()
+    public async Task ReportCommand_GeneratesSelfContainedHtmlForEverySample()
     {
         await BuildCliAsync();
         var baselines = await LoadBaselinesAsync();
@@ -636,7 +636,7 @@ public sealed class AnalyzeCommandTests
                     workspace);
 
                 Assert.Equal(0, result.ExitCode);
-                AssertMissingConfigWarning(result.StandardError, Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!);
+                AssertSampleConfigDiagnostics(result.StandardError, GetRepositoryPath(sample.SolutionPath));
 
                 // The report now defaults to <solution-directory>/simplicity-report, not the CWD.
                 var reportPath = Path.Combine(Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!, "simplicity-report", "index.html");
@@ -689,7 +689,7 @@ public sealed class AnalyzeCommandTests
                 workspace);
 
             Assert.Equal(0, result.ExitCode);
-            AssertMissingConfigWarning(result.StandardError, Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!);
+            AssertSampleConfigDiagnostics(result.StandardError, GetRepositoryPath(sample.SolutionPath));
 
             var reportPath = Path.Combine(Path.GetDirectoryName(GetRepositoryPath(sample.SolutionPath))!, "simplicity-report", "index.html");
             var htmlContent = await File.ReadAllTextAsync(reportPath);
@@ -1036,6 +1036,27 @@ public sealed class AnalyzeCommandTests
     {
         var normalized = NormalizeLineEndings(standardError).Trim();
         Assert.Equal($"Info: using built-in defaults (no simplicity.json found in '{expectedDirectory}').", normalized);
+    }
+
+    /// <summary>
+    /// Asserts the stderr a sample solution is expected to produce. Samples differ: some ship a
+    /// simplicity.json and must run silently, the rest must emit the defaults notice. Deriving the
+    /// expectation from the file on disk keeps it from drifting when a sample gains or loses its
+    /// configuration.
+    /// </summary>
+    private static void AssertSampleConfigDiagnostics(string standardError, string solutionPath)
+    {
+        var solutionDirectory = Path.GetDirectoryName(solutionPath)!;
+
+        if (File.Exists(Path.Combine(solutionDirectory, "simplicity.json")))
+        {
+            Assert.True(
+                string.IsNullOrWhiteSpace(standardError),
+                $"'{solutionPath}' ships a simplicity.json, so nothing should be written to stderr. Got: {standardError}");
+            return;
+        }
+
+        AssertMissingConfigWarning(standardError, solutionDirectory);
     }
 
     private static string CreateSampleWorkspace(string sampleDirectoryName)

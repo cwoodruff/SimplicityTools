@@ -36,11 +36,13 @@ Swap in any other sample's `.sln`. `Sample.Simplified` and `Sample.OverEngineere
 
 ## Notes for contributors
 
-- `Sample.Simplified` and `Sample.OverEngineered` are pinned by
-  [`tests/SimplicitySampleBaselines.json`](../tests/SimplicitySampleBaselines.json); changing their
-  code means re-measuring and updating that file, the CLI test assertions, `README.md`, and
-  `docs/quickstart.md` together.
-- `Sample.ClaimsPortal` is not in that baseline file. Its own 20 xUnit tests run in CI; its
-  simplicity metrics are documented in its README rather than asserted.
+- All three samples are pinned by
+  [`tests/SimplicitySampleBaselines.json`](../tests/SimplicitySampleBaselines.json); changing a
+  sample's code means re-measuring and updating that file, the CLI test assertions, `README.md`, and
+  `docs/quickstart.md` together. These drift as a set.
+- Sample stderr expectations are derived from disk, not hard-coded: a sample that ships a
+  `simplicity.json` must run silently, and one that does not must emit the defaults notice. Adding
+  or removing a sample's config file needs no test change.
+- `Sample.ClaimsPortal` also has its own 20 xUnit tests in the CI matrix.
 - Generated artifacts (`simplicity-report/`, `.simplicity-history/`, `.simplicity-baseline.json`) are
   never committed.

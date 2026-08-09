@@ -25,6 +25,19 @@
       "interfacesWithSingleImplementation": 24,
       "averageMethodComplexity": 1.2,
       "estimatedOnboardingTime": null
+    },
+    {
+      "name": "Sample.ClaimsPortal",
+      "solutionPath": "samples/Sample.ClaimsPortal/Sample.ClaimsPortal.sln",
+      "totalProjects": 8,
+      "totalFiles": 49,
+      "primaryPathFileCount": 20,
+      "abstractionLayerCount": 7,
+      "externalDependencyCount": 2,
+      "unusedDependencyCount": 1,
+      "interfacesWithSingleImplementation": 6,
+      "averageMethodComplexity": 1.57,
+      "estimatedOnboardingTime": null
     }
   ]
 }
