@@ -317,6 +317,7 @@ FakesAssemblies/
 node_modules/
 docs-site/.astro/
 docs-site/dist/
+docs-site/.astro/
 
 # Visual Studio 6 build log
 *.plg

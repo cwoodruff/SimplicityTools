@@ -1,2 +1,2 @@
 // Auto-generated from Directory.Build.props
-export const toolVersion = '0.4.0';
+export const toolVersion = '0.8.0';
