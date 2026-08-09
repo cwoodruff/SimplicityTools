@@ -1,0 +1,6 @@
+namespace Sample.ClaimsPortal.Platform.Time;
+
+public sealed class SystemClock : IClock
+{
+    public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
+}

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Sample.ClaimsPortal.Notifications</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!--
+      SF0002 lives here. Humanizer.Core was added when the templates used Humanize(); the
+      templates were later rewritten with interpolated strings and nobody removed the package.
+      No symbol from this assembly is referenced any more.
+    -->
+    <PackageReference Include="Humanizer.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Sample.ClaimsPortal.Platform/Sample.ClaimsPortal.Platform.csproj" />
+  </ItemGroup>
+</Project>

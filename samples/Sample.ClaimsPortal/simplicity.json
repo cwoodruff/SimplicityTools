@@ -1,0 +1,17 @@
+{
+  "$schema": "../../docs/simplicity-schema.json",
+  "tca": {
+    "teamSize": 12,
+    "averageEngineerMonthlySalaryUsd": 14500,
+    "estimatedMonthlyIncidentCount": 6,
+    "onCallHourlyRateUsd": 165,
+    "attritionCoefficientPercent": 18
+  },
+  "filters": {
+    "primaryPathRatioTarget": 0.6,
+    "prematureAbstractionRatioTarget": 0.25,
+    "maxMethodComplexity": 5,
+    "maxOnboardingHours": 40,
+    "passingScore": 0.7
+  }
+}

@@ -242,9 +242,10 @@ SimplicityTools/
 │   ├── SimplicityTools.Tca/            # Cost-of-complexity estimates
 │   ├── SimplicityTools.Analyzers/      # Roslyn diagnostics and code fixes
 │   └── SimplicityTools.Cli/            # dotnet-simplicity command-line tool
-├── samples/
+├── samples/                            # See samples/README.md for the full comparison
 │   ├── Sample.Simplified/              # Good-shape reference: 2 projects, 19 files, 1 abstraction layer
-│   └── Sample.OverEngineered/          # Anti-pattern reference: 12 projects, 65 files, 25 abstraction layers
+│   ├── Sample.OverEngineered/          # Anti-pattern reference: 12 projects, 65 files, 25 abstraction layers
+│   └── Sample.ClaimsPortal/            # Realistic middle: 8 projects, 49 files — exercises every tool
 ├── docs/
 │   ├── using-the-simplicity-tools.md   # Complete command reference and workflows
 │   └── simplicity-schema.json           # Configuration schema reference
@@ -290,6 +291,7 @@ SimplicityTools/
 
 - **New to SimplicityTools?** Start with [Using the SimplicityTools Toolset](docs/using-the-simplicity-tools.md).
 - **Want to run it now?** Try `dotnet simplicity analyze samples/Sample.Simplified/Sample.Simplified.sln`.
+- **Want to see every tool at once?** [`samples/Sample.ClaimsPortal`](samples/Sample.ClaimsPortal/README.md) is an eight-project claims service that trips all seven analyzers, fails one filter, and ships a `simplicity.json` and documented `.editorconfig`.
 - **Configuring for your team?** See the [`simplicity.json` schema](docs/simplicity-schema.json).
 - **Cutting a package release?** Follow [CONTRIBUTING.md](CONTRIBUTING.md) for the tag and NuGet workflow.
 - **Contributing?** Check out the issues and sprint milestones. The team operates in public.

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Sample.ClaimsPortal.Claims</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Used by Journal/DecisionJournal.cs, so SF0002 correctly leaves it alone. -->
+    <PackageReference Include="Newtonsoft.Json" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Sample.ClaimsPortal.Fraud/Sample.ClaimsPortal.Fraud.csproj" />
+    <ProjectReference Include="../Sample.ClaimsPortal.Notifications/Sample.ClaimsPortal.Notifications.csproj" />
+    <ProjectReference Include="../Sample.ClaimsPortal.Payments/Sample.ClaimsPortal.Payments.csproj" />
+    <ProjectReference Include="../Sample.ClaimsPortal.Platform/Sample.ClaimsPortal.Platform.csproj" />
+    <ProjectReference Include="../Sample.ClaimsPortal.Policies/Sample.ClaimsPortal.Policies.csproj" />
+  </ItemGroup>
+</Project>
