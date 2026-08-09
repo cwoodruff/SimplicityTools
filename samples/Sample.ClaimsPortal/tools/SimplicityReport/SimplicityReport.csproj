@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>Sample.ClaimsPortal.SimplicityReport</AssemblyName>
+    <RootNamespace>Sample.ClaimsPortal.SimplicityReport</RootNamespace>
+    <!-- The libraries are consumed as project references here; a real consumer installs the
+         SimplicityTools.Metrics / .Filters / .Tca NuGet packages instead. -->
+    <UseSimplicityAnalyzers>false</UseSimplicityAnalyzers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../../src/SimplicityTools.Metrics/SimplicityTools.Metrics.csproj" />
+    <ProjectReference Include="../../../../src/SimplicityTools.Filters/SimplicityTools.Filters.csproj" />
+    <ProjectReference Include="../../../../src/SimplicityTools.Tca/SimplicityTools.Tca.csproj" />
+  </ItemGroup>
+</Project>

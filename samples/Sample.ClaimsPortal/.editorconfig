@@ -1,0 +1,42 @@
+# Analyzer knobs for SimplicityTools. Every value here is the built-in default, written out so the
+# sample doubles as a copy-paste starting point. Raise a threshold to grant an exception; lower it
+# to hold a stricter line than the defaults.
+root = true
+
+[*.cs]
+# SF0003 — cyclomatic complexity above which a method is "too complex for fast understanding".
+simplicity_first.sf0003_complexity_threshold = 10
+
+# SF0004 — maximum call-chain depth before the layering is called out.
+simplicity_first.sf0004_layer_threshold = 8
+
+# SF0005 — maximum constructor parameters.
+simplicity_first.sf0005_parameter_threshold = 7
+
+# SF0002 — packages never reported as unused (source generators, analyzers, runtime-only assets).
+simplicity_first.sf0002_excluded_packages = coverlet.collector, Microsoft.NET.Test.Sdk, xunit.runner.visualstudio
+
+# SF0007 — folder names that count as the primary business path.
+simplicity_first.sf0007_convention_folders = Controllers, Endpoints, Handlers, Pages
+
+# SF0001/SF0006 — include the public API surface in the half-rule diagnostics.
+# The default is false, which is right for a shipped library: you cannot delete a public interface
+# just because it has one implementation today. This is an application, nothing outside the
+# solution binds to these types, so the sample turns it on. Without it SF0001 and SF0006 stay
+# silent here, because every type in the sample is public.
+simplicity_first.include_public_api = true
+
+# SF0001, SF0002, and SF0006 ship at Info severity: they show in the IDE and in an --errorlog SARIF
+# file, but not in ordinary `dotnet build` console output. Uncomment to promote them to warnings.
+# Note the section split: SF0002 reports on the .csproj line that declares the package, so its
+# severity cannot be set from a [*.cs] section.
+# dotnet_diagnostic.SF0001.severity = warning
+# dotnet_diagnostic.SF0006.severity = warning
+
+# The sample's tests are allowed to be wide and repetitive; that is not the lesson here.
+[Sample.ClaimsPortal.Tests/**.cs]
+simplicity_first.sf0003_complexity_threshold = 20
+simplicity_first.sf0005_parameter_threshold = 12
+
+[*.csproj]
+# dotnet_diagnostic.SF0002.severity = warning

@@ -41,7 +41,8 @@ jobs:
             tests/SimplicityTools.Filters.Tests \
             tests/SimplicityTools.Tca.Tests \
             tests/SimplicityTools.Analyzers.Tests \
-            samples/Sample.Simplified/Sample.Simplified.Tests; do
+            samples/Sample.Simplified/Sample.Simplified.Tests \
+            samples/Sample.ClaimsPortal/Sample.ClaimsPortal.Tests; do
             dotnet test "$project" --configuration Release --no-build --verbosity minimal
           done
 

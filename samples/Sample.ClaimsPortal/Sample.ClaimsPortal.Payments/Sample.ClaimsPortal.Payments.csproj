@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Sample.ClaimsPortal.Payments</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Sample.ClaimsPortal.Platform/Sample.ClaimsPortal.Platform.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,38 @@
+<Project>
+  <!--
+    Self-contained sample properties. This file deliberately does NOT import the repository
+    root Directory.Build.props: the sample ships code that is *supposed* to trip SimplicityTools
+    diagnostics, so it must never inherit TreatWarningsAsErrors from the release gate.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!--
+    Opt-in analyzer wiring. Off by default so a normal repository build stays quiet; turn it on to
+    see SF0001-SF0007 live:
+
+      dotnet build samples/Sample.ClaimsPortal/Sample.ClaimsPortal.sln -p:UseSimplicityAnalyzers=true
+
+    A consumer of the published package gets this wiring automatically from
+    buildTransitive/SimplicityTools.Analyzers.props; here it is reproduced by hand because the
+    sample references the analyzer projects directly out of src/.
+  -->
+  <ItemGroup Condition="'$(UseSimplicityAnalyzers)' == 'true'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../../src/SimplicityTools.Analyzers/SimplicityTools.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      SetTargetFramework="TargetFramework=netstandard2.0" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../../src/SimplicityTools.Analyzers.CodeFixes/SimplicityTools.Analyzers.CodeFixes.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      SetTargetFramework="TargetFramework=netstandard2.0" />
+    <!-- SF0002 inspects PackageReference items through the project file, not through file I/O. -->
+    <AdditionalFiles Include="$(MSBuildProjectFullPath)" Visible="false" />
+  </ItemGroup>
+</Project>

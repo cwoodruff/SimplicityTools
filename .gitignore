@@ -452,3 +452,7 @@ tests/SimplicityTools.Cli.Tests/.workspace/
 simplicity-report/
 out.txt
 .DS_Store
+
+# SimplicityTools CLI local artifacts (baselines/history are per-developer, not committed)
+.simplicity-baseline.json
+.simplicity-history/

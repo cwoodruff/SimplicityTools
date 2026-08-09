@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>Sample.ClaimsPortal.Demo</AssemblyName>
+    <RootNamespace>Sample.ClaimsPortal.Api</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Sample.ClaimsPortal.Claims/Sample.ClaimsPortal.Claims.csproj" />
+    <ProjectReference Include="../Sample.ClaimsPortal.Payments/Sample.ClaimsPortal.Payments.csproj" />
+    <ProjectReference Include="../Sample.ClaimsPortal.Platform/Sample.ClaimsPortal.Platform.csproj" />
+    <ProjectReference Include="../Sample.ClaimsPortal.Policies/Sample.ClaimsPortal.Policies.csproj" />
+  </ItemGroup>
+</Project>
