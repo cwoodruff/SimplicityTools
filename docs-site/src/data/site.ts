@@ -39,6 +39,7 @@ export const docsLinks = {
   readme: `${repoUrl}/blob/main/README.md`,
   simplifiedSample: `${repoUrl}/tree/main/samples/Sample.Simplified`,
   overEngineeredSample: `${repoUrl}/tree/main/samples/Sample.OverEngineered`,
+  claimsPortalSample: `${repoUrl}/tree/main/samples/Sample.ClaimsPortal`,
   issues: `${repoUrl}/issues`
 };
 

@@ -6,12 +6,12 @@ import { docsLinks, withBase } from '../../data/site';
 
 <BaseLayout
   title="Samples hub"
-  description="Explore the simplified and over-engineered sample solutions used throughout the SimplicityTools docs."
+  description="Explore the simplified, over-engineered, and full-coverage sample solutions used throughout the SimplicityTools docs."
 >
   <DocsPageTemplate
     eyebrow="Samples"
     title="Samples hub"
-    summary="The samples are teaching assets, not filler. Use them to show what healthy shape looks like, to compare metric output, and to validate the CLI flow before you point the tool at your own solution."
+    summary="The samples are teaching assets, not filler. Use them to show what healthy shape looks like, to compare metric output, and to validate the CLI flow before you point the tool at your own solution. Two of them are ends of a spectrum; the third is the shape most real solutions actually have."
     breadcrumbs={[{ label: 'Home', href: withBase('/') }, { label: 'Samples' }]}
   >
     <section class="section">
@@ -19,18 +19,24 @@ import { docsLinks, withBase } from '../../data/site';
         <h2>Sample solutions</h2>
         <p>Each sample is already used in the docs. This hub makes them easier to find from the site.</p>
       </div>
-      <div class="two-up">
+      <div class="three-up">
         <a class="sample-card" href={docsLinks.simplifiedSample} target="_blank" rel="noreferrer">
           <span class="link-card__eyebrow">Healthy shape</span>
           <h3>Sample.Simplified</h3>
-          <p>A lean reference solution with a small project graph, low complexity, and a clear primary path.</p>
+          <p>A lean reference solution with a small project graph, low complexity, and a clear primary path. 2 projects, 19 files.</p>
           <pre><code>dotnet simplicity analyze samples/Sample.Simplified/Sample.Simplified.sln</code></pre>
         </a>
         <a class="sample-card" href={docsLinks.overEngineeredSample} target="_blank" rel="noreferrer">
           <span class="link-card__eyebrow">Anti-pattern reference</span>
           <h3>Sample.OverEngineered</h3>
-          <p>A deliberately heavy solution that makes abstraction depth, drift, and report storytelling obvious.</p>
+          <p>A deliberately heavy solution that makes abstraction depth, drift, and report storytelling obvious. 12 projects, 65 files.</p>
           <pre><code>dotnet simplicity analyze samples/Sample.OverEngineered/Sample.OverEngineered.sln</code></pre>
+        </a>
+        <a class="sample-card" href={docsLinks.claimsPortalSample} target="_blank" rel="noreferrer">
+          <span class="link-card__eyebrow">Full toolkit coverage</span>
+          <h3>Sample.ClaimsPortal</h3>
+          <p>The realistic middle: a claims intake service that builds clean and passes its tests, yet trips all seven analyzers and fails a filter. 8 projects, 49 files.</p>
+          <pre><code>dotnet simplicity analyze samples/Sample.ClaimsPortal/Sample.ClaimsPortal.sln</code></pre>
         </a>
       </div>
     </section>
@@ -41,10 +47,29 @@ import { docsLinks, withBase } from '../../data/site';
         <p>Use the samples to make the tool value concrete before you ask a team to trust the numbers on their own codebase.</p>
       </div>
       <ol class="step-list">
-        <li>Run <code>analyze</code> on both samples and compare the metrics summary.</li>
+        <li>Run <code>analyze</code> on the simplified and over-engineered samples and compare the metrics summary. The gap between them is the range the tool measures.</li>
         <li>Generate a report for the over-engineered sample so the visual story becomes obvious.</li>
+        <li>Run <code>analyze</code> and <code>budget</code> on Sample.ClaimsPortal. It reports 1 of 3 dimensions within budget, which is the conversation most teams actually need to have — the other two samples are too clean or too broken to argue about.</li>
         <li>Use <code>budget</code> and <code>diff</code> to show how the toolkit supports ongoing decisions, not just snapshots.</li>
       </ol>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <h2>Seeing every tool at once</h2>
+        <p>Sample.ClaimsPortal is the only sample wired for the whole toolkit.</p>
+      </div>
+      <ul class="step-list">
+        <li>All seven analyzer diagnostics fire, including a deliberate non-hit: an interface with two implementations that SF0001 correctly leaves alone.</li>
+        <li>The three filter evaluators return a mixed verdict — TwoAmTest passes, HalfRule fails, PrimaryPathFirst passes narrowly — instead of all green or all red.</li>
+        <li>It is the only sample shipping a <code>simplicity.json</code> and a fully documented <code>.editorconfig</code>, so it doubles as a configuration starting point.</li>
+        <li>A companion console project calls the Metrics, Filters, and TCA libraries directly, which is the only worked example of the TCA calculator.</li>
+      </ul>
+      <p>
+        The sample's
+        <a href={`${docsLinks.claimsPortalSample}#readme`} target="_blank" rel="noreferrer">README</a>
+        has the per-tool walkthrough, a table naming the file and reason behind every diagnostic, and a six-step exercise that fixes the solution while you watch the numbers move.
+      </p>
     </section>
   </DocsPageTemplate>
 </BaseLayout>
