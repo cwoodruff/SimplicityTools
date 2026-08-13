@@ -94,3 +94,24 @@
 **Build result:** ✅ 32 pages built, 0 errors.
 
 ---
+
+## Learnings
+
+### 2026-08-13: Pricing page removed — packages are free/open-source
+
+**Decision:** Removed the `/pricing/` page and all nav/CSS references to it. SimplicityTools NuGet packages (Metrics, Filters, Tca, Analyzers, Cli) are free and open-source. Support-based pricing may be introduced later as a separate initiative, but should NOT be pre-built or implied in the docs-site until Chris explicitly decides to offer it.
+
+**What was removed:**
+- `docs-site/src/pages/pricing.astro` (deleted)
+- `pricing: '/pricing/'` from `docsLinks` in `site.ts`
+- `{ label: 'Pricing', href: '/pricing/' }` from `primaryNavigation` in `site.ts`
+- `'/pricing/'` from `publicRoutes` in `site.ts`
+- `.pricing-card`, `.pricing-grid`, `.pricing-grid--wide` from all shared CSS selector groups in `site.css`
+
+**What was NOT touched:** `IPricingService` in `reference-content.ts` — that's an unrelated SF0001 code sample, not a pricing UI element.
+
+**Build result:** ✅ 31 pages (was 32), 0 errors.
+
+**Guidance for future work:** Do NOT reintroduce a pricing page without explicit direction from Chris. If support pricing becomes a real initiative, build it as a fresh, separate page — do not restore the deleted one from git without review.
+
+---

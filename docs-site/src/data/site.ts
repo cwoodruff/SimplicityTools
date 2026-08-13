@@ -27,7 +27,6 @@ export const docsLinks = {
   docsHub: '/docs/',
   gettingStarted: '/getting-started/',
   features: '/features/',
-  pricing: '/pricing/',
   reference: '/reference/',
   samples: '/samples/',
   quickstart: `${repoUrl}/blob/main/docs/quickstart.md`,
@@ -49,8 +48,7 @@ export const primaryNavigation: NavigationLink[] = [
   { label: 'Features', href: '/features/' },
   { label: 'Docs', href: '/docs/' },
   { label: 'Reference', href: '/reference/' },
-  { label: 'Samples', href: '/samples/' },
-  { label: 'Pricing', href: '/pricing/' }
+  { label: 'Samples', href: '/samples/' }
 ];
 
 export const toolHighlights = [
@@ -95,7 +93,6 @@ export const publicRoutes = [
   '/',
   '/getting-started/',
   '/features/',
-  '/pricing/',
   '/docs/',
   '/docs/commands/',
   '/docs/commands/analyze/',

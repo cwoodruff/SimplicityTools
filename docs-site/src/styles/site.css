@@ -320,7 +320,6 @@ li {
 .callout-panel,
 .card,
 .link-card,
-.pricing-card,
 .sample-card {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
@@ -385,7 +384,6 @@ li {
 .card-grid,
 .three-up,
 .two-up,
-.pricing-grid,
 .swatch-grid {
   display: grid;
   gap: 1rem;
@@ -393,7 +391,6 @@ li {
 
 .card,
 .link-card,
-.pricing-card,
 .sample-card,
 .swatch-card {
   padding: 1.25rem;
@@ -401,7 +398,6 @@ li {
 
 .card p,
 .link-card p,
-.pricing-card p,
 .sample-card p,
 .swatch-card p {
   margin-bottom: 0;
@@ -669,7 +665,6 @@ th {
   }
 
   .two-up,
-  .pricing-grid,
   .footer-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -711,12 +706,10 @@ th {
   }
 
   .card-grid,
-  .three-up,
-  .pricing-grid {
+  .three-up {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .pricing-grid--wide,
   .footer-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
