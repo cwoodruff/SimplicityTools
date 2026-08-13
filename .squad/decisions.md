@@ -1,6 +1,19 @@
 # Squad Decisions
 
 
+### 2026-08-13: Remove Pricing Page — Packages Are Free/Open-Source
+**By:** Link (DevRel)  
+**Requested by:** Chris Woody Woodruff (Owner)  
+**Status:** ✅ APPLIED
+
+**Decision:** SimplicityTools NuGet packages (Metrics, Filters, Tca, Analyzers, Cli) are free and open-source. The pricing page (`/pricing/`) has been removed. No pricing UI, nav item, or route should exist.
+
+**Changes:** Deleted `docs-site/src/pages/pricing.astro`, removed pricing references from `site.ts`, cleaned pricing CSS from `site.css`. Build validated: 31 pages, 0 errors (previously 32).
+
+**Implications:** Do NOT reintroduce pricing page without explicit direction. If support pricing becomes real future initiative, build deliberately—do not restore deleted page. Packages remain free.
+
+---
+
 ### 2026-08-13T09:20:58Z: Docs-Site Hero Callout Panels — Full-Width Section Pattern
 **By:** Link (DevRel)
 **Status:** ✅ APPLIED
