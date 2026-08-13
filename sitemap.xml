@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://simplicitytools.dev/</loc></url>
+  <url><loc>https://simplicitytools.dev/getting-started/</loc></url>
+  <url><loc>https://simplicitytools.dev/features/</loc></url>
+  <url><loc>https://simplicitytools.dev/docs/</loc></url>
+  <url><loc>https://simplicitytools.dev/docs/commands/</loc></url>
+  <url><loc>https://simplicitytools.dev/docs/commands/analyze/</loc></url>
+  <url><loc>https://simplicitytools.dev/docs/commands/baseline/</loc></url>
+  <url><loc>https://simplicitytools.dev/docs/commands/budget/</loc></url>
+  <url><loc>https://simplicitytools.dev/docs/commands/diff/</loc></url>
+  <url><loc>https://simplicitytools.dev/docs/commands/report/</loc></url>
+  <url><loc>https://simplicitytools.dev/docs/commands/watch/</loc></url>
+  <url><loc>https://simplicitytools.dev/docs/filters/</loc></url>
+  <url><loc>https://simplicitytools.dev/docs/filters/halfrule/</loc></url>
+  <url><loc>https://simplicitytools.dev/docs/filters/primarypathfirst/</loc></url>
+  <url><loc>https://simplicitytools.dev/docs/filters/twowamtest/</loc></url>
+  <url><loc>https://simplicitytools.dev/docs/configuration/</loc></url>
+  <url><loc>https://simplicitytools.dev/docs/library-usage/</loc></url>
+  <url><loc>https://simplicitytools.dev/reference/</loc></url>
+  <url><loc>https://simplicitytools.dev/samples/</loc></url>
+  <url><loc>https://simplicitytools.dev/analyzers/</loc></url>
+  <url><loc>https://simplicitytools.dev/analyzers/sf0001/</loc></url>
+  <url><loc>https://simplicitytools.dev/analyzers/sf0002/</loc></url>
+  <url><loc>https://simplicitytools.dev/analyzers/sf0003/</loc></url>
+  <url><loc>https://simplicitytools.dev/analyzers/sf0004/</loc></url>
+  <url><loc>https://simplicitytools.dev/analyzers/sf0005/</loc></url>
+  <url><loc>https://simplicitytools.dev/analyzers/sf0006/</loc></url>
+  <url><loc>https://simplicitytools.dev/analyzers/sf0007/</loc></url>
+  <url><loc>https://simplicitytools.dev/integration/</loc></url>
+  <url><loc>https://simplicitytools.dev/integration/ci-cd/</loc></url>
+  <url><loc>https://simplicitytools.dev/integration/csproj-reference/</loc></url>
+  <url><loc>https://simplicitytools.dev/integration/ide-setup/</loc></url>
+</urlset>
