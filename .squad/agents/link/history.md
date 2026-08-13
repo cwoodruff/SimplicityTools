@@ -115,3 +115,23 @@
 **Guidance for future work:** Do NOT reintroduce a pricing page without explicit direction from Chris. If support pricing becomes a real initiative, build it as a fresh, separate page — do not restore the deleted one from git without review.
 
 ---
+
+### 2026-08-13: Install-path cards redesigned — command as visual focal point
+
+**Task:** Redesign the "Pick the fastest honest install path" three-card grid in `getting-started.astro` so each command block is the visual focal point, not a trailing afterthought.
+
+**Changes made:**
+
+- `docs-site/src/pages/getting-started.astro`: Replaced the three plain `.card` divs with `.card.install-card` divs. Each card now has:
+  1. A use-case eyebrow badge (`.install-card__eyebrow`) positioned at the top using site pill/badge token language (`--accent-warm`, `rgba(255,107,114,...)`).
+  2. The `<h3>` title beneath the badge.
+  3. A `.install-card__terminal` wrapper with a `.terminal-bar` (macOS-style colored dots + shell-type label) topping a `<pre>` block — making the command visually prominent.
+  4. The description (`<p>`) dropped beneath as secondary context (`.install-card__description`, muted color).
+  Use-case labels added: "Recommended for CI parity", "Recommended for contributors", "Recommended for IDE-first teams".
+  All command text preserved exactly.
+
+- `docs-site/src/styles/site.css`: Added new classes (`.install-card`, `.install-card__eyebrow`, `.install-card__terminal`, `.terminal-bar`, `.terminal-dot`, `.terminal-dot--red/yellow/green`, `.terminal-bar__label`, `.install-card__description`). All use existing design tokens (`--bg-panel`, `--accent-warm`, `--text-muted`, `--line`, `--radius-md`, `rgba(...)` background/border patterns). No new arbitrary colors. Terminal dot colors (`#ff5f57`, `#febc2e`, `#28c840`) mirror the familiar macOS traffic-light convention that readers already associate with "real terminal."
+
+**Why:** The old layout buried commands below prose, making readers scan down to find the thing they actually needed (the exact command to copy). Moving the terminal block above the description with a distinct visual frame (dots + type label) follows the "command is the thing" principle — description is supporting context, not the primary read.
+
+**Build result:** ✅ 31 pages built, 0 errors.

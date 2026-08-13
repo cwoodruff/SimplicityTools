@@ -33,22 +33,49 @@ import { cliPackageUrl, repoUrl, withBase } from '../data/site';
         <p>The right entry point depends on whether you are evaluating the tool, integrating it, or working inside this repo.</p>
       </div>
       <div class="three-up">
-        <div class="card">
+        <div class="card install-card">
+          <span class="install-card__eyebrow">Recommended for CI parity</span>
           <h3>Global tool</h3>
-          <p>Best when you want the normal user workflow and CI parity.</p>
-          <pre><code>dotnet tool install --global SimplicityTools.Cli</code></pre>
+          <div class="install-card__terminal">
+            <div class="terminal-bar">
+              <span class="terminal-dot terminal-dot--red"></span>
+              <span class="terminal-dot terminal-dot--yellow"></span>
+              <span class="terminal-dot terminal-dot--green"></span>
+              <span class="terminal-bar__label">shell</span>
+            </div>
+            <pre><code>dotnet tool install --global SimplicityTools.Cli</code></pre>
+          </div>
+          <p class="install-card__description">Best when you want the normal user workflow and CI parity.</p>
         </div>
-        <div class="card">
+        <div class="card install-card">
+          <span class="install-card__eyebrow">Recommended for contributors</span>
           <h3>Run from source</h3>
-          <p>Best when you are validating changes in this repository before packaging.</p>
-          <pre><code>dotnet build src/SimplicityTools.Cli/SimplicityTools.Cli.csproj --nologo --verbosity quiet
+          <div class="install-card__terminal">
+            <div class="terminal-bar">
+              <span class="terminal-dot terminal-dot--red"></span>
+              <span class="terminal-dot terminal-dot--yellow"></span>
+              <span class="terminal-dot terminal-dot--green"></span>
+              <span class="terminal-bar__label">shell</span>
+            </div>
+            <pre><code>dotnet build src/SimplicityTools.Cli/SimplicityTools.Cli.csproj --nologo --verbosity quiet
 
 dotnet src/SimplicityTools.Cli/bin/Debug/net10.0/SimplicityTools.Cli.dll analyze samples/Sample.Simplified/Sample.Simplified.sln</code></pre>
+          </div>
+          <p class="install-card__description">Best when you are validating changes in this repository before packaging.</p>
         </div>
-        <div class="card">
+        <div class="card install-card">
+          <span class="install-card__eyebrow">Recommended for IDE-first teams</span>
           <h3>Analyzer-first adoption</h3>
-          <p>Best when the team wants IDE nudges before it is ready for CI contracts.</p>
-          <pre><code>&lt;PackageReference Include="SimplicityTools.Analyzers" Version="x.y.z" PrivateAssets="all" /&gt;</code></pre>
+          <div class="install-card__terminal">
+            <div class="terminal-bar">
+              <span class="terminal-dot terminal-dot--red"></span>
+              <span class="terminal-dot terminal-dot--yellow"></span>
+              <span class="terminal-dot terminal-dot--green"></span>
+              <span class="terminal-bar__label">csproj</span>
+            </div>
+            <pre><code>&lt;PackageReference Include="SimplicityTools.Analyzers" Version="x.y.z" PrivateAssets="all" /&gt;</code></pre>
+          </div>
+          <p class="install-card__description">Best when the team wants IDE nudges before it is ready for CI contracts.</p>
         </div>
       </div>
     </section>

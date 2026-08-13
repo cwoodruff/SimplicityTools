@@ -446,6 +446,81 @@ pre {
   gap: 1rem;
 }
 
+/* ── Install-path cards ── */
+.install-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.install-card__eyebrow {
+  display: inline-block;
+  align-self: flex-start;
+  margin: 1.1rem 1.25rem 0;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 107, 114, 0.13);
+  border: 1px solid rgba(255, 107, 114, 0.3);
+  color: var(--accent-warm);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.install-card h3 {
+  margin: 0.65rem 1.25rem 0.75rem;
+}
+
+.install-card__terminal {
+  margin: 0 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+}
+
+.terminal-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.85rem;
+  background: rgba(2, 6, 23, 0.9);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.terminal-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.terminal-dot--red    { background: #ff5f57; }
+.terminal-dot--yellow { background: #febc2e; }
+.terminal-dot--green  { background: #28c840; }
+
+.terminal-bar__label {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  letter-spacing: 0.04em;
+}
+
+.install-card__terminal pre {
+  border-radius: 0;
+  border: none;
+  margin: 0;
+}
+
+.install-card__description {
+  margin: 0.85rem 1.25rem 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
 .pill-row {
   display: flex;
   flex-wrap: wrap;
