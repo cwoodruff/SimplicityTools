@@ -79,3 +79,18 @@
 **Status:** ✅ Complete. Five-agent findings merged into `.squad/decisions.md`. Release gate now honest and accountable.
 
 ---
+
+## 2026-08-13T09:20:58Z — Docs-Site Hero Restructure: Callout Panels to Full-Width Sections
+
+**Task:** Move the "The first five minutes" callout (index.astro) and "Recommended first command" callout (getting-started.astro) from `slot="aside"` in `<LandingPageTemplate>` into full-width section blocks in the default slot.
+
+**Changes made:**
+- `docs-site/src/pages/index.astro`: Removed `<div slot="aside" class="callout-panel">`. Replaced with `<section class="section"><div class="callout-panel">…</div></section>` as the first child of the default slot (above "Five surfaces, one contract").
+- `docs-site/src/pages/getting-started.astro`: Same pattern — aside callout became the first full-width section (above "Pick the fastest honest install path").
+- `docs-site/src/styles/site.css`: Removed the responsive rule setting `.hero-grid { grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr); }`. With both asides gone, the two-column hero grid would have left a phantom empty right column at wide viewports. Single-column hero now renders cleanly on all breakpoints.
+
+**Pattern used:** Reused existing `.callout-panel` class (unchanged) inside a standard `.section` wrapper. No new CSS classes introduced.
+
+**Build result:** ✅ 32 pages built, 0 errors.
+
+---
