@@ -72,19 +72,21 @@ const adoptionPaths = [
       { label: 'View GitHub', href: repoUrl, variant: 'ghost', external: true }
     ]}
   >
-    <div slot="aside" class="callout-panel">
-      <span class="panel-label">The first five minutes</span>
-      <pre><code>dotnet tool install --global SimplicityTools.Cli
+    <section class="section">
+      <div class="callout-panel">
+        <span class="panel-label">The first five minutes</span>
+        <pre><code>dotnet tool install --global SimplicityTools.Cli
 
 dotnet simplicity analyze path/to/YourSolution.sln
 
 dotnet simplicity diff path/to/YourSolution.sln --fail-on-regression</code></pre>
-      <div class="pill-row">
-        <span class="pill">Zero config by default</span>
-        <span class="pill">Local first</span>
-        <span class="pill">CI-ready</span>
+        <div class="pill-row">
+          <span class="pill">Zero config by default</span>
+          <span class="pill">Local first</span>
+          <span class="pill">CI-ready</span>
+        </div>
       </div>
-    </div>
+    </section>
 
     <section class="section">
       <div class="section-heading">
